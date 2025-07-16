@@ -45,7 +45,8 @@ prompter/
 │   ├── magical-enhancer.js   # Main content script
 │   └── icons/               # Extension icons
 ├── backend/                  # Optional Python backend
-│   ├── app/                 # FastAPI application
+│   ├── app/                 # FastAPI application modules
+│   ├── main.py             # Main FastAPI application
 │   ├── config.py           # Configuration
 │   └── requirements.txt    # Python dependencies
 ├── venv/                    # Python virtual environment
@@ -79,7 +80,7 @@ echo "GEMINI_API_KEY=your_key_here" >> .env
 ### 4. Run Backend
 ```bash
 cd backend
-python -m app.main
+python main.py
 ```
 
 The backend will run on `http://localhost:8000`

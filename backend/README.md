@@ -33,7 +33,7 @@ export REDIS_URL="redis://localhost:6379"
 python start_server.py
 
 # Or directly with uvicorn
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### 4. Test the API

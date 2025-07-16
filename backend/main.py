@@ -6,13 +6,13 @@ import time
 from datetime import datetime
 
 # Add the backend directory to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from api import enhance, websocket
+from app.api import enhance, websocket
 from config import settings
 
 # Configure logging
@@ -21,7 +21,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('../app.log', mode='a')
+        logging.FileHandler('app.log', mode='a')
     ]
 )
 
