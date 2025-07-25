@@ -6,315 +6,6 @@ if (window.enhancerInstance) {
   window.enhancerInstance.destroy();
 }
 
-// Enhanced Perplexity Text Inserter Class
-class PerplexityTextInserter {
-  constructor() {
-    this.debugMode = true;
-    this.maxRetries = 3;
-  }
-
-  log(message, data = null) {
-    if (this.debugMode) {
-      console.log(`🎯 [PerplexityInserter] ${message}`, data || '');
-    }
-  }
-
-  async insertTextForPerplexity(inputElement, text) {
-    this.log('Starting enhanced Perplexity insertion');
-    this.log('Input element:', {
-      tagName: inputElement.tagName,
-      className: inputElement.className,
-      contentEditable: inputElement.contentEditable,
-      type: inputElement.type
-    });
-    this.log('Text to insert:', text.substring(0, 100) + '...');
-
-    // Strategy 1: Try enhanced Lexical editor insertion
-    try {
-      await this.strategy1_LexicalEditor(inputElement, text);
-      if (await this.validateInsertion(inputElement, text)) {
-        this.log('✅ Strategy 1 (Lexical Editor) - SUCCESS');
-        return;
-      }
-    } catch (error) {
-      this.log('❌ Strategy 1 failed:', error.message);
-    }
-
-    // Strategy 2: Try React synthetic events
-    try {
-      await this.strategy2_ReactSynthetic(inputElement, text);
-      if (await this.validateInsertion(inputElement, text)) {
-        this.log('✅ Strategy 2 (React Synthetic) - SUCCESS');
-        return;
-      }
-    } catch (error) {
-      this.log('❌ Strategy 2 failed:', error.message);
-    }
-
-    // Strategy 3: Try direct DOM manipulation with word-level spans
-    try {
-      await this.strategy3_WordLevelSpans(inputElement, text);
-      if (await this.validateInsertion(inputElement, text)) {
-        this.log('✅ Strategy 3 (Word Level Spans) - SUCCESS');
-        return;
-      }
-    } catch (error) {
-      this.log('❌ Strategy 3 failed:', error.message);
-    }
-
-    // Strategy 4: Try clipboard simulation
-    try {
-      await this.strategy4_ClipboardSimulation(inputElement, text);
-      if (await this.validateInsertion(inputElement, text)) {
-        this.log('✅ Strategy 4 (Clipboard Simulation) - SUCCESS');
-        return;
-      }
-    } catch (error) {
-      this.log('❌ Strategy 4 failed:', error.message);
-    }
-
-    throw new Error('All insertion strategies failed');
-  }
-
-  async strategy1_LexicalEditor(inputElement, text) {
-    this.log('🔄 Strategy 1: Enhanced Lexical Editor');
-    
-    // Focus and clear
-    inputElement.focus();
-    await this.delay(100);
-    
-    // Clear existing content
-    inputElement.innerHTML = '';
-    inputElement.textContent = '';
-    
-    // Create proper Lexical structure with word-level spans
-    const paragraph = document.createElement('p');
-    paragraph.setAttribute('dir', 'ltr');
-    
-    // Split text into words and create individual spans
-    const words = text.split(/\s+/);
-    words.forEach((word, index) => {
-      const span = document.createElement('span');
-      span.setAttribute('data-lexical-text', 'true');
-      span.textContent = word + (index < words.length - 1 ? ' ' : '');
-      paragraph.appendChild(span);
-    });
-    
-    inputElement.appendChild(paragraph);
-    
-    // Dispatch events with proper timing
-    await this.delay(50);
-    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-    await this.delay(50);
-    inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-    await this.delay(50);
-    
-    // Trigger React synthetic events
-    inputElement.dispatchEvent(new InputEvent('input', {
-      inputType: 'insertText',
-      data: text,
-      bubbles: true,
-      cancelable: true
-    }));
-  }
-
-  async strategy2_ReactSynthetic(inputElement, text) {
-    this.log('🔄 Strategy 2: React Synthetic Events');
-    
-    inputElement.focus();
-    await this.delay(100);
-    
-    // Clear content
-    inputElement.innerHTML = '';
-    inputElement.textContent = '';
-    
-    // Simulate React's synthetic event pattern
-    const beforeInputEvent = new InputEvent('beforeinput', {
-      inputType: 'insertText',
-      data: text,
-      bubbles: true,
-      cancelable: true
-    });
-    
-    inputElement.dispatchEvent(beforeInputEvent);
-    
-    // Set content
-    if (inputElement.contentEditable === 'true') {
-      inputElement.textContent = text;
-    } else {
-      inputElement.value = text;
-    }
-    
-    // Dispatch input event
-    const inputEvent = new InputEvent('input', {
-      inputType: 'insertText',
-      data: text,
-      bubbles: true,
-      cancelable: true
-    });
-    
-    inputElement.dispatchEvent(inputEvent);
-    
-    // Dispatch change event
-    const changeEvent = new Event('change', { bubbles: true });
-    inputElement.dispatchEvent(changeEvent);
-    
-    await this.delay(100);
-  }
-
-  async strategy3_WordLevelSpans(inputElement, text) {
-    this.log('🔄 Strategy 3: Word Level Spans');
-    
-    inputElement.focus();
-    await this.delay(100);
-    
-    // Clear content
-    inputElement.innerHTML = '';
-    inputElement.textContent = '';
-    
-    // Create paragraph
-    const paragraph = document.createElement('p');
-    paragraph.setAttribute('dir', 'ltr');
-    
-    // Split into words and create individual spans
-    const words = text.split(/\s+/);
-    words.forEach((word, index) => {
-      const span = document.createElement('span');
-      span.setAttribute('data-lexical-text', 'true');
-      span.textContent = word;
-      paragraph.appendChild(span);
-      
-      // Add space between words (except last word)
-      if (index < words.length - 1) {
-        const spaceSpan = document.createElement('span');
-        spaceSpan.setAttribute('data-lexical-text', 'true');
-        spaceSpan.textContent = ' ';
-        paragraph.appendChild(spaceSpan);
-      }
-    });
-    
-    inputElement.appendChild(paragraph);
-    
-    // Dispatch events
-    await this.delay(50);
-    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-    await this.delay(50);
-    inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
-  async strategy4_ClipboardSimulation(inputElement, text) {
-    this.log('🔄 Strategy 4: Clipboard Simulation');
-    
-    // Copy to clipboard
-    await navigator.clipboard.writeText(text);
-    
-    inputElement.focus();
-    await this.delay(200);
-    
-    // Simulate Ctrl+V
-    const keyDownEvent = new KeyboardEvent('keydown', {
-      key: 'v',
-      code: 'KeyV',
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true
-    });
-    
-    const keyUpEvent = new KeyboardEvent('keyup', {
-      key: 'v',
-      code: 'KeyV',
-      ctrlKey: true,
-      bubbles: true
-    });
-    
-    inputElement.dispatchEvent(keyDownEvent);
-    await this.delay(50);
-    inputElement.dispatchEvent(keyUpEvent);
-    
-    // Also try Cmd+V for Mac
-    const cmdKeyDownEvent = new KeyboardEvent('keydown', {
-      key: 'v',
-      code: 'KeyV',
-      metaKey: true,
-      bubbles: true,
-      cancelable: true
-    });
-    
-    const cmdKeyUpEvent = new KeyboardEvent('keyup', {
-      key: 'v',
-      code: 'KeyV',
-      metaKey: true,
-      bubbles: true
-    });
-    
-    await this.delay(100);
-    inputElement.dispatchEvent(cmdKeyDownEvent);
-    await this.delay(50);
-    inputElement.dispatchEvent(cmdKeyUpEvent);
-  }
-
-  async validateInsertion(inputElement, expectedText) {
-    await this.delay(200);
-    
-    const actualText = inputElement.contentEditable === 'true' 
-      ? inputElement.textContent 
-      : inputElement.value;
-    
-    const isSuccess = actualText && actualText.trim().length > 0;
-    
-    this.log('Validation result:', {
-      expected: expectedText.substring(0, 50) + '...',
-      actual: actualText ? actualText.substring(0, 50) + '...' : 'empty',
-      success: isSuccess
-    });
-    
-    return isSuccess;
-  }
-
-  delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-}
-
-// Debug helper function
-window.debugPerplexity = function() {
-  console.log('🔍 Perplexity Debug Helper');
-  
-  const inputs = [
-    ...document.querySelectorAll('textarea'),
-    ...document.querySelectorAll('div[contenteditable="true"]'),
-    ...document.querySelectorAll('[data-testid*="search"]'),
-    ...document.querySelectorAll('[placeholder*="Ask"]')
-  ];
-  
-  console.log(`Found ${inputs.length} potential input elements`);
-  
-  inputs.forEach((input, index) => {
-    const rect = input.getBoundingClientRect();
-    console.log(`Input ${index + 1}:`, {
-      tagName: input.tagName,
-      className: input.className,
-      contentEditable: input.contentEditable,
-      type: input.type,
-      placeholder: input.placeholder,
-      visible: rect.width > 0 && rect.height > 0,
-      size: `${rect.width}x${rect.height}`
-    });
-  });
-  
-  // Test insertion
-  const mainInput = inputs.find(input => {
-    const rect = input.getBoundingClientRect();
-    return rect.width > 100 && rect.height > 20;
-  });
-  
-  if (mainInput) {
-    console.log('Testing insertion on:', mainInput);
-    const inserter = new PerplexityTextInserter();
-    inserter.insertTextForPerplexity(mainInput, "Test prompt from debug helper");
-  }
-};
-
 class CleanEnhancer {
   constructor() {
     this.icons = new Map();
@@ -756,20 +447,6 @@ class CleanEnhancer {
   }
 
   setupInputDetection() {
-    // Perplexity AI specific selectors (added first for priority)
-    const perplexitySelectors = [
-      'textarea[placeholder*="Ask anything"]',
-      'textarea[placeholder*="Ask"]',
-      'textarea[data-testid*="search"]',
-      'textarea[data-testid*="input"]',
-      'div[contenteditable="true"][data-testid*="search"]',
-      'div[contenteditable="true"][data-testid*="input"]',
-      'textarea[class*="search"]',
-      'textarea[class*="input"]',
-      'div[contenteditable="true"][class*="search"]',
-      'div[contenteditable="true"][class*="input"]'
-    ];
-
     // Meta AI selectors (comprehensive)
     const metaAISelectors = [
       'textarea[placeholder*="Ask"]',
@@ -797,7 +474,7 @@ class CleanEnhancer {
       'div[contenteditable="true"]'
     ];
 
-    this.allSelectors = [...perplexitySelectors, ...metaAISelectors, ...otherSelectors];
+    this.allSelectors = [...metaAISelectors, ...otherSelectors];
 
     // Watch for new inputs (but don't scan automatically)
     const observer = new MutationObserver((mutations) => {
@@ -1309,34 +986,14 @@ class CleanEnhancer {
     
     insertBtn.disabled = false;
     insertBtn.style.filter = '';
-      insertBtn.onclick = async () => {
-        console.log('🔘 Insert button clicked');
-        console.log('📝 Text to insert:', enhancedText.substring(0, 100) + '...');
-        console.log('🎯 Target element:', inputElement.tagName, inputElement.className);
-        
-        // Check if we're on Perplexity AI
-        if (window.location.hostname.includes('perplexity.ai')) {
-          console.log('🎯 Perplexity detected, using enhanced insertion');
-          
-          try {
-            // Try enhanced insertion with multiple strategies
-            await this.insertTextForPerplexity(inputElement, enhancedText);
-            console.log('✅ Enhanced Perplexity insertion successful');
-          } catch (error) {
-            console.log('❌ Enhanced Perplexity insertion failed, trying clipboard fallback');
-            // If enhanced insertion fails, use clipboard method
-            await this.insertTextViaClipboard(enhancedText, inputElement);
-          }
-        } else {
-          // For other platforms, use standard insertion
-          this.insertText(enhancedText, inputElement);
-        }
-        
+      insertBtn.onclick = () => {
+        this.insertText(enhancedText, inputElement);
         this.closePopup();
-        // Stop icon spinning after insertion
-        const icon = this.icons.get(inputElement);
-        if (icon && icon._logo) icon._logo.classList.remove('ce-logo-spin');
-      };
+      // Notification removed
+      // Stop icon spinning after insertion
+      const icon = this.icons.get(inputElement);
+      if (icon && icon._logo) icon._logo.classList.remove('ce-logo-spin');
+    };
     
     // Show enhanced text instantly, no animation, no delay
     content.innerHTML = `<div id="animated-text" style="font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;">${enhancedText}</div>`;
@@ -1344,53 +1001,13 @@ class CleanEnhancer {
 
   async enhancePrompt(text) {
     try {
-      // First check if user is authenticated
-      const token = await new Promise((resolve) => {
-        chrome.storage.local.get(['google_token'], (result) => {
-          resolve(result.google_token || null);
-        });
-      });
-
-      // If user is authenticated, use authenticated endpoint first (to track stats)
-      if (token) {
-        console.log('🔑 User authenticated, using tracked endpoint...');
-        
-        try {
-          const response = await fetch('http://localhost:8004/api/v1/enhance?fast_mode=true', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              prompt: text,
-              url: window.location.href,
-              context: null
-            })
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            console.log(`✅ Enhanced with authenticated backend:`, result.enhanced.substring(0, 100) + '...');
-            
-            // Increment enhanced count since this was tracked
-            this.incrementEnhancedCount();
-            
-            return result.enhanced;
-          } else {
-            console.log(`⚠️ Authenticated endpoint failed (${response.status}), trying quick test...`);
-          }
-        } catch (error) {
-          console.log('⚠️ Authenticated endpoint error, trying quick test...', error.message);
-        }
-      }
-
-      // Fallback to quick test endpoint (no auth, no tracking)
-      console.log('🚀 Using quick test endpoint (no tracking)...');
+      // First try the quick test endpoint (no auth required) with retry mechanism
+      console.log('🚀 Trying quick test endpoint...');
       
       let quickResponse;
       let retryCount = 0;
       const maxRetries = 1;
+      let retryDelay = 1000; // Initial delay in milliseconds
       
       while (retryCount <= maxRetries) {
         try {
@@ -1401,7 +1018,7 @@ class CleanEnhancer {
             },
             body: JSON.stringify({
               prompt: text,
-              url: window.location.href
+              target_model: 'gpt-4o-mini'
             })
           });
           
@@ -1436,12 +1053,87 @@ class CleanEnhancer {
         }
       }
       
-      // If all API calls fail, use fallback
-      console.log('🔄 All API calls failed, using fallback enhancement');
+      // If quick test fails, try the authenticated endpoint
+      console.log('🔄 Quick test failed, trying authenticated endpoint...');
+      
+      const token = await new Promise((resolve) => {
+        chrome.storage.local.get(['google_token'], (result) => {
+          resolve(result.google_token || null);
+        });
+      });
+
+      if (!token) {
+        console.log('⚠️ No auth token, using fallback enhancement');
+        return this.getFallbackEnhancement(text);
+      }
+
+      // Send prompt to backend - let backend auto-detect model and set system prompts with retry
+      let response;
+      let authRetryCount = 0;
+      const maxAuthRetries = 1;
+      
+      while (authRetryCount <= maxAuthRetries) {
+        try {
+          response = await fetch('http://localhost:8004/api/v1/enhance?fast_mode=true', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              prompt: text,
+              url: window.location.href,
+              context: null
+            })
+          });
+          
+          if (response.ok) {
+            break; // Success, exit retry loop
+          }
+          
+          const errorData = await response.json().catch(() => ({}));
+          console.warn(`⚠️ Backend API failed (${response.status}):`, errorData);
+          
+          // Handle authentication errors specifically
+          if (response.status === 401) {
+            console.log('⚠️ Authentication failed, using fallback enhancement');
+            return this.getFallbackEnhancement(text);
+          } else if (response.status === 403) {
+            console.log('⚠️ Access denied, using fallback enhancement');
+            return this.getFallbackEnhancement(text);
+          } else if (response.status === 429 || response.status === 500) {
+            if (authRetryCount < maxAuthRetries) {
+              console.log(`⚠️ Backend error ${response.status}, retrying in 2 seconds...`);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              authRetryCount++;
+              continue;
+            }
+          }
+          
+          // If we get here, it's a non-retryable error or max retries reached
+          console.log(`⚠️ API call failed (${response.status}), using fallback enhancement`);
           return this.getFallbackEnhancement(text);
           
         } catch (error) {
-      console.error('❌ Enhancement failed:', error.message);
+          if (authRetryCount < maxAuthRetries) {
+            console.log(`⚠️ Network error, retrying in 2 seconds...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            authRetryCount++;
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      const result = await response.json();
+      console.log(`✅ Enhanced with authenticated backend:`, result.enhanced.substring(0, 100) + '...');
+      
+      // Increment enhanced count in storage
+      this.incrementEnhancedCount();
+      
+      return result.enhanced;
+    } catch (error) {
+      console.error('❌ Backend API failed:', error.message);
       
       // Always use fallback on any error
       console.log('🔄 Using fallback enhancement due to error');
@@ -1508,15 +1200,10 @@ Additional context: Please structure your response in a clear, organized manner 
   }
 
   insertText(text, inputElement) {
-    console.log('🔧 Inserting text into element:', inputElement.tagName, inputElement.className);
-    
     if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
-      console.log('📝 Using value property for textarea/input');
       inputElement.value = text;
       inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-      inputElement.dispatchEvent(new Event('change', { bubbles: true }));
     } else if (inputElement.contentEditable === 'true') {
-      console.log('📝 Using innerHTML for contentEditable');
       // Convert markdown tables and newlines to HTML
       let html = text
         // Convert markdown tables to HTML tables (simple version)
@@ -1531,324 +1218,9 @@ Additional context: Please structure your response in a clear, organized manner 
       html = html.replace(/(<\/table>)(<table>)+/g, '');
       inputElement.innerHTML = html;
       inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-    } else {
-      console.log('⚠️ Unknown element type, trying basic methods');
-      
-      // Try basic methods for unknown elements
-      if (inputElement.value !== undefined) {
-        console.log('📝 Trying value property');
-        inputElement.value = text;
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-      } else if (inputElement.textContent !== undefined) {
-        console.log('📝 Trying textContent');
-        inputElement.textContent = text;
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-      } else {
-        console.log('📝 Trying innerHTML');
-        inputElement.innerHTML = text;
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-      }
     }
-    
     // Focus the input
-    inputElement.focus();
-    console.log('✅ Text insertion completed');
-  }
-
-  insertTextForPerplexity(inputElement, text) {
-    console.log('🎯 Using enhanced Perplexity-specific insertion method');
-    
-    return new Promise(async (resolve, reject) => {
-      try {
-        // Focus the input first
-        inputElement.focus();
-        await this.delay(100);
-        
-        // Clear existing content
-        inputElement.textContent = '';
-        inputElement.innerHTML = '';
-        
-        // Simple approach - just set textContent
-        inputElement.textContent = text;
-        
-        // Trigger events
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-        
-        await this.delay(200);
-        
-        // Verify insertion
-        const actualText = inputElement.textContent || '';
-        if (actualText.includes(text.substring(0, 20))) {
-          console.log('✅ Perplexity insertion successful');
-        resolve();
-        } else {
-          console.log('⚠️ Insertion verification failed, but continuing...');
-          resolve(); // Don't fail, just continue
-        }
-        
-      } catch (error) {
-        console.error('❌ Perplexity insertion failed:', error);
-        // Don't reject, just resolve to continue
-        resolve();
-      }
-    });
-  }
-
-
-
-  delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  async typeInto(inputElement, text) {
-    console.log('⌨️ Using simulated typing for Perplexity');
-    console.log('🔍 Element properties:', {
-      tagName: inputElement.tagName,
-      className: inputElement.className,
-      contentEditable: inputElement.contentEditable,
-      type: inputElement.type
-    });
-    
-    try {
-      // Focus the input first
       inputElement.focus();
-      
-      // Clear existing content based on element type
-      if (inputElement.contentEditable === 'true' || inputElement.tagName === 'DIV') {
-        console.log('🧹 Clearing contentEditable element');
-        inputElement.innerHTML = '';
-        inputElement.textContent = '';
-        
-        // For Perplexity's Lexical editor, create the initial structure
-        if (window.location.hostname.includes('perplexity.ai')) {
-          console.log('🎯 Setting up Perplexity Lexical editor structure');
-          
-          // Try to find existing Lexical structure first
-          let existingParagraph = inputElement.querySelector('p[dir="ltr"]');
-          let existingSpan = inputElement.querySelector('span[data-lexical-text="true"]');
-          
-          if (!existingParagraph) {
-            const paragraph = document.createElement('p');
-            paragraph.setAttribute('dir', 'ltr');
-            inputElement.appendChild(paragraph);
-            existingParagraph = paragraph;
-          }
-          
-          if (!existingSpan) {
-            const span = document.createElement('span');
-            span.setAttribute('data-lexical-text', 'true');
-            existingParagraph.appendChild(span);
-            existingSpan = span;
-          }
-          
-          console.log('✅ Lexical structure ready:', { paragraph: !!existingParagraph, span: !!existingSpan });
-        }
-      } else {
-        console.log('🧹 Clearing input/textarea element');
-        inputElement.value = '';
-      }
-      
-      inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-      
-      // Wait a bit for focus to settle
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
-      // Type character by character
-      console.log('⌨️ Starting character-by-character typing...');
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        
-        // Fire beforeinput so any listeners prepare for incoming text
-        inputElement.dispatchEvent(new InputEvent('beforeinput', {
-          inputType: 'insertText',
-          data: char,
-          bubbles: true
-        }));
-        
-        // Append one character based on element type
-        if (inputElement.contentEditable === 'true' || inputElement.tagName === 'DIV') {
-          if (window.location.hostname.includes('perplexity.ai')) {
-            // For Perplexity's Lexical editor, update the span content
-            const span = inputElement.querySelector('span[data-lexical-text="true"]');
-            if (span) {
-              span.textContent = (span.textContent || '') + char;
-            } else {
-              // Fallback to textContent if span not found
-              const currentText = inputElement.textContent || '';
-              inputElement.textContent = currentText + char;
-            }
-          } else {
-            const currentText = inputElement.textContent || '';
-            inputElement.textContent = currentText + char;
-          }
-        } else {
-          const val = inputElement.value || '';
-          inputElement.value = val + char;
-        }
-        
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-        
-        // Progress indicator every 50 characters
-        if (i % 50 === 0) {
-          console.log(`⌨️ Typing progress: ${i}/${text.length} characters`);
-        }
-        
-        // Tiny delay so it looks human
-        await new Promise(r => setTimeout(r, 15));
-      }
-      
-      // Final change event
-      inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-      console.log('✅ Simulated typing completed successfully');
-      
-      // Verify the text was inserted
-      const finalText = inputElement.contentEditable === 'true' ? 
-        inputElement.textContent : inputElement.value;
-      console.log('📝 Final text length:', finalText.length);
-      console.log('📝 Text preview:', finalText.substring(0, 100) + '...');
-      
-    } catch (e) {
-      console.error('❌ Simulated typing failed:', e);
-      // Fallback to clipboard method
-      await this.insertTextViaClipboard(text, inputElement);
-    }
-  }
-
-  async insertTextViaClipboard(text, inputElement) {
-    try {
-      console.log('📋 Using clipboard fallback for Perplexity');
-      
-      // Copy text to clipboard
-      await navigator.clipboard.writeText(text);
-      console.log('✅ Text copied to clipboard');
-      
-      // Focus the input
-      inputElement.focus();
-      
-      // Wait a bit for focus to settle
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Try multiple paste methods for Perplexity
-      if (window.location.hostname.includes('perplexity.ai')) {
-        console.log('🎯 Trying Perplexity-specific paste methods');
-        
-        // Method 1: Standard Ctrl+V
-        inputElement.dispatchEvent(new KeyboardEvent('keydown', {
-          key: 'v',
-          code: 'KeyV',
-          ctrlKey: true,
-          bubbles: true,
-          cancelable: true
-        }));
-        
-        inputElement.dispatchEvent(new KeyboardEvent('keyup', {
-          key: 'v',
-          code: 'KeyV',
-          ctrlKey: true,
-          bubbles: true
-        }));
-        
-        // Wait a bit
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Method 2: Try Cmd+V for Mac users
-        inputElement.dispatchEvent(new KeyboardEvent('keydown', {
-          key: 'v',
-          code: 'KeyV',
-          metaKey: true,
-          bubbles: true,
-          cancelable: true
-        }));
-        
-        inputElement.dispatchEvent(new KeyboardEvent('keyup', {
-          key: 'v',
-          code: 'KeyV',
-          metaKey: true,
-          bubbles: true
-        }));
-        
-        // Method 3: Try right-click paste simulation
-        setTimeout(() => {
-          inputElement.dispatchEvent(new MouseEvent('contextmenu', {
-            bubbles: true,
-            cancelable: true
-          }));
-        }, 50);
-        
-      } else {
-        // Standard paste for other platforms
-        inputElement.dispatchEvent(new KeyboardEvent('keydown', {
-          key: 'v',
-          code: 'KeyV',
-          ctrlKey: true,
-          bubbles: true
-        }));
-        
-        inputElement.dispatchEvent(new KeyboardEvent('keyup', {
-          key: 'v',
-          code: 'KeyV',
-          ctrlKey: true,
-          bubbles: true
-        }));
-      }
-      
-      console.log('✅ Clipboard paste attempted');
-      
-      // Show user notification
-      this.showClipboardNotification(text);
-      
-    } catch (e) {
-      console.error('❌ Clipboard fallback failed:', e);
-      this.showClipboardNotification(text);
-    }
-  }
-
-  showClipboardNotification(text) {
-    // Create a temporary notification
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #1a1a1a;
-      color: #f0f0f0;
-      padding: 16px;
-      border-radius: 8px;
-      border: 1px solid #333;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      z-index: 1000001;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 14px;
-      max-width: 350px;
-      word-wrap: break-word;
-    `;
-    
-    const isPerplexity = window.location.hostname.includes('perplexity.ai');
-    const platformText = isPerplexity ? 
-      'Press Ctrl+V (or Cmd+V) to paste into Perplexity\'s search field.' :
-      'Press Ctrl+V (or Cmd+V) to paste into the input field.';
-    
-    notification.innerHTML = `
-      <div style="margin-bottom: 8px; font-weight: 600; color: #4CAF50;">📋 Enhanced prompt copied!</div>
-      <div style="margin-bottom: 12px; font-size: 12px; color: #aaa;">
-        ${platformText}
-      </div>
-      <div style="font-size: 12px; color: #888; max-height: 100px; overflow-y: auto; border-top: 1px solid #333; padding-top: 8px;">
-        <strong>Preview:</strong><br>
-        ${text.substring(0, 150)}${text.length > 150 ? '...' : ''}
-      </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Remove after 8 seconds (longer for Perplexity users)
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.remove();
-      }
-    }, isPerplexity ? 8000 : 5000);
   }
 
   closePopup() {
@@ -1963,16 +1335,20 @@ Additional context: Please structure your response in a clear, organized manner 
 
   async checkLoginStatus() {
     try {
-      // Get user info from storage
+      // Get user info and extension state from storage
       const result = await new Promise((resolve) => {
-        chrome.storage.local.get(['user_info'], resolve);
+        chrome.storage.local.get(['user_info', 'extension_active'], resolve);
       });
       
       this.userInfo = result.user_info;
       if (this.userInfo) {
         console.log('✅ User is logged in:', this.userInfo.name);
-        // Don't auto-start extension - user must click Start button
-        console.log('⏸️ Extension waiting for user to click Start');
+        
+        // Check if extension should be active
+        if (result.extension_active) {
+          console.log('🔄 Extension was active, restarting...');
+          this.startExtension();
+        }
       } else {
         console.log('❌ No user logged in');
       }

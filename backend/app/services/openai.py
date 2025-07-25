@@ -2,6 +2,7 @@ import httpx
 from typing import Optional
 from openai import AsyncOpenAI
 import re
+import asyncio
 
 class OpenAIService:
     """OpenAI API integration"""
@@ -15,78 +16,52 @@ class OpenAIService:
         }
     
     def _get_model_specific_system_prompt(self, target_model: str) -> str:
-        """Get professional system prompt for prompt optimization"""
+        """Get model-specific system prompt from prompts.py"""
         
-        # Professional system prompt for all models
-        system_prompt = """You are an expert prompt engineer with deep expertise in AI model optimization. Your mission is to transform user prompts into exceptional, highly-effective prompts that produce outstanding results.
-
-TRANSFORMATION APPROACH:
-Transform this prompt using proven prompt engineering techniques while maintaining natural, professional language. Focus on:
-
-1. **Clarity & Specificity**: Make the intent crystal clear and actionable
-2. **Strategic Structure**: Add logical organization that guides the AI's thinking
-3. **Context Enhancement**: Provide relevant background when helpful
-4. **Output Specification**: Define clear expectations for the response format
-5. **Quality Constraints**: Set appropriate boundaries and requirements
-
-ESSENTIAL IMPROVEMENTS:
-1. **Role Assignment**: When helpful, establish expertise context ("You are a [specific expert]")
-2. **Structured Thinking**: For complex tasks, add "Let's approach this systematically"
-3. **Output Format**: Specify response structure when beneficial
-4. **Step-by-Step Reasoning**: For analytical tasks, request "Please walk through your reasoning"
-5. **Concrete Examples**: Include relevant examples when they clarify the request
-6. **Quality Standards**: Set clear expectations for depth and accuracy
-
-PROFESSIONAL TRANSFORMATION EXAMPLES:
-
-- "write code" → "You are an experienced software engineer. Please write a Python function that [specific task]. Include proper error handling, type hints, and a comprehensive docstring. Format your response with the code first, followed by a brief explanation of the approach and any important considerations."
-
-- "help me understand" → "I'd like to understand [specific topic] thoroughly. Please provide a comprehensive explanation that includes: 1) Core concepts and definitions 2) Practical examples or applications 3) Common misconceptions or pitfalls to avoid. Format your response in clear sections with examples where helpful."
-
-- "analyze this" → "Please conduct a thorough analysis of [specific subject]. Walk through your reasoning step-by-step, considering multiple perspectives and potential factors. Include relevant data or examples to support your conclusions. Format your response with clear sections for different aspects of the analysis."
-
-OPTIMIZATION PRINCIPLES:
-- Maintain natural, professional tone
-- Add structure that enhances clarity without being robotic
-- Specify output format only when it adds value
-- Include examples when they improve understanding
-- Set appropriate depth and scope expectations
-
-Return ONLY the optimized prompt."""
+        # Import the ModelSpecificPrompts class
+        from app.core.prompts import ModelSpecificPrompts
+        
+        # Use the model-specific prompts from prompts.py
+        system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
+        
+        # Add explicit instruction to return only the enhanced prompt
+        system_prompt += "\n\nCRITICAL: Return ONLY the enhanced prompt. Do NOT include any explanations, meta-commentary, or repeat the system prompt. Just return the transformed user prompt."
         
         return system_prompt
 
     async def enhance_with_model_specific_prompt(self, prompt: str, target_model: str) -> str:
-        """Use GPT-4o mini to enhance prompts with professional system prompts"""
+        """Use GPT-4o mini to enhance prompts with model-specific system prompts"""
         
         # Don't enhance simple/casual prompts
         if self._is_simple_prompt(prompt):
             return prompt
             
         try:
-            # Get the professional system prompt
-            system_prompt = self._get_model_specific_system_prompt(target_model)
+            # Get the model-specific system prompt from prompts.py
+            from app.core.prompts import ModelSpecificPrompts
+            model_system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
             
-            # Create the enhancement request message
-            enhancement_request = f"""Transform this prompt into an exceptional, highly-effective prompt:
+            # Create the enhancement request using the model-specific prompt
+            enhancement_request = f"""Transform this user prompt for maximum effectiveness with {target_model}:
 
-"{prompt}"
+USER PROMPT: "{prompt}"
 
-Apply proven prompt engineering techniques to make it significantly more effective while maintaining natural, professional language."""
+CRITICAL: Return ONLY the enhanced version of the user's prompt. Do NOT include any explanations, meta-commentary, or repeat the system prompt. Just return the transformed user prompt."""
 
             messages = [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": model_system_prompt},
                 {"role": "user", "content": enhancement_request}
             ]
             
             response = await self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Use GPT-4o mini for all enhancements
+                model="gpt-4o-mini",
                 messages=messages,
-                temperature=2.0,  # Maximum creativity for highly varied enhancements
-                max_tokens=2000,  # Increased length for more detailed prompts
-                top_p=0.95,  # Higher top_p for more diverse outputs
-                frequency_penalty=0.1,  # Slight penalty to reduce repetition
-                presence_penalty=0.1  # Encourage more diverse content
+                temperature=0.3,
+                max_tokens=400,
+                top_p=0.95,
+                frequency_penalty=0.1,
+                presence_penalty=0.1,
+                timeout=30
             )
             
             enhanced_prompt = response.choices[0].message.content.strip()
@@ -140,11 +115,11 @@ OPTIMIZED PROMPT:"""
                     {"role": "system", "content": "You are an expert at rewriting prompts to be more specific and effective. Return only the enhanced prompt, no explanations."},
                     {"role": "user", "content": enhancement_prompt}
                 ],
-                temperature=2.0,  # Maximum creativity for highly varied enhancements
-                max_tokens=500,  # Increased length for better quality
-                top_p=0.95,  # Higher top_p for more diverse outputs
-                frequency_penalty=0.1,  # Slight penalty to reduce repetition
-                presence_penalty=0.1  # Encourage more diverse content
+                temperature=0.7,  # Reduced for faster, more consistent responses
+                max_tokens=300,  # Reduced for faster response
+                top_p=0.9,  # Slightly reduced for speed
+                frequency_penalty=0.0,  # Removed for speed
+                presence_penalty=0.0  # Removed for speed
             )
             
             return self.clean_enhanced_text(response.choices[0].message.content.strip())
@@ -188,9 +163,18 @@ OPTIMIZED PROMPT:"""
         return False
 
     def clean_enhanced_text(self, text):
-        # Remove any meta-commentary
+        # Remove common prefixes
         text = re.sub(r'^\s*Enhanced prompt:\s*', '', text, flags=re.IGNORECASE)
         text = re.sub(r'^\s*Here\'s the enhanced prompt:\s*', '', text, flags=re.IGNORECASE)
         text = re.sub(r'^\s*Improved prompt:\s*', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'^\s*User prompt:\s*', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'^\s*Original prompt:\s*', '', text, flags=re.IGNORECASE)
+        
+        # Remove any quotes at the beginning and end
         text = text.strip(' "\'')
+        
+        # If the response is too short or looks like an error, return a basic enhancement
+        if len(text) < 10 or "I cannot" in text or "I can't" in text:
+            return f"Please provide a detailed response to: {text}"
+        
         return text

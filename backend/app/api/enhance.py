@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, Header, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.models.request import EnhanceRequest, AnalyzeRequest, LLMModel
 from app.models.response import EnhancementResult, PromptAnalysis, ErrorResponse
@@ -6,6 +6,8 @@ from app.core.enhancer import PromptEnhancer
 from app.core.analyzer import PromptAnalyzer
 from app.core.model_specific_enhancer import ModelSpecificEnhancer
 from app.services.openai import OpenAIService
+from app.utils.auth import get_email_from_token, get_user_info_from_token
+from app.services.database import db_service
 from config import settings
 import logging
 import time
@@ -18,17 +20,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["enhancement"])
 
 def get_enhancer():
-    """Dependency to get unified model-specific enhancer instance"""
+    """Dependency to get OpenAI GPT-4o-mini enhancer instance"""
     try:
-        # Initialize OpenAI service with fallback
-        if not settings.openai_api_key:
-            logger.warning("No OpenAI API key found. Please set OPENAI_API_KEY environment variable.")
-            # Return a fallback enhancer that uses rule-based enhancement
+        openai_service = None
+        
+        # Initialize OpenAI service (primary)
+        if settings.openai_api_key:
+            try:
+                openai_service = OpenAIService(settings.openai_api_key)
+                logger.info("✅ OpenAI GPT-4o-mini service initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize OpenAI service: {str(e)}")
+        
+        # If OpenAI service is not available, use basic fallback
+        if not openai_service:
+            logger.warning("No OpenAI service available. Using basic fallback enhancement.")
             from app.core.enhancer import PromptEnhancer
             return PromptEnhancer()
-        
-        openai_service = OpenAIService(settings.openai_api_key)
-        return ModelSpecificEnhancer(openai_service=openai_service)
+            
+        return ModelSpecificEnhancer(
+            openai_service=openai_service
+        )
         
     except Exception as e:
         logger.error(f"Failed to initialize ModelSpecificEnhancer: {str(e)}")
@@ -39,6 +51,14 @@ def get_enhancer():
 def get_analyzer():
     """Dependency to get analyzer instance"""
     return PromptAnalyzer()
+
+def get_current_user_email(authorization: str = Header(...)) -> str:
+    """Dependency to get current user email from Google token"""
+    return get_email_from_token(authorization)
+
+def get_current_user_info(authorization: str = Header(...)) -> dict:
+    """Dependency to get current user info from Google token"""
+    return get_user_info_from_token(authorization)
 
 def detect_model_from_url(url: str) -> LLMModel:
     """Auto-detect target model from URL"""
@@ -63,8 +83,11 @@ def detect_model_from_url(url: str) -> LLMModel:
 @router.post("/enhance", response_model=EnhancementResult)
 async def enhance_prompt(
     request: EnhanceRequest,
+    user_email: str = Depends(get_current_user_email),
+    user_info: dict = Depends(get_current_user_info),
     enhancer: ModelSpecificEnhancer = Depends(get_enhancer),
-    client_request: Request = None
+    client_request: Request = None,
+    fast_mode: bool = Query(default=False, description="Skip database operations for faster response")
 ):
     """Enhance a prompt - automatically detects target model and uses appropriate system prompts"""
     start_time = time.time()
@@ -83,6 +106,23 @@ async def enhance_prompt(
         )
     
     try:
+        # ✅ User authentication verified - now you have the user's email and info
+        if not fast_mode:
+            logger.info(f"Verified user: {user_email} (Name: {user_info.get('name', 'Unknown')})")
+        
+        # 📊 Track user in database (ALWAYS CREATE FOR UI)
+        try:
+            user_record = await db_service.get_or_create_user(email=user_email, user_info=user_info)
+            if not fast_mode:
+                logger.info(f"User tracked in database: {user_email} (ID: {user_record['id']})")
+        except Exception as e:
+            if not fast_mode:
+                logger.error(f"Failed to track user in database: {e}")
+        
+        # 🆓 No usage limits - unlimited access for all users
+        if not fast_mode:
+            logger.info(f"User {user_email} - unlimited access (no limits)")
+        
         # Auto-detect target model from URL/context
         referer = client_request.headers.get('referer', '') if client_request else ''
         url_to_check = request.url or referer
@@ -91,11 +131,12 @@ async def enhance_prompt(
         # Override with request target_model if provided, otherwise use detected
         target_model = request.target_model if request.target_model else detected_model
         
-        # Log request for monitoring
-        client_ip = getattr(client_request, 'client', {}).host if client_request else 'unknown'
-        logger.info(f"Enhancement request from {client_ip}: {request.prompt[:50]}...")
-        logger.info(f"Auto-detected model: {detected_model.value} from URL: {url_to_check}")
-        logger.info(f"Using target model: {target_model.value} (enhanced by GPT-4o mini with model-specific prompts)")
+        # Log request for monitoring (REDUCED IN FAST MODE)
+        if not fast_mode:
+            client_ip = getattr(client_request, 'client', {}).host if client_request else 'unknown'
+            logger.info(f"Enhancement request from {client_ip} (User: {user_email}): {request.prompt[:50]}...")
+            logger.info(f"Auto-detected model: {detected_model.value} from URL: {url_to_check}")
+            logger.info(f"Using target model: {target_model.value} (enhanced by GPT-4o mini with model-specific prompts)")
         
         result = await enhancer.enhance(
             prompt=request.prompt,
@@ -103,9 +144,20 @@ async def enhance_prompt(
             context=request.context
         )
         
-        # Log successful response
+        # Log successful response (REDUCED IN FAST MODE)
         processing_time = time.time() - start_time
-        logger.info(f"Enhancement completed in {processing_time:.2f}s for {client_ip}")
+        if not fast_mode:
+            logger.info(f"Enhancement completed in {processing_time:.2f}s for {client_ip}")
+        
+        # 📊 Track successful enhancement in database (ALWAYS TRACK FOR UI)
+        try:
+            # Increment user's prompt count (always track for popup UI)
+            new_count = await db_service.increment_user_prompts(email=user_email)
+            logger.info(f"✅ User stats updated: {user_email} -> {new_count} prompts")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to track enhancement in database: {e}")
+            # Don't fail the request, just log the error
         
         return result
         
@@ -163,25 +215,38 @@ async def health_check():
                 "configured": bool(enhancer.openai_service),
                 "purpose": "Primary LLM for all enhancements"
             },
-            "unified_enhancement": {
+            "gpt_4o_mini": {
+                "available": bool(settings.openai_api_key),
+                "configured": bool(enhancer.openai_service),
+                "purpose": "GPT-4o-mini for all model-specific enhancements"
+            },
+            "model_specific_enhancement": {
                 "available": True,
                 "configured": True,
-                "description": "GPT-4o mini with model-specific prompts"
+                "description": "GPT-4o-mini with model-specific prompts for all target models"
             }
         }
         
-        # Check if OpenAI service is available
+        # Check service availability
         openai_available = services_status["openai"]["available"]
         
-        health_status = "healthy" if openai_available else "unhealthy"
+        # Determine health status and strategy
+        if openai_available:
+            health_status = "healthy"
+            strategy = "OpenAI GPT-4o-mini for all enhancements with model-specific prompts"
+            message = "OpenAI GPT-4o-mini service available for all model enhancements"
+        else:
+            health_status = "unhealthy"
+            strategy = "Basic rule-based enhancement only"
+            message = "No OpenAI service available - using basic enhancement"
         
         return {
             "status": health_status,
             "version": settings.version,
             "timestamp": time.time(),
             "services": services_status,
-            "enhancement_strategy": "GPT-4o mini with model-specific system prompts",
-            "message": "OpenAI service is available for unified enhancement" if openai_available else "OpenAI service is required for enhancement"
+            "enhancement_strategy": strategy,
+            "message": message
         }
         
     except Exception as e:
@@ -203,8 +268,8 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
         return {
             "system": "Unified Model-Specific Enhancer",
             "version": "2.0.0",
-            "description": "Uses GPT-4o mini for all model enhancements with model-specific prompts",
-            "enhancement_llm": "gpt-4o-mini",
+            "description": "Uses OpenAI GPT-4o-mini for all model enhancements with model-specific prompts",
+            "enhancement_llm": "openai/gpt-4o-mini",
             "supported_models": [
                 "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
@@ -212,12 +277,12 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
             ],
             "features": [
                 "Model-specific system prompts",
-                "Unified GPT-4o mini enhancement",
+                "Unified OpenAI GPT-4o-mini enhancement",
                 "Intelligent quality analysis",
                 "Comprehensive caching",
                 "Target model detection"
             ],
-            "strategy": "Detect target model → Apply model-specific prompt → Enhance with GPT-4o mini"
+            "strategy": "OpenAI GPT-4o-mini for all enhancements with model-specific prompts"
         }
     except Exception as e:
         logger.error(f"Pipeline info failed: {str(e)}")
@@ -247,7 +312,7 @@ async def test_enhancement(
         return {
             "test_prompt": test_prompt,
             "target_model": target_model.value,
-            "enhancement_llm": "gpt-4o-mini",
+            "enhancement_llm": "openai/gpt-4o-mini",
             "result": {
                 "original": result.original,
                 "enhanced": result.enhanced,
@@ -255,7 +320,7 @@ async def test_enhancement(
                 "model_used": result.model_used,
                 "processing_time": result.enhancement_time
             },
-            "strategy": f"Used {target_model.value}-specific prompts with GPT-4o mini"
+            "strategy": f"Used {target_model.value}-specific prompts with OpenAI GPT-4o-mini"
         }
     except Exception as e:
         logger.error(f"Test enhancement failed: {str(e)}")
@@ -263,6 +328,41 @@ async def test_enhancement(
             status_code=500,
             detail="Test enhancement failed. Please check service configuration."
         )
+
+@router.post("/quick-test")
+async def quick_test(
+    request: dict,
+    enhancer: ModelSpecificEnhancer = Depends(get_enhancer)
+):
+    """Quick test endpoint without authentication"""
+    try:
+        prompt = request.get('prompt', 'write code')
+        url = request.get('url', '')
+        
+        # Auto-detect target model from URL
+        detected_model = detect_model_from_url(url)
+        
+        logger.info(f"Quick test request: {prompt[:50]}... for {detected_model.value}")
+        
+        result = await enhancer.enhance(
+            prompt=prompt,
+            target_model=detected_model,
+            context=None
+        )
+        
+        return {
+            "success": True,
+            "original": result.original,
+            "enhanced": result.enhanced,
+            "model_used": result.model_used,
+            "processing_time": result.enhancement_time
+        }
+    except Exception as e:
+        logger.error(f"Quick test failed: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 @router.get("/models")
 async def get_available_models():
@@ -390,24 +490,150 @@ async def get_available_models():
         }
     }
 
+
+
 @router.get("/stats")
 async def get_service_stats(enhancer: PromptEnhancer = Depends(get_enhancer)):
-    """Get service usage statistics (if available)"""
+    """Get service statistics"""
     try:
-        # This would typically connect to your monitoring/analytics system
+        # Get global stats from database
+        global_stats = await db_service.get_global_stats()
+        
         return {
-            "message": "Statistics collection not implemented yet",
-            "available_features": [
-                "Request counting",
-                "Response time tracking", 
-                "Error rate monitoring",
-                "Cache hit rates"
+            "service": "AI Magic Prompt Enhancer",
+            "version": settings.version,
+            "status": "operational",
+            "enhancement_engine": "GPT-4o mini with model-specific prompts",
+            "supported_models": [
+                "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
+                "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
+                "gemini-pro", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"
             ],
-            "pipeline_info": enhancer.get_pipeline_info()
+            "features": [
+                "Model-specific prompt optimization",
+                "Unified GPT-4o mini enhancement",
+                "Intelligent quality analysis",
+                "Comprehensive caching system",
+                "Real-time model detection"
+            ],
+            "analytics": global_stats
         }
     except Exception as e:
-        logger.error(f"Stats retrieval failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Unable to retrieve statistics")
+        logger.error(f"Stats endpoint failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Unable to retrieve service statistics")
+
+@router.get("/user/stats")
+async def get_user_stats(
+    user_email: str = Depends(get_current_user_email)
+):
+    """Get current user's statistics"""
+    try:
+        stats = await db_service.get_user_stats(email=user_email)
+        
+        if not stats:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {
+            "user": {
+                "email": stats["email"],
+                "id": stats["id"],
+                "name": stats.get("name")
+            },
+            "usage": {
+                "total_prompts": stats["enhanced_prompts"]
+            },
+            "activity": {
+                "member_since": stats["created_at"].isoformat() if stats["created_at"] else None
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"User stats failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Unable to retrieve user statistics")
+
+@router.get("/user/count/{email}")
+async def get_user_count_by_email(email: str):
+    """Get user's enhanced prompt count by email (no auth required)"""
+    try:
+        stats = await db_service.get_user_stats(email=email)
+        
+        if not stats:
+            return {"count": 0, "email": email}
+        
+        return {
+            "count": stats["enhanced_prompts"],
+            "email": email,
+            "name": stats.get("name")
+        }
+        
+    except Exception as e:
+        logger.error(f"User count failed for {email}: {str(e)}")
+        return {"count": 0, "email": email, "error": str(e)}
+
+@router.get("/user/leaderboard")
+async def get_leaderboard(
+    limit: int = Query(default=10, ge=1, le=50, description="Number of top users to return")
+):
+    """Get leaderboard of top users by prompt count"""
+    try:
+        conn = await db_service.get_connection()
+        try:
+            top_users = await conn.fetch("""
+                SELECT 
+                    email, enhanced_prompts
+                FROM users 
+                WHERE enhanced_prompts > 0
+                ORDER BY enhanced_prompts DESC 
+                LIMIT $1
+            """, limit)
+            
+            return {
+                "leaderboard": [
+                    {
+                        "email": user["email"],
+                        "prompts": user["enhanced_prompts"]
+                    }
+                    for user in top_users
+                ]
+            }
+            
+        finally:
+            await db_service.connection_pool.release(conn)
+            
+    except Exception as e:
+        logger.error(f"Leaderboard failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Unable to retrieve leaderboard")
+
+@router.post("/user/update-name")
+async def update_user_name(
+    request: dict,
+    user_email: str = Depends(get_current_user_email)
+):
+    """Update user's display name in database"""
+    try:
+        name = request.get("name")
+        if not name or not name.strip():
+            raise HTTPException(status_code=400, detail="Name cannot be empty")
+        
+        # Update name in database
+        db_service._init_supabase()
+        result = db_service.supabase.table('users').update({
+            'name': name.strip()
+        }).eq('email', user_email).execute()
+        
+        if result.data:
+            logger.info(f"Updated name for {user_email}: {name}")
+            return {"success": True, "message": "Name updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update user name: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update name")
 
 @router.post("/stream-enhance")
 async def stream_enhance_prompt(request: EnhanceRequest):

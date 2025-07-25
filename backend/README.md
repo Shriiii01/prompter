@@ -69,13 +69,21 @@ The system automatically detects the target model from the URL and applies appro
 
 Environment variables:
 - `OPENAI_API_KEY` - Required for GPT-4o mini enhancement
+
 - `REDIS_URL` - Optional, defaults to `redis://localhost:6379`
 - `DEBUG` - Optional, defaults to `false`
+
+
 
 ## Architecture
 
 ```
-User Request → Model Detection → GPT-4o Mini + Model-Specific Prompt → Enhanced Response
+User Request → Authentication → Model Detection → GPT-4o Mini + Model-Specific Prompt → Enhanced Response
 ```
 
-The system uses GPT-4o mini as the "brain" but applies different system prompts based on the target model to ensure the enhanced prompt is optimized for that specific platform. 
+The system uses GPT-4o mini as the "brain" but applies different system prompts based on the target model to ensure the enhanced prompt is optimized for that specific platform.
+
+### Authentication
+
+- **Google OAuth**: Secure authentication with verified email
+- **Unlimited Access**: No usage limits for any user 

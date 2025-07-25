@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Magic - Prompt Enhancer",
-  "version": "2.0.0",
+  "version": "2.0.4",
   "description": "Magical 2-click AI prompt enhancement with cinematic animations for ChatGPT, Claude, and other AI platforms",
   
   "permissions": [
@@ -10,7 +10,9 @@
     "scripting",
     "notifications",
     "contextMenus",
-    "alarms"
+    "alarms",
+    "identity",
+    "management"
   ],
   
   "host_permissions": [
@@ -22,7 +24,7 @@
     "https://www.perplexity.ai/*",
     "https://perplexity.ai/*",
     "https://www.meta.ai/*",
-    "http://localhost:8000/*"
+    "http://localhost:8004/*"
   ],
   
   "content_scripts": [
@@ -44,6 +46,7 @@
   
   "action": {
     "default_title": "AI Magic - Prompt Enhancer",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -64,5 +67,14 @@
       "resources": ["icons/*"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  
+  "oauth2": {
+    "client_id": "20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  },
+  
+  "background": {
+    "service_worker": "background.js"
+  }
 } 

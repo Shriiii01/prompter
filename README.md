@@ -1,10 +1,11 @@
 # 🎬 AI Magic - Prompt Enhancer
 
-A **clean, professional** Chrome extension that enhances AI prompts with a sleek 2-click workflow.
+A **clean, professional** Chrome extension that enhances AI prompts with unlimited access and a sleek 2-click workflow.
 
 ## ✨ Features
 
 - **2-Click Enhancement**: Click icon → Click insert  
+- **Unlimited Access**: No usage limits - enhance as many prompts as you want
 - **Clean UI**: Black transparent popup with white text  
 - **Professional Animations**: Smooth, minimal transitions  
 - **Universal Compatibility**: Works on ChatGPT, Claude, Gemini, and more  
