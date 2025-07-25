@@ -7,6 +7,7 @@ class GoogleLoginManager {
         this.scopes = ['openid', 'email', 'profile'];
         this.userInfo = null;
         this.extensionId = chrome.runtime.id;
+        this.secureStorage = new SecureStorage();
         
         this.init();
     }
@@ -615,13 +616,28 @@ class GoogleLoginManager {
 
     // Storage methods
     async storeUserData(token, userInfo) {
-        return new Promise((resolve) => {
-            chrome.storage.local.set({
-                'google_token': token,
-                'user_info': userInfo,
-                'login_time': Date.now()
-            }, resolve);
-        });
+        try {
+            // Store sensitive data encrypted
+            await this.secureStorage.setEncrypted('google_token', token);
+            await this.secureStorage.setEncrypted('user_info', userInfo);
+            
+            // Store non-sensitive data in plain text
+            return new Promise((resolve) => {
+                chrome.storage.local.set({
+                    'login_time': Date.now()
+                }, resolve);
+            });
+        } catch (error) {
+            console.error('Failed to store user data securely:', error);
+            // Fallback to plain storage
+            return new Promise((resolve) => {
+                chrome.storage.local.set({
+                    'google_token': token,
+                    'user_info': userInfo,
+                    'login_time': Date.now()
+                }, resolve);
+            });
+        }
     }
 
     async storeTokenOnly(token) {
@@ -634,19 +650,31 @@ class GoogleLoginManager {
     }
 
     async getStoredToken() {
-        return new Promise((resolve) => {
-            chrome.storage.local.get(['google_token'], (result) => {
-                resolve(result.google_token || null);
+        try {
+            return await this.secureStorage.getEncrypted('google_token');
+        } catch (error) {
+            console.error('Failed to get encrypted token:', error);
+            // Fallback to plain storage
+            return new Promise((resolve) => {
+                chrome.storage.local.get(['google_token'], (result) => {
+                    resolve(result.google_token || null);
+                });
             });
-        });
+        }
     }
 
     async getStoredUserInfo() {
-        return new Promise((resolve) => {
-            chrome.storage.local.get(['user_info'], (result) => {
-                resolve(result.user_info || null);
+        try {
+            return await this.secureStorage.getEncrypted('user_info');
+        } catch (error) {
+            console.error('Failed to get encrypted user info:', error);
+            // Fallback to plain storage
+            return new Promise((resolve) => {
+                chrome.storage.local.get(['user_info'], (result) => {
+                    resolve(result.user_info || null);
+                });
             });
-        });
+        }
     }
 
     async getCachedPromptCount() {
@@ -658,9 +686,22 @@ class GoogleLoginManager {
     }
 
     async clearStoredData() {
-        return new Promise((resolve) => {
-            chrome.storage.local.remove(['google_token', 'user_info', 'login_time'], resolve);
-        });
+        try {
+            // Clear encrypted data
+            await this.secureStorage.removeEncrypted('google_token');
+            await this.secureStorage.removeEncrypted('user_info');
+            
+            // Clear plain text data
+            return new Promise((resolve) => {
+                chrome.storage.local.remove(['login_time'], resolve);
+            });
+        } catch (error) {
+            console.error('Failed to clear encrypted data:', error);
+            // Fallback to plain storage clearing
+            return new Promise((resolve) => {
+                chrome.storage.local.remove(['google_token', 'user_info', 'login_time'], resolve);
+            });
+        }
     }
 
     // UI methods - Updated for new HTML structure

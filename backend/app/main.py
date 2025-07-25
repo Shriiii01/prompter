@@ -5,6 +5,9 @@ Main FastAPI application for the Prompt Enhancer backend
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.enhance import router as enhance_router
+from app.middleware.rate_limiter import rate_limiter
+from app.middleware.monitoring import monitoring_middleware
+from app.monitoring.health_monitor import health_monitor
 import logging
 
 # Configure logging
@@ -33,6 +36,12 @@ app.add_middleware(
     allow_headers=["*"],
         )
 
+# Add rate limiting middleware
+app.middleware("http")(rate_limiter)
+
+# Add monitoring middleware
+app.middleware("http")(monitoring_middleware)
+
 # Include routers
 app.include_router(enhance_router)
 
@@ -54,7 +63,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Simple health check"""
-    return {"status": "healthy", "service": "prompt-enhancer"}
+    return health_monitor.get_simple_health()
+
+@app.get("/api/v1/health")
+async def detailed_health_check():
+    """Detailed health check with monitoring data"""
+    return health_monitor.get_health_status()
 
 if __name__ == "__main__":
     import uvicorn
