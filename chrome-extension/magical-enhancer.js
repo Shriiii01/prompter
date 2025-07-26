@@ -1,79 +1,55 @@
 // 🚀 CLEAN PROMPT ENHANCER - WITH 3D GLOWING CUBE
 console.log('🚀 Clean Prompt Enhancer - Loading...');
 
+// 🌐 PRODUCTION CONFIGURATION
+const CONFIG = {
+  // Railway production URL (replace with your actual Railway URL)
+  API_BASE_URL: 'https://prompter-production-76a3.railway.app',
+  
+  // Fallback to localhost for development
+  DEV_API_BASE_URL: 'http://localhost:8004',
+  
+  // Environment detection
+  isProduction: () => {
+    return window.location.protocol === 'https:' || 
+           window.location.hostname !== 'localhost';
+  },
+  
+  // Get the appropriate API URL
+  getApiUrl: () => {
+    return CONFIG.isProduction() ? CONFIG.API_BASE_URL : CONFIG.DEV_API_BASE_URL;
+  },
+  
+  // API endpoints
+  endpoints: {
+    enhance: '/api/v1/enhance',
+    quickTest: '/api/v1/quick-test',
+    health: '/api/v1/health',
+    userStats: '/api/v1/user/stats',
+    userCount: '/api/v1/user/count'
+  }
+};
+
+console.log('🌐 API Configuration:', {
+  isProduction: CONFIG.isProduction(),
+  apiUrl: CONFIG.getApiUrl()
+});
+
 // Prevent multiple instances
 if (window.enhancerInstance) {
   window.enhancerInstance.destroy();
 }
 
-// Enhanced Perplexity Text Inserter Class
-class PerplexityTextInserter {
+// 🚀 OPTIMIZED TEXT INSERTION - Single Strategy Approach
+class OptimizedTextInserter {
   constructor() {
-    this.debugMode = true;
-    this.maxRetries = 3;
+    this.debugMode = false; // Reduced logging for performance
   }
 
   log(message, data = null) {
     if (this.debugMode) {
-      console.log(`🎯 [PerplexityInserter] ${message}`, data || '');
+      console.log(`🎯 [OptimizedInserter] ${message}`, data || '');
     }
-  }
-
-  async insertTextForPerplexity(inputElement, text) {
-    this.log('Starting enhanced Perplexity insertion');
-    this.log('Input element:', {
-      tagName: inputElement.tagName,
-      className: inputElement.className,
-      contentEditable: inputElement.contentEditable,
-      type: inputElement.type
-    });
-    this.log('Text to insert:', text.substring(0, 100) + '...');
-
-    // Strategy 1: Try enhanced Lexical editor insertion
-    try {
-      await this.strategy1_LexicalEditor(inputElement, text);
-      if (await this.validateInsertion(inputElement, text)) {
-        this.log('✅ Strategy 1 (Lexical Editor) - SUCCESS');
-        return;
-      }
-    } catch (error) {
-      this.log('❌ Strategy 1 failed:', error.message);
-    }
-
-    // Strategy 2: Try React synthetic events
-    try {
-      await this.strategy2_ReactSynthetic(inputElement, text);
-      if (await this.validateInsertion(inputElement, text)) {
-        this.log('✅ Strategy 2 (React Synthetic) - SUCCESS');
-        return;
-      }
-    } catch (error) {
-      this.log('❌ Strategy 2 failed:', error.message);
-    }
-
-    // Strategy 3: Try direct DOM manipulation with word-level spans
-    try {
-      await this.strategy3_WordLevelSpans(inputElement, text);
-      if (await this.validateInsertion(inputElement, text)) {
-        this.log('✅ Strategy 3 (Word Level Spans) - SUCCESS');
-        return;
-      }
-    } catch (error) {
-      this.log('❌ Strategy 3 failed:', error.message);
-    }
-
-    // Strategy 4: Try clipboard simulation
-    try {
-      await this.strategy4_ClipboardSimulation(inputElement, text);
-      if (await this.validateInsertion(inputElement, text)) {
-        this.log('✅ Strategy 4 (Clipboard Simulation) - SUCCESS');
-        return;
-      }
-    } catch (error) {
-      this.log('❌ Strategy 4 failed:', error.message);
-    }
-
-    throw new Error('All insertion strategies failed');
   }
 
   async strategy1_LexicalEditor(inputElement, text) {
@@ -325,6 +301,15 @@ class CleanEnhancer {
     this.isAnyIconDragging = false;
     this.userInfo = null;
     this.isExtensionActive = false; // New: Track if extension is active
+    
+    // 🚀 SMART DOM SCANNING - NEW PROPERTIES
+    this.inputCache = new Map(); // Cache for input elements
+    this.scanDebounceTimer = null; // Debounce timer
+    this.lastScanTime = 0; // Track last scan time
+    this.scanCooldown = 500; // Minimum time between scans (ms)
+    this.mainInputElement = null; // Track the main input element
+    this.mutationObserver = null; // Smart DOM observer
+    this.isScanning = false; // Prevent concurrent scans
     
     this.init();
   }
@@ -756,140 +741,310 @@ class CleanEnhancer {
   }
 
   setupInputDetection() {
-    // Perplexity AI specific selectors (added first for priority)
-    const perplexitySelectors = [
+    // 🎯 PRIORITIZED SELECTORS FOR MAIN INPUT DETECTION
+    this.selectors = {
+      // Perplexity AI (highest priority)
+      perplexity: [
       'textarea[placeholder*="Ask anything"]',
       'textarea[placeholder*="Ask"]',
       'textarea[data-testid*="search"]',
       'textarea[data-testid*="input"]',
       'div[contenteditable="true"][data-testid*="search"]',
-      'div[contenteditable="true"][data-testid*="input"]',
-      'textarea[class*="search"]',
-      'textarea[class*="input"]',
-      'div[contenteditable="true"][class*="search"]',
-      'div[contenteditable="true"][class*="input"]'
-    ];
-
-    // Meta AI selectors (comprehensive)
-    const metaAISelectors = [
+        'div[contenteditable="true"][data-testid*="input"]'
+      ],
+      // ChatGPT/OpenAI
+      chatgpt: [
+        'textarea[data-testid="prompt-textarea"]',
+        'textarea[placeholder*="Send a message"]',
+        'div[contenteditable="true"][data-testid*="prompt"]'
+      ],
+      // Claude/Anthropic
+      claude: [
+        'textarea[placeholder*="Message Claude"]',
+        'textarea[data-testid*="claude"]',
+        'div[contenteditable="true"][data-testid*="claude"]'
+      ],
+      // Meta AI
+      meta: [
       'textarea[placeholder*="Ask"]',
       'textarea[placeholder*="Message"]',
       'textarea[data-testid*="composer"]',
-      'textarea[aria-label*="Message"]',
-      'div[contenteditable="true"][role="textbox"]',
-      'div[contenteditable="true"][data-testid*="composer"]',
-      'div[contenteditable="true"][aria-label*="Message"]',
-      'textarea.x1i10hfl',
-      'div.x1i10hfl[contenteditable="true"]',
-      'textarea',
-      'div[contenteditable="true"]'
-    ];
-
-    // Other AI platform selectors
-    const otherSelectors = [
-      'textarea[placeholder*="Send a message"]',
+        'div[contenteditable="true"][role="textbox"]'
+      ],
+      // Gemini/Google
+      gemini: [
       'textarea[placeholder*="Message"]',
-      'textarea[data-testid="prompt-textarea"]',
+        'textarea[data-testid*="gemini"]',
+        'div[contenteditable="true"][data-testid*="gemini"]'
+      ],
+      // Fallback selectors
+      fallback: [
+        'textarea[placeholder*="Message"]',
+        'textarea[placeholder*="Ask"]',
       'textarea[id*="prompt"]',
-      'div[contenteditable="true"][data-testid*="prompt"]',
       'div[contenteditable="true"][role="textbox"]',
       'textarea',
       'div[contenteditable="true"]'
-    ];
+      ]
+    };
 
-    this.allSelectors = [...perplexitySelectors, ...metaAISelectors, ...otherSelectors];
+    // 🚀 SMART MUTATION OBSERVER
+    this.setupSmartMutationObserver();
+    
+    console.log('✅ Smart input detection setup - waiting for extension to start');
+  }
 
-    // Watch for new inputs (but don't scan automatically)
-    const observer = new MutationObserver((mutations) => {
-      if (!this.isExtensionActive) return; // Only scan if extension is active
+  setupSmartMutationObserver() {
+    // 🎯 EFFICIENT MUTATION OBSERVER
+    this.mutationObserver = new MutationObserver((mutations) => {
+      if (!this.isExtensionActive || this.isScanning) return;
       
+      // 🚀 SMART TRIGGER DETECTION
       let shouldScan = false;
+      let hasInputChanges = false;
+      
       mutations.forEach((mutation) => {
+        // Check for new nodes that might be inputs
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          shouldScan = true;
+          for (let node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              // Check if it's an input element or contains inputs
+              if (this.isInputElement(node) || node.querySelector('textarea, div[contenteditable="true"]')) {
+                hasInputChanges = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        // Check for attribute changes on existing inputs
+        if (mutation.type === 'attributes' && this.isInputElement(mutation.target)) {
+          hasInputChanges = true;
         }
       });
       
+      if (hasInputChanges) {
+        shouldScan = true;
+      }
+      
+      // 🚀 DEBOUNCED SCANNING
       if (shouldScan) {
-        setTimeout(() => this.scanForInputs(this.allSelectors), 100);
+        this.debouncedScan();
       }
     });
 
-    observer.observe(document.body, {
+    // 🎯 OBSERVE ONLY RELEVANT CHANGES
+    this.mutationObserver.observe(document.body, {
       childList: true,
-      subtree: true
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class', 'data-testid', 'placeholder', 'aria-label']
     });
-
-    this.observers.push(observer);
-
-    console.log('✅ Input detection setup - waiting for extension to start');
   }
 
-  scanForInputs(selectors) {
+  isInputElement(element) {
+    if (!element || !element.tagName) return false;
+    
+    const tagName = element.tagName.toLowerCase();
+    const isTextarea = tagName === 'textarea';
+    const isContentEditable = element.contentEditable === 'true';
+    const hasInputAttributes = element.getAttribute('data-testid') || 
+                              element.getAttribute('placeholder') || 
+                              element.getAttribute('role') === 'textbox';
+    
+    return isTextarea || isContentEditable || hasInputAttributes;
+  }
+
+  debouncedScan() {
+    // 🚀 DEBOUNCE SCANNING TO PREVENT EXCESSIVE OPERATIONS
+    if (this.scanDebounceTimer) {
+      clearTimeout(this.scanDebounceTimer);
+    }
+    
+    const now = Date.now();
+    if (now - this.lastScanTime < this.scanCooldown) {
+      // Too soon, debounce it
+      this.scanDebounceTimer = setTimeout(() => {
+        this.smartScanForMainInput();
+      }, this.scanCooldown - (now - this.lastScanTime));
+    } else {
+      // Safe to scan immediately
+      this.smartScanForMainInput();
+    }
+  }
+
+  smartScanForMainInput() {
     if (!this.isExtensionActive) {
-      console.log('❌ Extension not active, skipping scan');
+      console.log('❌ Extension not active, skipping smart scan');
       return;
     }
     
-    console.log('🔍 Scanning for inputs with', selectors.length, 'selectors...');
+    if (this.isScanning) {
+      console.log('⏳ Scan already in progress, skipping');
+      return;
+    }
     
-    // Only add icon to the main input (largest visible input)
-    let largest = null;
-    let largestArea = 0;
-    let totalElements = 0;
-    let validElements = 0;
+    this.isScanning = true;
+    this.lastScanTime = Date.now();
     
-    selectors.forEach(selector => {
+    console.log('🚀 Smart scanning for main input...');
+    
+    try {
+      // 🎯 PRIORITY-BASED MAIN INPUT DETECTION
+      const mainInput = this.findMainInputByPriority();
+      
+      if (mainInput) {
+        console.log('🎯 Found main input:', mainInput.tagName, mainInput.className);
+        this.handleMainInputFound(mainInput);
+      } else {
+        console.log('❌ No main input found in this scan');
+        this.cleanupOrphanedIcons();
+      }
+      
+    } catch (error) {
+      console.error('❌ Smart scan error:', error);
+    } finally {
+      this.isScanning = false;
+    }
+  }
+
+  findMainInputByPriority() {
+    // 🎯 PRIORITY-BASED SEARCH (most specific to least specific)
+    const priorityOrder = ['perplexity', 'chatgpt', 'claude', 'meta', 'gemini', 'fallback'];
+    
+    for (const platform of priorityOrder) {
+      const selectors = this.selectors[platform];
+      const input = this.findBestInputForSelectors(selectors);
+      
+      if (input) {
+        console.log(`✅ Found ${platform} input:`, input.tagName, input.className);
+        return input;
+      }
+    }
+    
+    return null;
+  }
+
+  findBestInputForSelectors(selectors) {
+    let bestInput = null;
+    let bestScore = 0;
+    
+    for (const selector of selectors) {
       try {
         const elements = document.querySelectorAll(selector);
-        totalElements += elements.length;
         
         elements.forEach(element => {
           if (this.isValidInput(element)) {
-            validElements++;
-            const rect = element.getBoundingClientRect();
-            const area = rect.width * rect.height;
-            if (area > largestArea) {
-              largest = element;
-              largestArea = area;
+            const score = this.calculateInputScore(element);
+            
+            if (score > bestScore) {
+              bestScore = score;
+              bestInput = element;
             }
           }
         });
-      } catch (e) {
-        console.log('⚠️ Error with selector:', selector, e);
+      } catch (error) {
+        console.log('⚠️ Selector error:', selector, error.message);
       }
-    });
+    }
     
-    console.log(`📊 Found ${totalElements} total elements, ${validElements} valid inputs`);
+    return bestInput;
+  }
+
+  calculateInputScore(element) {
+    if (!element) return 0;
     
-    if (largest) {
-      // Check if icon is already attached (both in our map and data attribute)
-      const hasIconInMap = this.icons.has(largest);
-      const hasDataAttribute = largest.dataset.ceIconAttached === "true";
+            const rect = element.getBoundingClientRect();
+            const area = rect.width * rect.height;
+    
+    // 🎯 SCORING ALGORITHM FOR MAIN INPUT DETECTION
+    let score = 0;
+    
+    // Size score (larger inputs get higher scores)
+    score += Math.min(area / 1000, 10); // Max 10 points for size
+    
+    // Visibility score
+    const style = window.getComputedStyle(element);
+    if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+      score += 5;
+    }
+    
+    // Position score (inputs in viewport get higher scores)
+    if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+      score += 3;
+    }
+    
+    // Specificity score (more specific selectors get higher scores)
+    if (element.getAttribute('data-testid')) score += 2;
+    if (element.getAttribute('placeholder')) score += 1;
+    if (element.getAttribute('role') === 'textbox') score += 1;
+    
+    // Content score (empty or focused inputs get higher scores)
+    if (!element.value && !element.textContent.trim()) score += 2;
+    if (document.activeElement === element) score += 3;
+    
+    // Platform-specific bonuses
+    const url = window.location.href;
+    if (url.includes('perplexity.ai') && element.getAttribute('data-testid')?.includes('search')) {
+      score += 5; // Bonus for Perplexity main search
+    }
+    if (url.includes('chat.openai.com') && element.getAttribute('data-testid') === 'prompt-textarea') {
+      score += 5; // Bonus for ChatGPT main textarea
+    }
+    
+    return score;
+  }
+
+  handleMainInputFound(inputElement) {
+    // 🎯 SMART ICON MANAGEMENT
+    const hasIconInMap = this.icons.has(inputElement);
+    const hasDataAttribute = inputElement.dataset.ceIconAttached === "true";
       
       if (!hasIconInMap && !hasDataAttribute) {
-        console.log('🎯 Adding icon to input:', largest.tagName, largest.className);
-        this.addIcon(largest);
-        largest.dataset.ceIconAttached = "true";
+      // New input found - add icon
+      console.log('🎯 Adding icon to main input:', inputElement.tagName, inputElement.className);
+      this.addIcon(inputElement);
+      inputElement.dataset.ceIconAttached = "true";
+      this.mainInputElement = inputElement;
+      
       } else if (hasIconInMap && hasDataAttribute) {
-        console.log('✅ Icon already attached to input');
+      // Icon already properly attached
+      console.log('✅ Icon already attached to main input');
+      this.mainInputElement = inputElement;
+      
       } else {
-        // Clean up inconsistent state
+      // Inconsistent state - clean up and re-add
         console.log('🔄 Cleaning up inconsistent icon state');
-        if (hasIconInMap) {
-          this.icons.get(largest).remove();
-          this.icons.delete(largest);
-        }
-        if (hasDataAttribute) {
-          delete largest.dataset.ceIconAttached;
-        }
-        // Try to add icon again
-        console.log('🎯 Re-adding icon to input:', largest.tagName, largest.className);
-        this.addIcon(largest);
-        largest.dataset.ceIconAttached = "true";
+      this.cleanupIconForElement(inputElement);
+      this.addIcon(inputElement);
+      inputElement.dataset.ceIconAttached = "true";
+      this.mainInputElement = inputElement;
+    }
+    
+    // 🧹 Clean up icons from other inputs
+    this.cleanupOrphanedIcons();
+  }
+
+  cleanupIconForElement(element) {
+    if (this.icons.has(element)) {
+      const icon = this.icons.get(element);
+      if (icon && icon.parentNode) {
+        icon.remove();
       }
-    } else {
-      console.log('❌ No suitable input found');
+      this.icons.delete(element);
+    }
+    delete element.dataset.ceIconAttached;
+  }
+
+  cleanupOrphanedIcons() {
+    // 🧹 Remove icons from inputs that are no longer the main input
+    const currentMainInput = this.mainInputElement;
+    
+    for (const [element, icon] of this.icons.entries()) {
+      if (element !== currentMainInput) {
+        console.log('🧹 Removing orphaned icon from:', element.tagName, element.className);
+        this.cleanupIconForElement(element);
+      }
     }
   }
 
@@ -1328,8 +1483,8 @@ class CleanEnhancer {
             await this.insertTextViaClipboard(enhancedText, inputElement);
           }
         } else {
-          // For other platforms, use standard insertion
-          this.insertText(enhancedText, inputElement);
+          // For other platforms, use optimized insertion
+          await this.insertText(enhancedText, inputElement);
         }
         
         this.closePopup();
@@ -1344,104 +1499,152 @@ class CleanEnhancer {
 
   async enhancePrompt(text) {
     try {
-      // First check if user is authenticated
-      const token = await new Promise((resolve) => {
-        chrome.storage.local.get(['google_token'], (result) => {
-          resolve(result.google_token || null);
-        });
-      });
+      console.log('🚀 Starting optimized enhancement process...');
+      
+      // 🚀 OPTIMIZED: Single API call with smart fallback
+      const result = await this.makeOptimizedApiCall(text);
+      
+      if (result.success) {
+        console.log(`✅ Enhancement successful: ${result.enhanced.substring(0, 100)}...`);
+        return result.enhanced;
+      } else {
+        console.log('🔄 API call failed, using fallback enhancement');
+        return this.getFallbackEnhancement(text);
+      }
+      
+    } catch (error) {
+      console.error('❌ Enhancement failed:', error.message);
+      return this.getFallbackEnhancement(text);
+    }
+  }
 
-      // If user is authenticated, use authenticated endpoint first (to track stats)
+  async makeOptimizedApiCall(text) {
+    // 🚀 OPTIMIZED: Single API call strategy
+    const startTime = Date.now();
+    
+    try {
+      // Get user token efficiently
+      const token = await this.getUserToken();
+      
+      // 🎯 SMART ENDPOINT SELECTION
+      const endpoint = token ? '/api/v1/enhance' : '/api/v1/quick-test';
+      const headers = {
+              'Content-Type': 'application/json'
+      };
+      
       if (token) {
-        console.log('🔑 User authenticated, using tracked endpoint...');
-        
-        try {
-          const response = await fetch('http://localhost:8004/api/v1/enhance?fast_mode=true', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const payload = {
               prompt: text,
-              url: window.location.href,
-              context: null
-            })
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            console.log(`✅ Enhanced with authenticated backend:`, result.enhanced.substring(0, 100) + '...');
-            
-            // Increment enhanced count since this was tracked
+        url: window.location.href,
+        context: null
+      };
+      
+      // Add fast_mode for authenticated requests
+      if (token) {
+        payload.fast_mode = true;
+      }
+      
+      console.log(`🚀 Making optimized API call to ${endpoint}...`);
+      
+      // 🚀 SINGLE API CALL WITH TIMEOUT
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${CONFIG.getApiUrl()}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const responseTime = Date.now() - startTime;
+      console.log(`⚡ API response received in ${responseTime}ms`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        // 🎯 HANDLE DIFFERENT RESPONSE FORMATS
+        if (result.enhanced) {
+          // Authenticated endpoint response
+          if (token) {
             this.incrementEnhancedCount();
-            
-            return result.enhanced;
-          } else {
-            console.log(`⚠️ Authenticated endpoint failed (${response.status}), trying quick test...`);
           }
-        } catch (error) {
-          console.log('⚠️ Authenticated endpoint error, trying quick test...', error.message);
+          return { success: true, enhanced: result.enhanced };
+        } else if (result.success && result.enhanced) {
+          // Quick test endpoint response
+          return { success: true, enhanced: result.enhanced };
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } else {
+        // 🚀 SMART ERROR HANDLING
+        const errorText = await response.text();
+        console.log(`⚠️ API error ${response.status}: ${errorText}`);
+        
+        if (response.status === 429) {
+          throw new Error('Rate limited - please wait a moment');
+        } else if (response.status === 401 && token) {
+          // Token expired, try without auth
+          console.log('🔄 Token expired, retrying without authentication...');
+          return await this.makeUnauthenticatedCall(text);
+        } else {
+          throw new Error(`API error: ${response.status}`);
         }
       }
-
-      // Fallback to quick test endpoint (no auth, no tracking)
-      console.log('🚀 Using quick test endpoint (no tracking)...');
       
-      let quickResponse;
-      let retryCount = 0;
-      const maxRetries = 1;
-      
-      while (retryCount <= maxRetries) {
-        try {
-          quickResponse = await fetch('http://localhost:8004/api/v1/quick-test', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              prompt: text,
-              url: window.location.href
-            })
-          });
-          
-          if (quickResponse.ok) {
-            const result = await quickResponse.json();
-            if (result.success) {
-              console.log(`✅ Enhanced with backend (${result.model_used}):`, result.enhanced.substring(0, 100) + '...');
-              return result.enhanced;
-            }
-          }
-          
-          // If we get here, response was not ok
-          if (quickResponse.status === 429 || quickResponse.status === 500) {
-            if (retryCount < maxRetries) {
-              console.log(`⚠️ Backend error ${quickResponse.status}, retrying in 2 seconds...`);
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              retryCount++;
-              continue;
-            }
-          }
-          
-          break; // Exit retry loop
-          
         } catch (error) {
-          if (retryCount < maxRetries) {
-            console.log(`⚠️ Network error, retrying in 2 seconds...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            retryCount++;
-            continue;
-          }
+      const responseTime = Date.now() - startTime;
+      console.log(`❌ API call failed after ${responseTime}ms:`, error.message);
+      
+      // 🚀 SMART FALLBACK STRATEGY
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - server may be busy');
+      } else if (error.message.includes('Failed to fetch')) {
+        throw new Error('Network error - check your connection');
+      } else {
           throw error;
         }
       }
+  }
+
+  async makeUnauthenticatedCall(text) {
+    // 🚀 FALLBACK: Unauthenticated call when token fails
+    console.log('🚀 Making unauthenticated API call...');
+    
+    const response = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.quickTest}`, {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: text,
+        url: window.location.href
+        })
+      });
       
-      // If all API calls fail, use fallback
-      console.log('🔄 All API calls failed, using fallback enhancement');
-          return this.getFallbackEnhancement(text);
-          
-        } catch (error) {
-      console.error('❌ Enhancement failed:', error.message);
+          if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        return { success: true, enhanced: result.enhanced };
+      }
+    }
+    
+    throw new Error('Unauthenticated call also failed');
+  }
+
+  async getUserToken() {
+    // 🚀 OPTIMIZED: Efficient token retrieval
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['google_token'], (result) => {
+        resolve(result.google_token || null);
+      });
+    });
+  }
       
       // Always use fallback on any error
       console.log('🔄 Using fallback enhancement due to error');
@@ -1507,93 +1710,89 @@ Additional context: Please structure your response in a clear, organized manner 
     }
   }
 
-  insertText(text, inputElement) {
-    console.log('🔧 Inserting text into element:', inputElement.tagName, inputElement.className);
+  async insertText(text, inputElement) {
+    console.log('🚀 Using optimized text insertion');
     
+    // Use the optimized insertion method
+    const success = await this.insertTextOptimized(inputElement, text);
+    
+    if (success) {
+      console.log('✅ Optimized text insertion completed');
+    } else {
+      console.log('⚠️ Optimized insertion failed, using fallback');
+      // Fallback to basic insertion
+      this.insertTextFallback(text, inputElement);
+    }
+  }
+
+  insertTextFallback(text, inputElement) {
+    console.log('🔄 Using fallback text insertion');
+    
+    try {
+      // Simple fallback method
     if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
-      console.log('📝 Using value property for textarea/input');
       inputElement.value = text;
+      } else {
+        inputElement.textContent = text;
+      }
+      
       inputElement.dispatchEvent(new Event('input', { bubbles: true }));
       inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-    } else if (inputElement.contentEditable === 'true') {
-      console.log('📝 Using innerHTML for contentEditable');
-      // Convert markdown tables and newlines to HTML
-      let html = text
-        // Convert markdown tables to HTML tables (simple version)
-        .replace(/\|([^\n]*)\|/g, (row) => {
-          const cells = row.split('|').slice(1, -1).map(cell => `<td>${cell.trim()}</td>`).join('');
-          return `<tr>${cells}</tr>`;
-        })
-        .replace(/<tr>.*<\/tr>\n<tr>[-:| ]*<\/tr>/g, '') // Remove markdown table header separator
-        .replace(/(<tr>.*<\/tr>)/g, '<table>$1</table>') // Wrap in <table> (naive, but works for single table)
-        .replace(/\n/g, '<br>');
-      // Remove duplicate <table> tags
-      html = html.replace(/(<\/table>)(<table>)+/g, '');
-      inputElement.innerHTML = html;
-      inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-    } else {
-      console.log('⚠️ Unknown element type, trying basic methods');
+      inputElement.focus();
       
-      // Try basic methods for unknown elements
-      if (inputElement.value !== undefined) {
-        console.log('📝 Trying value property');
+      console.log('✅ Fallback text insertion completed');
+    } catch (error) {
+      console.error('❌ Fallback insertion also failed:', error);
+    }
+  }
+
+  async insertTextOptimized(inputElement, text) {
+    console.log('🚀 Using optimized text insertion method');
+    
+    try {
+      // 🎯 SINGLE STRATEGY: Direct text insertion with smart fallbacks
+      
+      // Focus the input first
+      inputElement.focus();
+      await this.delay(50); // Reduced delay for performance
+      
+      // Clear existing content
+      inputElement.textContent = '';
+      inputElement.innerHTML = '';
+      
+      // 🚀 SMART INSERTION BASED ON ELEMENT TYPE
+      if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
+        // Standard form elements
         inputElement.value = text;
         inputElement.dispatchEvent(new Event('input', { bubbles: true }));
         inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-      } else if (inputElement.textContent !== undefined) {
-        console.log('📝 Trying textContent');
+      } else if (inputElement.contentEditable === 'true') {
+        // ContentEditable elements (like Perplexity)
         inputElement.textContent = text;
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-      } else {
-        console.log('📝 Trying innerHTML');
-        inputElement.innerHTML = text;
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    }
-    
-    // Focus the input
-    inputElement.focus();
-    console.log('✅ Text insertion completed');
-  }
-
-  insertTextForPerplexity(inputElement, text) {
-    console.log('🎯 Using enhanced Perplexity-specific insertion method');
-    
-    return new Promise(async (resolve, reject) => {
-      try {
-        // Focus the input first
-        inputElement.focus();
-        await this.delay(100);
-        
-        // Clear existing content
-        inputElement.textContent = '';
-        inputElement.innerHTML = '';
-        
-        // Simple approach - just set textContent
-        inputElement.textContent = text;
-        
-        // Trigger events
         inputElement.dispatchEvent(new Event('input', { bubbles: true }));
         inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-        
-        await this.delay(200);
-        
-        // Verify insertion
-        const actualText = inputElement.textContent || '';
-        if (actualText.includes(text.substring(0, 20))) {
-          console.log('✅ Perplexity insertion successful');
-        resolve();
-        } else {
-          console.log('⚠️ Insertion verification failed, but continuing...');
-          resolve(); // Don't fail, just continue
-        }
-        
-      } catch (error) {
-        console.error('❌ Perplexity insertion failed:', error);
-        // Don't reject, just resolve to continue
-        resolve();
+      } else {
+        // Fallback for unknown elements
+        inputElement.textContent = text;
+        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
       }
-    });
+      
+      await this.delay(100); // Reduced delay
+      
+      // 🎯 QUICK VERIFICATION
+      const actualText = inputElement.textContent || inputElement.value || '';
+      if (actualText.includes(text.substring(0, 20))) {
+        console.log('✅ Optimized insertion successful');
+        return true;
+      } else {
+        console.log('⚠️ Insertion verification failed, but continuing...');
+        return true; // Don't fail, just continue
+      }
+      
+      } catch (error) {
+      console.error('❌ Optimized insertion failed:', error);
+      return false; // Don't throw, just return false
+    }
   }
 
 
@@ -1981,10 +2180,16 @@ Additional context: Please structure your response in a clear, organized manner 
     }
   }
 
-  startExtension() {
+  async startExtension() {
+    // Check if user info is loaded, if not try to load it
     if (!this.userInfo) {
-      console.log('❌ Cannot start extension - user not logged in');
-      return false;
+      console.log('🔄 User info not loaded, checking login status...');
+      await this.checkLoginStatus();
+      
+      if (!this.userInfo) {
+        console.log('❌ Cannot start extension - user not logged in');
+        return false;
+      }
     }
     
     console.log('🚀 Starting extension for user:', this.userInfo.name);
@@ -1998,6 +2203,12 @@ Additional context: Please structure your response in a clear, organized manner 
       this.scanInterval = null;
     }
     
+    // Clear any old debounce timer
+    if (this.scanDebounceTimer) {
+      clearTimeout(this.scanDebounceTimer);
+      this.scanDebounceTimer = null;
+    }
+    
     // Clear any old icons that might be lingering
     this.icons.forEach((icon, inputElement) => {
       icon.remove();
@@ -2009,6 +2220,11 @@ Additional context: Please structure your response in a clear, organized manner 
       delete input.dataset.ceIconAttached;
     });
     
+    // Reset smart scanning state
+    this.mainInputElement = null;
+    this.inputCache.clear();
+    this.isScanning = false;
+    
     // Now set as active
     this.isExtensionActive = true;
     
@@ -2017,22 +2233,24 @@ Additional context: Please structure your response in a clear, organized manner 
       console.log('💾 Extension active state saved');
     });
     
-    // Initial scan for existing inputs
-    console.log('🔍 Scanning for inputs...');
-    this.scanForInputs(this.allSelectors);
+    // 🚀 SMART INITIAL SCAN
+    console.log('🚀 Smart scanning for main input...');
+    this.smartScanForMainInput();
     
-    // Force another scan after a short delay
+    // Force another smart scan after a short delay
     setTimeout(() => {
-      console.log('🔍 Force scanning for inputs...');
-      this.scanForInputs(this.allSelectors);
-    }, 100);
+      console.log('🚀 Force smart scanning for main input...');
+      this.smartScanForMainInput();
+    }, 200);
     
-    // Start periodic scanning for inputs
+    // 🚀 PERIODIC SMART SCANNING (less frequent, more efficient)
     this.scanInterval = setInterval(() => {
-      this.scanForInputs(this.allSelectors);
-    }, 500);
+      if (this.isExtensionActive && !this.isScanning) {
+        this.smartScanForMainInput();
+      }
+    }, 2000); // Reduced frequency - smart scanning is more efficient
     
-    console.log('✅ Extension started successfully');
+    console.log('✅ Extension started successfully with smart scanning');
     return true;
   }
 
@@ -2056,8 +2274,14 @@ Additional context: Please structure your response in a clear, organized manner 
       this.scanInterval = null;
     }
     
-    // Remove all existing icons and clear data attributes
-    console.log('🗑️ Removing all icons...');
+    // Clear debounce timer
+    if (this.scanDebounceTimer) {
+      clearTimeout(this.scanDebounceTimer);
+      this.scanDebounceTimer = null;
+    }
+    
+    // 🧹 SMART CLEANUP
+    console.log('🧹 Smart cleanup - removing all icons...');
     this.icons.forEach((icon, inputElement) => {
       icon.remove();
       // Clear the data attribute so icons can be re-added
@@ -2072,7 +2296,12 @@ Additional context: Please structure your response in a clear, organized manner 
       delete input.dataset.ceIconAttached;
     });
     
-    console.log('✅ Extension stopped - all icons and data cleared');
+    // Reset smart scanning state
+    this.mainInputElement = null;
+    this.inputCache.clear();
+    this.isScanning = false;
+    
+    console.log('✅ Extension stopped - smart cleanup completed');
   }
 
   incrementEnhancedCount() {
@@ -2093,7 +2322,7 @@ Additional context: Please structure your response in a clear, organized manner 
     // Stop extension if active
     this.stopExtension();
     
-    // Clean up everything
+    // 🧹 SMART CLEANUP
     this.icons.forEach((icon, inputElement) => {
       // Clean up icon-specific resources
       if (icon.updatePosition) {
@@ -2110,8 +2339,32 @@ Additional context: Please structure your response in a clear, organized manner 
     });
     this.icons.clear();
     
+    // Clean up mutation observer
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+      this.mutationObserver = null;
+    }
+    
+    // Clean up other observers
     this.observers.forEach(obs => obs.disconnect());
     this.observers = [];
+    
+    // Clear debounce timer
+    if (this.scanDebounceTimer) {
+      clearTimeout(this.scanDebounceTimer);
+      this.scanDebounceTimer = null;
+    }
+    
+    // Clear scanning interval
+    if (this.scanInterval) {
+      clearInterval(this.scanInterval);
+      this.scanInterval = null;
+    }
+    
+    // Reset smart scanning state
+    this.mainInputElement = null;
+    this.inputCache.clear();
+    this.isScanning = false;
     
     if (this.activePopup) {
       this.activePopup.remove();
@@ -2119,6 +2372,8 @@ Additional context: Please structure your response in a clear, organized manner 
     
     const styles = document.getElementById('clean-enhancer-styles');
     if (styles) styles.remove();
+    
+    console.log('✅ Smart cleanup completed');
   }
 
   makePopupDraggable(popup) {
@@ -2158,3 +2413,66 @@ window.enhancerInstance = new CleanEnhancer();
 console.log('🚀 Content script loaded - waiting for user to start extension');
 console.log('📍 Current URL:', window.location.href);
 console.log('🔧 Extension ID:', chrome.runtime.id);
+
+// 🚀 MESSAGE LISTENER FOR POPUP COMMUNICATION
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('📡 Content script received message:', message);
+  
+  if (message.action === 'startExtension') {
+    console.log('🚀 Starting extension from popup...');
+    try {
+      // Handle async startExtension method
+      window.enhancerInstance.startExtension().then(success => {
+        console.log('✅ Extension start result:', success);
+        sendResponse({ success: success });
+      }).catch(error => {
+        console.error('❌ Extension start error:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    } catch (error) {
+      console.error('❌ Extension start error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true; // Keep message channel open for async response
+  }
+  
+  if (message.action === 'stopExtension') {
+    console.log('🛑 Stopping extension from popup...');
+    try {
+      window.enhancerInstance.stopExtension();
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('❌ Extension stop error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
+  }
+  
+  if (message.action === 'cleanupAndQuit') {
+    console.log('🧹 Cleaning up and quitting...');
+    try {
+      window.enhancerInstance.cleanupAndQuit();
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('❌ Cleanup error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
+  }
+  
+  if (message.action === 'updateEnhancedCount') {
+    console.log('📊 Updating enhanced count...');
+    try {
+      window.enhancerInstance.incrementEnhancedCount();
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('❌ Count update error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true;
+  }
+  
+  console.log('⚠️ Unknown message action:', message.action);
+  sendResponse({ success: false, error: 'Unknown action' });
+  return true;
+});

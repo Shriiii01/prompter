@@ -24,7 +24,8 @@
     "https://www.perplexity.ai/*",
     "https://perplexity.ai/*",
     "https://www.meta.ai/*",
-    "http://localhost:8004/*"
+    "http://localhost:8004/*",
+    "https://*.railway.app/*"
   ],
   
   "content_scripts": [
@@ -37,7 +38,8 @@
         "https://poe.com/*",
         "https://www.perplexity.ai/*",
         "https://perplexity.ai/*",
-        "https://www.meta.ai/*"
+        "https://www.meta.ai/*",
+        "file://*"
       ],
       "js": ["magical-enhancer.js"],
       "run_at": "document_end"

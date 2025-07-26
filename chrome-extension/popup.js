@@ -1,6 +1,40 @@
 // AI Magic - Prompt Enhancer - Google Login
 console.log('🚀 AI Magic Popup - Loading Google Login...');
 
+// 🌐 PRODUCTION CONFIGURATION
+const CONFIG = {
+  // Railway production URL (replace with your actual Railway URL)
+  API_BASE_URL: 'https://prompter-production-76a3.railway.app',
+  
+  // Fallback to localhost for development
+  DEV_API_BASE_URL: 'http://localhost:8004',
+  
+  // Environment detection
+  isProduction: () => {
+    return window.location.protocol === 'https:' || 
+           window.location.hostname !== 'localhost';
+  },
+  
+  // Get the appropriate API URL
+  getApiUrl: () => {
+    return CONFIG.isProduction() ? CONFIG.API_BASE_URL : CONFIG.DEV_API_BASE_URL;
+  },
+  
+  // API endpoints
+  endpoints: {
+    enhance: '/api/v1/enhance',
+    quickTest: '/api/v1/quick-test',
+    health: '/api/v1/health',
+    userStats: '/api/v1/user/stats',
+    userCount: '/api/v1/user/count'
+  }
+};
+
+console.log('🌐 Popup API Configuration:', {
+  isProduction: CONFIG.isProduction(),
+  apiUrl: CONFIG.getApiUrl()
+});
+
 class GoogleLoginManager {
     constructor() {
         this.clientId = '20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com';
@@ -93,24 +127,10 @@ class GoogleLoginManager {
                     this.showNameInputForm(userInfoFromToken);
                 }
             } else {
-                // Token is invalid or missing
+                // Token is invalid or missing - DON'T AUTO-REFRESH
                 console.log(`❌ Token invalid: ${tokenStatus.reason}`);
                 
-                if (tokenStatus.reason === 'expired') {
-                    // Try to refresh the token automatically
-                    console.log('🔄 Attempting automatic token refresh...');
-                    const refreshedToken = await this.refreshToken();
-                    
-                    if (refreshedToken) {
-                        // Token refreshed successfully, check login status again
-                        console.log('✅ Token refreshed, checking login status again');
-                        await this.checkLoginStatus();
-                        return;
-                    } else {
-                        console.log('❌ Automatic token refresh failed');
-                    }
-                }
-                
+                // 🚨 FIXED: Don't automatically refresh tokens - wait for user to click "Sign In"
                 // Clear invalid data and show login form
                 await this.clearStoredData();
                 this.showLoginForm();
@@ -125,9 +145,31 @@ class GoogleLoginManager {
     async handleLogin() {
         try {
             this.setLoading(true);
-            // Info notification removed
+            console.log('🚀 User clicked Sign In - starting login process');
 
-            // Launch OAuth flow
+            // Check if we have an expired token that can be refreshed
+            const tokenStatus = await this.checkTokenExpiry();
+            if (tokenStatus.reason === 'expired') {
+                console.log('🔄 Attempting to refresh expired token...');
+                const refreshedToken = await this.refreshToken();
+                
+                if (refreshedToken) {
+                    console.log('✅ Token refreshed successfully');
+                    // Get user info from refreshed token
+                    const userInfo = await this.getUserInfo(refreshedToken);
+                    
+                    // Store token temporarily (we'll store user info after name input)
+                    await this.storeTokenOnly(refreshedToken);
+                    
+                    // Show name input form
+                    this.showNameInputForm(userInfo);
+                    return;
+                } else {
+                    console.log('❌ Token refresh failed, launching new OAuth flow');
+                }
+            }
+
+            // Launch new OAuth flow
             const token = await this.launchOAuthFlow();
             
             if (token) {
@@ -940,10 +982,10 @@ class GoogleLoginManager {
             
             // Check if backend is likely available (quick health check)
             try {
-                const healthCheck = await fetch('http://localhost:8004/api/v1/health', {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(2000) // 2 second timeout
-                });
+                        const healthCheck = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.health}`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(2000) // 2 second timeout
+        });
                 
                 if (!healthCheck.ok) {
                     throw new Error('Backend health check failed');
@@ -970,13 +1012,13 @@ class GoogleLoginManager {
             const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
             
             try {
-                const response = await fetch(`http://localhost:8004/api/v1/user/count/${encodeURIComponent(userInfo.email)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    signal: controller.signal
-                });
+                        const response = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.userCount}/${encodeURIComponent(userInfo.email)}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            signal: controller.signal
+        });
                 
                 clearTimeout(timeoutId);
             
