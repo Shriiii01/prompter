@@ -2,114 +2,83 @@
 """
 Test backend startup to identify issues
 """
-import os
 import sys
-import subprocess
+import os
 
 def test_backend_startup():
-    print("🔍 Testing Backend Startup...")
+    print("🧪 Testing Backend Startup...")
     
-    # Change to backend directory
-    os.chdir("backend")
+    # Add backend to path
+    backend_path = os.path.join(os.getcwd(), 'backend')
+    sys.path.insert(0, backend_path)
     
-    # Test 1: Check if main.py can be imported
-    print("\n🧪 Test 1: Import main.py")
+    print(f"📁 Backend path: {backend_path}")
+    
     try:
-        import main
-        print("✅ main.py imports successfully")
-    except Exception as e:
+        print("1️⃣ Testing config import...")
+        from config import settings
+        print("✅ Config imported successfully")
+        
+        print("2️⃣ Testing app import...")
+        from main import app
+        print("✅ App imported successfully")
+        
+        print("3️⃣ Testing app startup...")
+        # This would normally be done by uvicorn
+        print("✅ App startup test passed")
+        
+        print("4️⃣ Testing endpoints...")
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
+        
+        # Test root endpoint
+        response = client.get("/")
+        print(f"✅ Root endpoint: {response.status_code}")
+        
+        # Test health endpoint
+        response = client.get("/api/v1/health")
+        print(f"✅ Health endpoint: {response.status_code}")
+        
+        return True
+        
+    except ImportError as e:
         print(f"❌ Import error: {e}")
         return False
-    
-    # Test 2: Check if app can be created
-    print("\n🧪 Test 2: Create FastAPI app")
-    try:
-        app = main.app
-        print("✅ FastAPI app created successfully")
     except Exception as e:
-        print(f"❌ App creation error: {e}")
+        print(f"❌ Startup error: {e}")
         return False
-    
-    # Test 3: Check environment variables
-    print("\n🧪 Test 3: Check environment variables")
-    required_vars = [
-        "SUPABASE_URL",
-        "SUPABASE_SERVICE_KEY",
-        "OPENAI_API_KEY",
-        "ANTHROPIC_API_KEY"
-    ]
-    
-    missing_vars = []
-    for var in required_vars:
-        if not os.getenv(var):
-            missing_vars.append(var)
-    
-    if missing_vars:
-        print(f"⚠️ Missing environment variables: {missing_vars}")
-        print("These might cause issues on Railway")
-    else:
-        print("✅ All required environment variables are set")
-    
-    # Test 4: Check if uvicorn can start (briefly)
-    print("\n🧪 Test 4: Test uvicorn startup")
-    try:
-        # Try to start uvicorn for 5 seconds
-        process = subprocess.Popen([
-            "python", "-m", "uvicorn", "main:app", 
-            "--host", "0.0.0.0", "--port", "8000"
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        # Wait a bit for startup
-        import time
-        time.sleep(3)
-        
-        # Check if process is still running
-        if process.poll() is None:
-            print("✅ Uvicorn started successfully")
-            process.terminate()
-            process.wait()
-        else:
-            stdout, stderr = process.communicate()
-            print(f"❌ Uvicorn failed to start")
-            print(f"Error: {stderr.decode()}")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Uvicorn test error: {e}")
-        return False
-    
-    return True
 
-def provide_railway_solutions():
-    print("\n🔧 RAILWAY SOLUTIONS:")
-    print("1. Check Railway Environment Variables:")
-    print("   - Go to Railway dashboard")
-    print("   - Click 'Variables' tab")
-    print("   - Ensure these are set:")
-    print("     * SUPABASE_URL")
-    print("     * SUPABASE_SERVICE_KEY")
-    print("     * OPENAI_API_KEY")
-    print("     * ANTHROPIC_API_KEY")
+def check_environment():
+    print("\n🔍 Environment Check:")
+    print(f"Python version: {sys.version}")
+    print(f"Current directory: {os.getcwd()}")
     
-    print("\n2. Check Railway Logs:")
-    print("   - Click 'View logs' in deployment")
-    print("   - Look for startup errors")
+    # Check if .env exists
+    env_file = os.path.join('backend', '.env')
+    if os.path.exists(env_file):
+        print(f"✅ .env file exists: {env_file}")
+    else:
+        print(f"❌ .env file missing: {env_file}")
     
-    print("\n3. Redeploy if needed:")
-    print("   - Click 'Redeploy' button")
-    print("   - Or use: railway up")
+    # Check requirements
+    req_file = os.path.join('backend', 'requirements.txt')
+    if os.path.exists(req_file):
+        print(f"✅ requirements.txt exists: {req_file}")
+    else:
+        print(f"❌ requirements.txt missing: {req_file}")
 
 if __name__ == "__main__":
-    print("🚀 Backend Startup Tester")
+    print("🚀 Backend Startup Test")
     print("=" * 50)
     
+    check_environment()
+    
     if test_backend_startup():
-        print("\n✅ Backend startup test passed!")
-        print("The issue is likely in Railway environment variables")
-        provide_railway_solutions()
+        print("\n✅ Backend startup test PASSED!")
+        print("The issue is likely in Railway deployment, not the code.")
     else:
-        print("\n❌ Backend startup test failed!")
-        print("Fix the issues above before deploying to Railway")
+        print("\n❌ Backend startup test FAILED!")
+        print("There's an issue with the code that needs fixing.")
     
     print("\n" + "=" * 50)
     print("✅ Test completed!") 

@@ -56,7 +56,13 @@ class GoogleLoginManager {
         // Login button
         const loginBtn = document.getElementById('login-btn');
         if (loginBtn) {
-            loginBtn.addEventListener('click', () => this.handleLogin());
+            console.log('🔗 Binding login button click event');
+            loginBtn.addEventListener('click', () => {
+                console.log('🖱️ Login button clicked!');
+                this.handleLogin();
+            });
+        } else {
+            console.error('❌ Login button not found in DOM');
         }
 
         // Logout button
@@ -107,11 +113,11 @@ class GoogleLoginManager {
             
             if (tokenStatus.valid) {
                 // Token is valid, check if user has completed full login
-                const userInfo = await this.getStoredUserInfo();
-                if (userInfo && userInfo.display_name) {
-                    // User has completed the full login process
+                    const userInfo = await this.getStoredUserInfo();
+                    if (userInfo && userInfo.display_name) {
+                        // User has completed the full login process
                     console.log('✅ User fully logged in, showing user info');
-                    this.showUserInfo();
+                        this.showUserInfo();
                     
                     // If token expires soon, show warning
                     if (tokenStatus.reason === 'expiring_soon') {
@@ -119,20 +125,20 @@ class GoogleLoginManager {
                         console.log(`⚠️ Token expires in ${minutesLeft} minutes`);
                         // Could show a subtle warning to user here
                     }
-                } else {
-                    // User has token but hasn't completed name input
+                    } else {
+                        // User has token but hasn't completed name input
                     console.log('⚠️ User has token but needs to complete name input');
                     const token = await this.getStoredToken();
-                    const userInfoFromToken = await this.getUserInfo(token);
-                    this.showNameInputForm(userInfoFromToken);
-                }
-            } else {
+                        const userInfoFromToken = await this.getUserInfo(token);
+                        this.showNameInputForm(userInfoFromToken);
+                    }
+                } else {
                 // Token is invalid or missing - DON'T AUTO-REFRESH
                 console.log(`❌ Token invalid: ${tokenStatus.reason}`);
                 
                 // 🚨 FIXED: Don't automatically refresh tokens - wait for user to click "Sign In"
                 // Clear invalid data and show login form
-                await this.clearStoredData();
+                    await this.clearStoredData();
                 this.showLoginForm();
             }
         } catch (error) {
@@ -399,6 +405,10 @@ class GoogleLoginManager {
 
     async launchOAuthFlow() {
         return new Promise((resolve, reject) => {
+            console.log('🚀 Launching OAuth flow...');
+            console.log('🔑 Client ID:', this.clientId);
+            console.log('📋 Scopes:', this.scopes);
+            
             const authUrl = `https://accounts.google.com/o/oauth2/auth?` +
                 `client_id=${this.clientId}&` +
                 `response_type=id_token&` +
@@ -407,33 +417,48 @@ class GoogleLoginManager {
                 `state=${this.generateState()}&` +
                 `nonce=${this.generateNonce()}`;
 
+            console.log('🌐 Auth URL:', authUrl);
+            console.log('🔄 Redirect URI:', chrome.identity.getRedirectURL());
+
             chrome.identity.launchWebAuthFlow({
                 url: authUrl,
                 interactive: true
             }, (redirectUrl) => {
+                console.log('🔄 OAuth callback received');
+                console.log('📡 Redirect URL:', redirectUrl);
+                
                 if (chrome.runtime.lastError) {
+                    console.error('❌ Chrome runtime error:', chrome.runtime.lastError);
                     reject(new Error(chrome.runtime.lastError.message));
                     return;
                 }
 
                 if (!redirectUrl) {
+                    console.log('❌ No redirect URL - user cancelled');
                     resolve(null); // User cancelled
                     return;
                 }
 
                 try {
+                    console.log('🔍 Parsing redirect URL...');
                     // Extract id_token from redirect URL
                     const url = new URL(redirectUrl);
                     const fragment = url.hash.substring(1);
                     const params = new URLSearchParams(fragment);
                     const idToken = params.get('id_token');
                     
+                    console.log('🔍 URL fragment:', fragment);
+                    console.log('🔍 ID token found:', !!idToken);
+                    
                     if (idToken) {
+                        console.log('✅ ID token extracted successfully');
                         resolve(idToken);
                     } else {
+                        console.error('❌ No ID token in redirect URL');
                         reject(new Error('No ID token received'));
                     }
                 } catch (error) {
+                    console.error('❌ Error parsing redirect URL:', error);
                     reject(new Error('Failed to parse redirect URL'));
                 }
             });
@@ -624,11 +649,13 @@ class GoogleLoginManager {
                         console.log('✅ Token is still valid');
                     } else {
                         console.log('⚠️ Token will expire soon - user may need to re-authenticate');
-                        // Could show a subtle notification to user here
+                        const minutesLeft = Math.ceil(tokenStatus.timeUntilExpiry / 60);
+                        this.showStatus(`Your session will expire in ${minutesLeft} minutes.`, 'warning');
                     }
                 } else if (tokenStatus.reason === 'expired') {
                     console.log('❌ Token expired - user needs to re-authenticate');
-                    // Could show a notification to user here
+                    this.showStatus('Your session has expired. Please sign in again.', 'error');
+                    this.showLoginForm();
                 }
             } catch (error) {
                 console.error('❌ Error in token refresh monitoring:', error);
@@ -672,13 +699,13 @@ class GoogleLoginManager {
         } catch (error) {
             console.error('Failed to store user data securely:', error);
             // Fallback to plain storage
-            return new Promise((resolve) => {
-                chrome.storage.local.set({
-                    'google_token': token,
-                    'user_info': userInfo,
-                    'login_time': Date.now()
-                }, resolve);
-            });
+        return new Promise((resolve) => {
+            chrome.storage.local.set({
+                'google_token': token,
+                'user_info': userInfo,
+                'login_time': Date.now()
+            }, resolve);
+        });
         }
     }
 
@@ -697,11 +724,11 @@ class GoogleLoginManager {
         } catch (error) {
             console.error('Failed to get encrypted token:', error);
             // Fallback to plain storage
-            return new Promise((resolve) => {
-                chrome.storage.local.get(['google_token'], (result) => {
-                    resolve(result.google_token || null);
-                });
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['google_token'], (result) => {
+                resolve(result.google_token || null);
             });
+        });
         }
     }
 
@@ -711,11 +738,11 @@ class GoogleLoginManager {
         } catch (error) {
             console.error('Failed to get encrypted user info:', error);
             // Fallback to plain storage
-            return new Promise((resolve) => {
-                chrome.storage.local.get(['user_info'], (result) => {
-                    resolve(result.user_info || null);
-                });
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['user_info'], (result) => {
+                resolve(result.user_info || null);
             });
+        });
         }
     }
 
@@ -740,9 +767,9 @@ class GoogleLoginManager {
         } catch (error) {
             console.error('Failed to clear encrypted data:', error);
             // Fallback to plain storage clearing
-            return new Promise((resolve) => {
-                chrome.storage.local.remove(['google_token', 'user_info', 'login_time'], resolve);
-            });
+        return new Promise((resolve) => {
+            chrome.storage.local.remove(['google_token', 'user_info', 'login_time'], resolve);
+        });
         }
     }
 
@@ -983,9 +1010,9 @@ class GoogleLoginManager {
             // Check if backend is likely available (quick health check)
             try {
                         const healthCheck = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.health}`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(2000) // 2 second timeout
-        });
+                    method: 'GET',
+                    signal: AbortSignal.timeout(2000) // 2 second timeout
+                });
                 
                 if (!healthCheck.ok) {
                     throw new Error('Backend health check failed');
@@ -1013,12 +1040,12 @@ class GoogleLoginManager {
             
             try {
                         const response = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.userCount}/${encodeURIComponent(userInfo.email)}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            signal: controller.signal
-        });
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    signal: controller.signal
+                });
                 
                 clearTimeout(timeoutId);
             
@@ -1031,6 +1058,9 @@ class GoogleLoginManager {
                 const totalPrompts = userData.count;
                 
                 this.updateEnhancedCountDisplay(totalPrompts);
+                
+                // Check rate limit headers
+                this.checkRateLimitHeaders(response);
                 
                 console.log('✅ Loaded user count from backend:', userData);
                 console.log(`📊 Total prompts: ${totalPrompts}`);
@@ -1080,6 +1110,32 @@ class GoogleLoginManager {
             });
         } else {
             console.log('❌ Enhanced count element not found!');
+        }
+    }
+    
+    checkRateLimitHeaders(response) {
+        // Check and display rate limit information
+        const userHourly = response.headers.get('X-RateLimit-User-Hourly');
+        const userMinute = response.headers.get('X-RateLimit-User-Minute');
+        const ipHourly = response.headers.get('X-RateLimit-IP-Hourly');
+        const ipMinute = response.headers.get('X-RateLimit-IP-Minute');
+        const resetTime = response.headers.get('X-RateLimit-Reset');
+        
+        if (userHourly) {
+            const [current, limit] = userHourly.split('/');
+            const remaining = limit - current;
+            console.log(`📊 Rate Limit - User Hourly: ${remaining}/${limit} remaining`);
+            
+            // Show warning if getting close to limit
+            if (remaining <= 5) {
+                this.showStatus(`⚠️ You have ${remaining} requests remaining this hour`, 'warning');
+            }
+        }
+        
+        if (userMinute) {
+            const [current, limit] = userMinute.split('/');
+            const remaining = limit - current;
+            console.log(`📊 Rate Limit - User Minute: ${remaining}/${limit} remaining`);
         }
     }
 

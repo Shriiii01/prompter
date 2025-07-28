@@ -812,7 +812,7 @@ class CleanEnhancer {
               if (this.isInputElement(node) || node.querySelector('textarea, div[contenteditable="true"]')) {
                 hasInputChanges = true;
                 break;
-              }
+        }
             }
           }
         }
@@ -967,7 +967,7 @@ class CleanEnhancer {
     const style = window.getComputedStyle(element);
     if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
       score += 5;
-    }
+            }
     
     // Position score (inputs in viewport get higher scores)
     if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
@@ -1032,9 +1032,9 @@ class CleanEnhancer {
         icon.remove();
       }
       this.icons.delete(element);
-    }
+        }
     delete element.dataset.ceIconAttached;
-  }
+        }
 
   cleanupOrphanedIcons() {
     // 🧹 Remove icons from inputs that are no longer the main input
@@ -1580,7 +1580,7 @@ class CleanEnhancer {
           return { success: true, enhanced: result.enhanced };
         } else {
           throw new Error('Invalid response format');
-        }
+          }
       } else {
         // 🚀 SMART ERROR HANDLING
         const errorText = await response.text();
@@ -1594,9 +1594,9 @@ class CleanEnhancer {
           return await this.makeUnauthenticatedCall(text);
         } else {
           throw new Error(`API error: ${response.status}`);
-        }
-      }
-      
+            }
+          }
+          
         } catch (error) {
       const responseTime = Date.now() - startTime;
       console.log(`❌ API call failed after ${responseTime}ms:`, error.message);
@@ -1616,25 +1616,30 @@ class CleanEnhancer {
     // 🚀 FALLBACK: Unauthenticated call when token fails
     console.log('🚀 Making unauthenticated API call...');
     
-    const response = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.quickTest}`, {
+    try {
+      const response = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.quickTest}`, {
         method: 'POST',
         headers: {
-        'Content-Type': 'application/json'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           prompt: text,
-        url: window.location.href
+          url: window.location.href
         })
       });
       
-          if (response.ok) {
-      const result = await response.json();
-      if (result.success) {
-        return { success: true, enhanced: result.enhanced };
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          return { success: true, enhanced: result.enhanced };
+        }
       }
+      
+      throw new Error('Unauthenticated call also failed');
+    } catch (error) {
+      console.log('🔄 Using fallback enhancement due to error');
+      return this.getFallbackEnhancement(text);
     }
-    
-    throw new Error('Unauthenticated call also failed');
   }
 
   async getUserToken() {
@@ -1644,12 +1649,6 @@ class CleanEnhancer {
         resolve(result.google_token || null);
       });
     });
-  }
-      
-      // Always use fallback on any error
-      console.log('🔄 Using fallback enhancement due to error');
-      return this.getFallbackEnhancement(text);
-    }
   }
 
   detectTargetModel() {
@@ -1792,7 +1791,7 @@ Additional context: Please structure your response in a clear, organized manner 
       } catch (error) {
       console.error('❌ Optimized insertion failed:', error);
       return false; // Don't throw, just return false
-    }
+      }
   }
 
 
@@ -2186,9 +2185,9 @@ Additional context: Please structure your response in a clear, organized manner 
       console.log('🔄 User info not loaded, checking login status...');
       await this.checkLoginStatus();
       
-      if (!this.userInfo) {
-        console.log('❌ Cannot start extension - user not logged in');
-        return false;
+    if (!this.userInfo) {
+      console.log('❌ Cannot start extension - user not logged in');
+      return false;
       }
     }
     

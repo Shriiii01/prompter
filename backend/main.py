@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from app.api import enhance, websocket
+from app.middleware.rate_limiter import rate_limiter
 from config import settings
 
 # Configure logging
@@ -48,6 +49,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting middleware
+app.middleware("http")(rate_limiter)
 
 # Request logging middleware
 @app.middleware("http")
