@@ -18,10 +18,9 @@ const PRODUCTION_CONFIG = {
   }
 };
 
-// Environment detection
+// Environment detection - FORCE LOCALHOST FOR TESTING
 const isProduction = () => {
-  return window.location.protocol === 'https:' || 
-         window.location.hostname !== 'localhost';
+  return false; // Force localhost for testing
 };
 
 // Get the appropriate API URL
