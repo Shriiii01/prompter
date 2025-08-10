@@ -1,7 +1,7 @@
 import json
 import redis.asyncio as redis
 from typing import Optional, Any
-from config import settings
+from app.core.config import config
 
 class CacheService:
     """Redis caching service"""
@@ -14,7 +14,7 @@ class CacheService:
         """Ensure Redis connection is established"""
         if not self._connected:
             try:
-                self.redis = await redis.from_url(settings.redis_url)
+                self.redis = await redis.from_url(config.settings.redis_url)
                 self._connected = True
             except Exception:
                 # If Redis is not available, caching will be disabled

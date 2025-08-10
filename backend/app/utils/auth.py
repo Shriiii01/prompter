@@ -1,133 +1,144 @@
-"""
-Google Authentication Utilities
-Handles verification of Google ID tokens from Chrome extension
-"""
-
-from fastapi import HTTPException, status
+import jwt
+import requests
+from typing import Optional, Dict, Any
+from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
-from google.auth.transport import requests
+from google.auth import default
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Your Google OAuth Client ID from the Chrome extension
+# Google OAuth configuration
 GOOGLE_CLIENT_ID = "20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com"
 
-def get_email_from_token(auth_header: str) -> str:
+def get_email_from_token(authorization: str) -> str:
     """
-    Verify Google ID token and extract user email
+    Extract user email from Google OAuth access token
     
     Args:
-        auth_header: Authorization header containing "Bearer <token>"
+        authorization: Bearer token from Authorization header
         
     Returns:
-        str: Verified user email
+        User email address
         
     Raises:
-        HTTPException: If token is invalid or missing
+        ValueError: If token is invalid or email cannot be extracted
     """
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Missing or invalid authorization header. Expected 'Bearer <token>'"
-        )
-
-    token = auth_header.split(" ")[1]
-    
     try:
-        # Verify the token with Google
-        idinfo = id_token.verify_oauth2_token(
-            token, 
-            requests.Request(), 
-            GOOGLE_CLIENT_ID
+        # Remove 'Bearer ' prefix
+        if authorization.startswith('Bearer '):
+            token = authorization[7:]
+        else:
+            token = authorization
+            
+        # Use the access token to get user info from Google API
+        response = requests.get(
+            'https://www.googleapis.com/oauth2/v2/userinfo',
+            headers={'Authorization': f'Bearer {token}'}
         )
         
-        # Extract email from verified token
-        email = idinfo.get("email")
-        if not email:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Email not found in token"
-            )
+        if response.status_code != 200:
+            raise ValueError(f"Failed to verify token: {response.status_code}")
             
-        # Log successful verification (without sensitive data)
-        logger.info(f"Successfully verified Google token for user: {email}")
+        user_info = response.json()
         
+        # Extract email
+        email = user_info.get('email')
+        if not email:
+            raise ValueError("No email found in token response")
+            
+        logger.info(f"✅ Authenticated user: {email}")
         return email
         
-    except ValueError as e:
-        logger.warning(f"Invalid Google token: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Google token"
-        )
     except Exception as e:
-        logger.error(f"Error verifying Google token: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token verification failed"
-        )
+        logger.error(f"❌ Authentication failed: {str(e)}")
+        raise ValueError(f"Invalid authentication token: {str(e)}")
 
-def get_user_info_from_token(auth_header: str) -> dict:
+def get_user_info_from_token(authorization: str) -> Dict[str, Any]:
     """
-    Verify Google ID token and extract full user information
+    Extract user information from Google OAuth access token
     
     Args:
-        auth_header: Authorization header containing "Bearer <token>"
+        authorization: Bearer token from Authorization header
         
     Returns:
-        dict: User information including email, name, picture, etc.
+        Dictionary containing user information (email, name, picture, etc.)
         
     Raises:
-        HTTPException: If token is invalid or missing
+        ValueError: If token is invalid or user info cannot be extracted
     """
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Missing or invalid authorization header. Expected 'Bearer <token>'"
-        )
-
-    token = auth_header.split(" ")[1]
-    
     try:
-        # Verify the token with Google
-        idinfo = id_token.verify_oauth2_token(
-            token, 
-            requests.Request(), 
-            GOOGLE_CLIENT_ID
+        # Remove 'Bearer ' prefix
+        if authorization.startswith('Bearer '):
+            token = authorization[7:]
+        else:
+            token = authorization
+            
+        # Use the access token to get user info from Google API
+        response = requests.get(
+            'https://www.googleapis.com/oauth2/v2/userinfo',
+            headers={'Authorization': f'Bearer {token}'}
         )
         
-        # Extract user information
-        user_info = {
-            "email": idinfo.get("email"),
-            "name": idinfo.get("name"),
-            "picture": idinfo.get("picture"),
-            "given_name": idinfo.get("given_name"),
-            "family_name": idinfo.get("family_name"),
-            "email_verified": idinfo.get("email_verified", False),
-            "sub": idinfo.get("sub")  # Google user ID
+        if response.status_code != 200:
+            raise ValueError(f"Failed to verify token: {response.status_code}")
+            
+        user_info = response.json()
+        
+        # Map Google API response to our format
+        formatted_user_info = {
+            'email': user_info.get('email'),
+            'name': user_info.get('name'),
+            'picture': user_info.get('picture'),
+            'given_name': user_info.get('given_name'),
+            'family_name': user_info.get('family_name'),
+            'sub': user_info.get('id'),  # Google user ID
+            'email_verified': user_info.get('verified_email', False)
         }
         
-        if not user_info["email"]:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Email not found in token"
-            )
+        if not formatted_user_info['email']:
+            raise ValueError("No email found in token response")
             
-        # Log successful verification (without sensitive data)
-        logger.info(f"Successfully verified Google token for user: {user_info['email']}")
+        logger.info(f"✅ User info extracted: {formatted_user_info['email']}")
+        return formatted_user_info
         
-        return user_info
-        
-    except ValueError as e:
-        logger.warning(f"Invalid Google token: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Google token"
-        )
     except Exception as e:
-        logger.error(f"Error verifying Google token: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token verification failed"
-        ) 
+        logger.error(f"❌ User info extraction failed: {str(e)}")
+        raise ValueError(f"Invalid authentication token: {str(e)}")
+
+def verify_token_validity(authorization: str) -> bool:
+    """
+    Verify if the provided token is valid
+    
+    Args:
+        authorization: Bearer token from Authorization header
+        
+    Returns:
+        True if token is valid, False otherwise
+    """
+    try:
+        get_email_from_token(authorization)
+        return True
+    except:
+        return False
+
+def extract_token_from_header(authorization: str) -> str:
+    """
+    Extract token from Authorization header
+    
+    Args:
+        authorization: Authorization header value
+        
+    Returns:
+        Clean token string
+        
+    Raises:
+        ValueError: If header format is invalid
+    """
+    if not authorization:
+        raise ValueError("No authorization header provided")
+        
+    if authorization.startswith('Bearer '):
+        return authorization[7:]
+    else:
+        return authorization 

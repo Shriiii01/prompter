@@ -6,9 +6,10 @@ from app.core.enhancer import PromptEnhancer
 from app.core.analyzer import PromptAnalyzer
 from app.core.model_specific_enhancer import ModelSpecificEnhancer
 from app.services.openai import OpenAIService
+from app.services.multi_provider import MultiProviderService
 from app.utils.auth import get_email_from_token, get_user_info_from_token
 from app.services.database import db_service
-from config import settings
+from app.core.config import config
 import logging
 import time
 from typing import Optional
@@ -20,33 +21,34 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["enhancement"])
 
 def get_enhancer():
-    """Dependency to get OpenAI GPT-4o-mini enhancer instance"""
+    """Dependency to get MultiProviderService enhancer instance"""
     try:
-        openai_service = None
-        
-        # Initialize OpenAI service (primary)
-        if settings.openai_api_key:
-            try:
-                openai_service = OpenAIService(settings.openai_api_key)
-                logger.info("✅ OpenAI GPT-4o-mini service initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize OpenAI service: {str(e)}")
-        
-        # If OpenAI service is not available, use basic fallback
-        if not openai_service:
-            logger.warning("No OpenAI service available. Using basic fallback enhancement.")
-            from app.core.enhancer import PromptEnhancer
-            return PromptEnhancer()
-            
-        return ModelSpecificEnhancer(
-            openai_service=openai_service
+        logger.info(f"🔧 Initializing MultiProviderService enhancer...")
+        logger.info(f"🔑 OpenAI API key available: {bool(config.settings.openai_api_key)}")
+        logger.info(f"🔑 Gemini API key available: {bool(config.settings.gemini_api_key)}")
+        logger.info(f"🔑 Together API key available: {bool(config.settings.together_api_key)}")
+
+        # Initialize MultiProviderService with all available API keys
+        multi_provider_service = MultiProviderService(
+            openai_key=config.settings.openai_api_key,
+            gemini_key=config.settings.gemini_api_key,
+            together_key=config.settings.together_api_key
         )
         
+        logger.info("✅ MultiProviderService initialized successfully")
+        logger.info(f"🔧 MultiProviderService type: {type(multi_provider_service)}")
+        
+        # Create ModelSpecificEnhancer with MultiProviderService
+        logger.info("✅ Creating ModelSpecificEnhancer with MultiProviderService")
+        enhancer = ModelSpecificEnhancer(multi_provider_service=multi_provider_service)
+        logger.info(f"✅ ModelSpecificEnhancer created: {type(enhancer)}")
+        return enhancer
+        
     except Exception as e:
-        logger.error(f"Failed to initialize ModelSpecificEnhancer: {str(e)}")
-        # Return fallback enhancer
-        from app.core.enhancer import PromptEnhancer
-        return PromptEnhancer()
+        logger.error(f"❌ Failed to initialize MultiProviderService enhancer: {str(e)}")
+        # Return ModelSpecificEnhancer without MultiProviderService - it has its own fallback logic
+        logger.info("🔄 Creating ModelSpecificEnhancer without MultiProviderService (will use internal fallback)")
+        return ModelSpecificEnhancer()
 
 def get_analyzer():
     """Dependency to get analyzer instance"""
@@ -61,24 +63,25 @@ def get_current_user_info(authorization: str = Header(...)) -> dict:
     return get_user_info_from_token(authorization)
 
 def detect_model_from_url(url: str) -> LLMModel:
-    """Auto-detect target model from URL"""
+    """Auto-detect target model from URL - optimized with dict lookup"""
     if not url:
-        return LLMModel.GPT4O_MINI
+        return LLMModel.GPT_4O_MINI
     
     hostname = url.lower()
     
-    if 'openai.com' in hostname or 'chatgpt.com' in hostname:
-        return LLMModel.GPT4O_MINI
-    elif 'claude.ai' in hostname:
-        return LLMModel.CLAUDE_35_SONNET
-    elif 'gemini.google.com' in hostname:
-        return LLMModel.GEMINI_15_PRO
-    elif 'perplexity.ai' in hostname:
-        return LLMModel.PERPLEXITY_PRO
-    elif 'meta.ai' in hostname:
-        return LLMModel.META_LLAMA_3
-    else:
-        return LLMModel.GPT4O_MINI
+    # 🚀 OPTIMIZED: Single dict lookup instead of multiple if/elif
+    domain_mapping = {
+        'openai.com': LLMModel.GPT_4O_MINI,
+        'chatgpt.com': LLMModel.GPT_4O_MINI,
+        'chat.openai.com': LLMModel.GPT_4O_MINI,
+        'claude.ai': LLMModel.CLAUDE_3_5_SONNET,
+        'gemini.google.com': LLMModel.GEMINI_1_5_PRO,
+        'perplexity.ai': LLMModel.PERPLEXITY_PRO,
+        'meta.ai': LLMModel.META_LLAMA_3,
+    }
+    
+    # Fast lookup - returns default if not found
+    return next((model for domain, model in domain_mapping.items() if domain in hostname), LLMModel.GPT_4O_MINI)
 
 @router.post("/enhance", response_model=EnhancementResult)
 async def enhance_prompt(
@@ -99,10 +102,10 @@ async def enhance_prompt(
             detail="Prompt must be at least 3 characters long"
         )
     
-    if len(request.prompt) > 10000:
+    if len(request.prompt) > 4000:
         raise HTTPException(
             status_code=400, 
-            detail="Prompt too long. Maximum 10,000 characters allowed"
+            detail="Prompt too long. Maximum 4,000 characters allowed"
         )
     
     try:
@@ -185,10 +188,10 @@ async def analyze_prompt(
             detail="Prompt cannot be empty"
         )
     
-    if len(request.prompt) > 10000:
+    if len(request.prompt) > 4000:
         raise HTTPException(
             status_code=400, 
-            detail="Prompt too long. Maximum 10,000 characters allowed"
+            detail="Prompt too long. Maximum 4,000 characters allowed"
         )
     
     try:
@@ -211,38 +214,38 @@ async def health_check():
         
         services_status = {
             "openai": {
-                "available": bool(settings.openai_api_key),
-                "configured": bool(enhancer.openai_service),
+                "available": bool(config.settings.openai_api_key),
+                "configured": bool(enhancer.multi_provider_service),
                 "purpose": "Primary LLM for all enhancements"
             },
             "gpt_4o_mini": {
-                "available": bool(settings.openai_api_key),
-                "configured": bool(enhancer.openai_service),
+                "available": bool(config.settings.openai_api_key),
+                "configured": bool(enhancer.multi_provider_service),
                 "purpose": "GPT-4o-mini for all model-specific enhancements"
             },
             "model_specific_enhancement": {
                 "available": True,
                 "configured": True,
-                "description": "GPT-4o-mini with model-specific prompts for all target models"
+                "description": "Multi-provider system with model-specific prompts for all target models"
             }
         }
         
-        # Check service availability
-        openai_available = services_status["openai"]["available"]
+        # Check service availability - ModelSpecificEnhancer uses MultiProviderService
+        multi_provider_available = bool(enhancer.multi_provider_service)
         
         # Determine health status and strategy
-        if openai_available:
+        if multi_provider_available:
             health_status = "healthy"
-            strategy = "OpenAI GPT-4o-mini for all enhancements with model-specific prompts"
-            message = "OpenAI GPT-4o-mini service available for all model enhancements"
+            strategy = "Multi-provider system (OpenAI → Gemini → Together) with model-specific prompts"
+            message = "Multi-provider AI service available for all model enhancements"
         else:
-            health_status = "unhealthy"
-            strategy = "Basic rule-based enhancement only"
-            message = "No OpenAI service available - using basic enhancement"
+            health_status = "degraded"
+            strategy = "Fallback enhancement only"
+            message = "No AI providers configured - using fallback enhancement"
         
         return {
             "status": health_status,
-            "version": settings.version,
+            "version": config.settings.app_version,
             "timestamp": time.time(),
             "services": services_status,
             "enhancement_strategy": strategy,
@@ -255,11 +258,15 @@ async def health_check():
             status_code=503,
             content={
                 "status": "unhealthy",
-                "version": settings.version,
+                "version": config.settings.app_version,
                 "timestamp": time.time(),
                 "error": "Service initialization failed"
             }
         )
+
+
+
+
 
 @router.get("/pipeline-info")
 async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhancer)):
@@ -273,7 +280,7 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
             "supported_models": [
                 "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
-                "gemini-pro", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"
+                "gemini-1.0-pro", "gemini-1.5-pro", "gemini-1.5-flash"
             ],
             "features": [
                 "Model-specific system prompts",
@@ -288,56 +295,39 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
         logger.error(f"Pipeline info failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Unable to retrieve pipeline information")
 
-@router.post("/test-enhancement")
-async def test_enhancement(
-    test_prompt: str = Query(default="Hello, how can I improve this text?", description="Test prompt to enhance"),
-    target_model: LLMModel = Query(default=LLMModel.GPT4O_MINI, description="Target model for enhancement"),
-    enhancer: ModelSpecificEnhancer = Depends(get_enhancer)
-):
-    """Test the unified enhancement pipeline with a sample prompt"""
-    
-    # Rate limiting for test endpoint
-    if len(test_prompt) > 500:
-        raise HTTPException(
-            status_code=400, 
-            detail="Test prompts limited to 500 characters"
-        )
-    
-    try:
-        result = await enhancer.enhance(
-            prompt=test_prompt,
-            target_model=target_model
-        )
-        
-        return {
-            "test_prompt": test_prompt,
-            "target_model": target_model.value,
-            "enhancement_llm": "openai/gpt-4o-mini",
-            "result": {
-                "original": result.original,
-                "enhanced": result.enhanced,
-                "improvements": result.improvements,
-                "model_used": result.model_used,
-                "processing_time": result.enhancement_time
-            },
-            "strategy": f"Used {target_model.value}-specific prompts with OpenAI GPT-4o-mini"
-        }
-    except Exception as e:
-        logger.error(f"Test enhancement failed: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail="Test enhancement failed. Please check service configuration."
-        )
+
 
 @router.post("/quick-test")
 async def quick_test(
     request: dict,
     enhancer: ModelSpecificEnhancer = Depends(get_enhancer)
 ):
-    """Quick test endpoint without authentication"""
+    """Quick test endpoint without authentication - now with user tracking"""
     try:
+        from app.services.database import db_service
+        
         prompt = request.get('prompt', 'write code')
         url = request.get('url', '')
+        user_email = request.get('user_email', None)  # Optional user email for tracking
+        
+        # Input validation - 4000 character limit
+        logger.info(f"🔍 Validating prompt length: {len(prompt)} characters")
+        
+        if not prompt or len(prompt.strip()) < 3:
+            logger.warning(f"❌ Prompt too short: {len(prompt)} characters")
+            raise HTTPException(
+                status_code=400, 
+                detail="Prompt must be at least 3 characters long"
+            )
+        
+        if len(prompt) > 4000:
+            logger.warning(f"❌ Prompt too long: {len(prompt)} characters")
+            raise HTTPException(
+                status_code=400, 
+                detail="Prompt too long. Maximum 4,000 characters allowed"
+            )
+        
+        logger.info(f"✅ Prompt validation passed: {len(prompt)} characters")
         
         # Auto-detect target model from URL
         detected_model = detect_model_from_url(url)
@@ -350,13 +340,47 @@ async def quick_test(
             context=None
         )
         
-        return {
-            "success": True,
-            "original": result.original,
-            "enhanced": result.enhanced,
-            "model_used": result.model_used,
-            "processing_time": result.enhancement_time
-        }
+        # 🎯 INCREMENT USER PROMPT COUNT IF EMAIL PROVIDED
+        if user_email:
+            try:
+                logger.info(f"📊 Incrementing prompt count for user: {user_email}")
+                new_count = await db_service.increment_user_prompts(user_email)
+                logger.info(f"✅ Prompt count incremented to: {new_count}")
+                
+                # Add response fields to indicate count was incremented
+                response_data = {
+                    "success": True,
+                    "original": result.original,
+                    "enhanced": result.enhanced,
+                    "model_used": result.model_used,
+                    "processing_time": result.enhancement_time,
+                    "count_incremented": True,
+                    "new_count": new_count
+                }
+            except Exception as db_error:
+                logger.warning(f"⚠️ Failed to increment prompt count: {db_error}")
+                response_data = {
+                    "success": True,
+                    "original": result.original,
+                    "enhanced": result.enhanced,
+                    "model_used": result.model_used,
+                    "processing_time": result.enhancement_time,
+                    "count_incremented": False
+                }
+        else:
+            logger.info("📊 No user email provided - prompt count not incremented")
+            response_data = {
+                "success": True,
+                "original": result.original,
+                "enhanced": result.enhanced,
+                "model_used": result.model_used,
+                "processing_time": result.enhancement_time,
+                "count_incremented": False
+            }
+        
+        return response_data
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Quick test failed: {str(e)}")
         return {
@@ -369,7 +393,7 @@ async def get_available_models():
     """Get list of available models and their unified enhancement status"""
     
     enhancer = get_enhancer()
-    is_openai_available = bool(enhancer.openai_service)
+    is_openai_available = bool(enhancer.multi_provider_service and hasattr(enhancer.multi_provider_service, 'providers'))
     
     models = {
         "gpt-4o": {
@@ -411,13 +435,13 @@ async def get_available_models():
             "description": "Most capable Claude model",
             "recommended_for": ["complex analysis", "creative writing"],
             "enhancement_llm": "gpt-4o-mini"
-        },
-        "gemini-2.0-flash": {
-            "name": "Gemini 2.0 Flash",
+                },
+        "gemini-1.0-pro": {
+            "name": "Gemini 1.0 Pro",
             "provider": "Google",
             "available": is_openai_available,
-            "description": "Fast and versatile",
-            "recommended_for": ["multimodal tasks", "quick responses"],
+            "description": "Original Gemini Pro model",
+            "recommended_for": ["general tasks", "conversation", "content creation"],
             "enhancement_llm": "gpt-4o-mini"
         },
         "gemini-1.5-pro": {
@@ -501,13 +525,13 @@ async def get_service_stats(enhancer: PromptEnhancer = Depends(get_enhancer)):
         
         return {
             "service": "AI Magic Prompt Enhancer",
-            "version": settings.version,
+                            "version": config.settings.app_version,
             "status": "operational",
             "enhancement_engine": "GPT-4o mini with model-specific prompts",
             "supported_models": [
                 "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
-                "gemini-pro", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"
+                "gemini-1.0-pro", "gemini-1.5-pro", "gemini-1.5-flash"
             ],
             "features": [
                 "Model-specific prompt optimization",
@@ -557,16 +581,29 @@ async def get_user_stats(
 async def get_user_count_by_email(email: str):
     """Get user's enhanced prompt count by email (no auth required)"""
     try:
+        from app.services.database import db_service
+        
+        # Get user stats directly
         stats = await db_service.get_user_stats(email=email)
         
-        if not stats:
-            return {"count": 0, "email": email}
-        
-        return {
-            "count": stats["enhanced_prompts"],
-            "email": email,
-            "name": stats.get("name")
-        }
+        if stats:
+            # User exists, return their stats
+            logger.info(f"✅ User found: {email} with {stats['enhanced_prompts']} prompts")
+            return {
+                "count": stats["enhanced_prompts"],
+                "email": email,
+                "name": stats.get("name"),
+                "new_user": False
+            }
+        else:
+            # User doesn't exist, return 0
+            logger.info(f"❌ User not found: {email}")
+            return {
+                "count": 0,
+                "email": email,
+                "name": email.split('@')[0],
+                "new_user": False
+            }
         
     except Exception as e:
         logger.error(f"User count failed for {email}: {str(e)}")
@@ -643,7 +680,7 @@ async def stream_enhance_prompt(request: EnhanceRequest):
         enhancer = get_enhancer()
         
         # Get the target model
-        target_model = request.target_model or LLMModel.GPT4O_MINI
+        target_model = request.target_model or LLMModel.GPT_4O_MINI
         detected_model = target_model.value
         
         # Get enhanced text using unified enhancement
@@ -700,7 +737,7 @@ async def stream_enhance_prompt(request: EnhanceRequest):
         # Fallback response
         async def fallback_stream():
             # Use the unified fallback based on target model
-            target_model = request.target_model or LLMModel.GPT4O_MINI
+            target_model = request.target_model or LLMModel.GPT_4O_MINI
             model_name = target_model.value
             
             # Create fallback enhancement based on target model
@@ -731,3 +768,38 @@ async def stream_enhance_prompt(request: EnhanceRequest):
                 "Access-Control-Allow-Origin": "*",
             }
         )
+
+
+
+
+
+@router.post("/user/increment-count")
+async def increment_user_count(request: dict):
+    """Simple endpoint to increment user prompt count without enhancement"""
+    try:
+        from app.services.database import db_service
+        
+        user_email = request.get('user_email')
+        if not user_email:
+            return {"success": False, "error": "user_email is required"}
+        
+        # Increment the user's prompt count
+        new_count = await db_service.increment_user_prompts(user_email)
+        
+        logger.info(f"✅ Incremented prompt count for {user_email}: {new_count}")
+        
+        return {
+            "success": True,
+            "email": user_email,
+            "new_count": new_count
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to increment user count: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+

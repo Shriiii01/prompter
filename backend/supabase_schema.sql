@@ -1,12 +1,15 @@
--- Simple User Tracking Schema
+-- Simple User Tracking Schema with Subscription Support
 -- Run this in your Supabase SQL editor
 
--- Create simple users table
+-- Create simple users table with subscription support
 CREATE TABLE IF NOT EXISTS users (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
-    name TEXT,
     enhanced_prompts INTEGER DEFAULT 0,
+    subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro')),
+    subscription_expires_at TIMESTAMP WITH TIME ZONE,
+    daily_prompts_used INTEGER DEFAULT 0,
+    last_prompt_reset DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -20,22 +23,6 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access" ON users
     FOR ALL USING (auth.role() = 'service_role');
 
--- Create RPC function for atomic increment
-CREATE OR REPLACE FUNCTION increment_user_prompts(user_email TEXT)
-RETURNS TABLE(enhanced_prompts INTEGER) AS $$
-BEGIN
-    UPDATE users 
-    SET enhanced_prompts = enhanced_prompts + 1 
-    WHERE email = user_email;
-    
-    RETURN QUERY 
-    SELECT users.enhanced_prompts 
-    FROM users 
-    WHERE users.email = user_email;
-END;
-$$ LANGUAGE plpgsql;
-
 -- Grant permissions
 GRANT ALL ON users TO service_role;
 GRANT USAGE ON SCHEMA public TO service_role; 
-GRANT EXECUTE ON FUNCTION increment_user_prompts(TEXT) TO service_role; 

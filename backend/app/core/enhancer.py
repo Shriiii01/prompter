@@ -1,4 +1,5 @@
 import time
+import re
 from datetime import datetime
 from typing import Optional, List
 from app.models.response import EnhancementResult, PromptAnalysis
@@ -25,6 +26,11 @@ class PromptEnhancer:
         
         start_time = time.time()
         print(f"🎯 Fast enhancing: {prompt[:50]}...")
+
+        # Handle edge cases first
+        edge_case_result = self._handle_edge_cases(prompt, start_time)
+        if edge_case_result:
+            return edge_case_result
         
         # Check cache first
         cache_key = f"enhance_v3:{hash(prompt)}:{target_model.value}"
@@ -38,15 +44,18 @@ class PromptEnhancer:
             # Direct enhancement without complex pipeline
             enhanced_prompt = await self._direct_enhance(prompt, target_model)
             
+            # Clean up the prompt to remove any unwanted prefixes
+            cleaned_prompt = self._cleanup_prompt(enhanced_prompt)
+
             # Quick analysis
             analysis = self.analyzer.analyze(prompt)
             
             # Create result
             result = EnhancementResult(
                 original=prompt,
-                enhanced=enhanced_prompt,
+                enhanced=cleaned_prompt,
                 model_used=f"fast-enhancer-{target_model.value}",
-                improvements=self._identify_improvements(prompt, enhanced_prompt),
+                improvements=self._identify_improvements(prompt, cleaned_prompt),
                 analysis=analysis,
                 enhancement_time=time.time() - start_time,
                 cached=False,
@@ -72,7 +81,47 @@ class PromptEnhancer:
                 cached=False,
                 timestamp=datetime.now()
             )
+
+    def _handle_edge_cases(self, prompt: str, start_time: float) -> Optional[EnhancementResult]:
+        """Handle non-standard inputs like emoji-only prompts"""
+        # Check for emoji-only prompts
+        if self._is_emoji_only(prompt):
+            return EnhancementResult(
+                original=prompt,
+                enhanced=f"Tell me a story about these emojis: {prompt}",
+                model_used="edge-case-handler",
+                improvements=["Converted emoji-only prompt to a creative request"],
+                analysis=self.analyzer.analyze(prompt),
+                enhancement_time=time.time() - start_time,
+                cached=False,
+                timestamp=datetime.now()
+            )
+        return None
+
+    def _is_emoji_only(self, text: str) -> bool:
+        """Check if a string contains only emojis and whitespace"""
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "]+", flags=re.UNICODE)
+        # Remove all emojis and see if only whitespace is left
+        return not emoji_pattern.sub(' ', text).strip()
     
+    def _cleanup_prompt(self, text: str) -> str:
+        """Remove any unwanted prefixes from the enhanced prompt"""
+        lines = text.split('\n')
+        if lines:
+            # Check for common prefixes and remove the first line if it matches
+            first_line = lines[0].lower()
+            if first_line.startswith("prompt for") or first_line.startswith("enhanced prompt:"):
+                return '\n'.join(lines[1:])
+        return text
+
     async def _direct_enhance(self, prompt: str, target_model: LLMModel) -> str:
         """Direct enhancement using GPT-4o with model-specific system prompts"""
         

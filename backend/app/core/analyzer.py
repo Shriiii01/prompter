@@ -40,12 +40,10 @@ class PromptAnalyzer:
         issues = self._identify_issues(prompt, word_count)
         
         return PromptAnalysis(
-            overall_score=overall_score,
-            length_score=length_score,
-            clarity_score=clarity_score,
-            specificity_score=specificity_score,
-            structure_score=structure_score,
+            quality_score=overall_score,
             issues=issues,
+            strengths=[],
+            suggestions=[],
             word_count=word_count,
             estimated_tokens=int(estimated_tokens)
         )
@@ -96,7 +94,7 @@ class PromptAnalyzer:
         
         if word_count < 10:
             issues.append(PromptIssue(
-                type="length",
+                issue_type="length",
                 severity="high",
                 description="Prompt is too short",
                 suggestion="Add more context and details to your prompt"
@@ -104,7 +102,7 @@ class PromptAnalyzer:
         
         if word_count > 200:
             issues.append(PromptIssue(
-                type="length",
+                issue_type="length",
                 severity="medium",
                 description="Prompt is very long",
                 suggestion="Consider breaking it into smaller, focused requests"
@@ -112,7 +110,7 @@ class PromptAnalyzer:
         
         if "?" not in prompt:
             issues.append(PromptIssue(
-                type="clarity",
+                issue_type="clarity",
                 severity="medium",
                 description="No clear question or request",
                 suggestion="End your prompt with a specific question or request"

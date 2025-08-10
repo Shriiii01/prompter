@@ -1,1229 +1,798 @@
-// AI Magic - Prompt Enhancer - Google Login
-console.log('🚀 AI Magic Popup - Loading Google Login...');
+// 🔐 SUPER SIMPLE POPUP SCRIPT - JUST WORKS
+console.log('🚀 Popup starting...');
 
-// 🌐 PRODUCTION CONFIGURATION
-const CONFIG = {
-  // Railway production URL (replace with your actual Railway URL)
-  API_BASE_URL: 'https://prompter-production-76a3.railway.app',
-  
-  // Fallback to localhost for development
-  DEV_API_BASE_URL: 'http://localhost:8004',
-  
-  // Environment detection
-  isProduction: () => {
-    return window.location.protocol === 'https:' || 
-           window.location.hostname !== 'localhost';
-  },
-  
-  // Get the appropriate API URL
-  getApiUrl: () => {
-    return CONFIG.isProduction() ? CONFIG.API_BASE_URL : CONFIG.DEV_API_BASE_URL;
-  },
-  
-  // API endpoints
-  endpoints: {
-    enhance: '/api/v1/enhance',
-    quickTest: '/api/v1/quick-test',
-    health: '/api/v1/health',
-    userStats: '/api/v1/user/stats',
-    userCount: '/api/v1/user/count'
-  }
-};
-
-console.log('🌐 Popup API Configuration:', {
-  isProduction: CONFIG.isProduction(),
-  apiUrl: CONFIG.getApiUrl()
-});
-
-class GoogleLoginManager {
-    constructor() {
-        this.clientId = '20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com';
-        this.scopes = ['openid', 'email', 'profile'];
-        this.userInfo = null;
-        this.extensionId = chrome.runtime.id;
-        this.secureStorage = new SecureStorage();
-        
-        this.init();
-    }
-
-    init() {
-        this.bindEvents();
-        this.checkLoginStatus();
-        this.setupMessageListener();
-    }
-
-    bindEvents() {
-        // Login button
-        const loginBtn = document.getElementById('login-btn');
-        if (loginBtn) {
-            console.log('🔗 Binding login button click event');
-            loginBtn.addEventListener('click', () => {
-                console.log('🖱️ Login button clicked!');
-                this.handleLogin();
-            });
-        } else {
-            console.error('❌ Login button not found in DOM');
-        }
-
-        // Logout button
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.handleLogout());
-        }
-
-        // Quit button
-        const quitBtn = document.getElementById('quit-btn');
-        if (quitBtn) {
-            quitBtn.addEventListener('click', () => this.handleQuit());
-        }
-
-        // Start/Stop button
-        const startStopBtn = document.getElementById('start-stop-btn');
-        if (startStopBtn) {
-            startStopBtn.addEventListener('click', () => this.handleStartStop());
-        }
-
-        // Name input functionality
-        const nameSubmitBtn = document.getElementById('name-submit-btn');
-        const nameInputField = document.getElementById('name-input-field');
-        
-        if (nameSubmitBtn) {
-            nameSubmitBtn.addEventListener('click', () => this.handleNameSubmit());
-        }
-        
-        if (nameInputField) {
-            // Allow Enter key to submit name
-            nameInputField.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    this.handleNameSubmit();
-                }
-            });
-        }
-
-
-    }
-
-    async checkLoginStatus() {
-        try {
-            console.log('🔍 Checking login status...');
-            
-            // Check token expiry status
-            const tokenStatus = await this.checkTokenExpiry();
-            console.log('📊 Token status:', tokenStatus);
-            
-            if (tokenStatus.valid) {
-                // Token is valid, check if user has completed full login
-                    const userInfo = await this.getStoredUserInfo();
-                    if (userInfo && userInfo.display_name) {
-                        // User has completed the full login process
-                    console.log('✅ User fully logged in, showing user info');
-                        this.showUserInfo();
-                    
-                    // If token expires soon, show warning
-                    if (tokenStatus.reason === 'expiring_soon') {
-                        const minutesLeft = Math.ceil(tokenStatus.timeUntilExpiry / 60);
-                        console.log(`⚠️ Token expires in ${minutesLeft} minutes`);
-                        // Could show a subtle warning to user here
-                    }
-                    } else {
-                        // User has token but hasn't completed name input
-                    console.log('⚠️ User has token but needs to complete name input');
-                    const token = await this.getStoredToken();
-                        const userInfoFromToken = await this.getUserInfo(token);
-                        this.showNameInputForm(userInfoFromToken);
-                    }
-                } else {
-                // Token is invalid or missing - DON'T AUTO-REFRESH
-                console.log(`❌ Token invalid: ${tokenStatus.reason}`);
-                
-                // 🚨 FIXED: Don't automatically refresh tokens - wait for user to click "Sign In"
-                // Clear invalid data and show login form
-                    await this.clearStoredData();
-                this.showLoginForm();
-            }
-        } catch (error) {
-            console.error('❌ Error checking login status:', error);
-            this.showStatus('Error checking login status', 'error');
-            this.showLoginForm();
-        }
-    }
-
-    async handleLogin() {
-        try {
-            this.setLoading(true);
-            console.log('🚀 User clicked Sign In - starting login process');
-
-            // Check if we have an expired token that can be refreshed
-            const tokenStatus = await this.checkTokenExpiry();
-            if (tokenStatus.reason === 'expired') {
-                console.log('🔄 Attempting to refresh expired token...');
-                const refreshedToken = await this.refreshToken();
-                
-                if (refreshedToken) {
-                    console.log('✅ Token refreshed successfully');
-                    // Get user info from refreshed token
-                    const userInfo = await this.getUserInfo(refreshedToken);
-                    
-                    // Store token temporarily (we'll store user info after name input)
-                    await this.storeTokenOnly(refreshedToken);
-                    
-                    // Show name input form
-                    this.showNameInputForm(userInfo);
-                    return;
-                } else {
-                    console.log('❌ Token refresh failed, launching new OAuth flow');
-                }
-            }
-
-            // Launch new OAuth flow
-            const token = await this.launchOAuthFlow();
-            
-            if (token) {
-                // Get user info from token
-                const userInfo = await this.getUserInfo(token);
-                
-                // Store token temporarily (we'll store user info after name input)
-                await this.storeTokenOnly(token);
-                
-                // Show name input form
-                this.showNameInputForm(userInfo);
-            } else {
-                this.showStatus('Login cancelled or failed', 'error');
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            this.showStatus(`Login failed: ${error.message}`, 'error');
-        } finally {
-            this.setLoading(false);
-        }
-    }
-
-    async handleLogout() {
-        try {
-            // Info notification removed
-            
-            // Stop token refresh monitoring
-            this.stopTokenRefreshMonitoring();
-            
-            // Clear stored data
-            await this.clearStoredData();
-            
-            // Clear any local enhanced count and cached count
-            chrome.storage.local.remove(['enhanced_count', 'cached_prompt_count'], () => {
-                console.log('Cleared local enhanced count and cached count on logout');
-            });
-            
-            // Revoke token if possible
-            await this.revokeToken();
-            
-            // Success notification removed
-            this.showLoginForm();
-            
-            // Notify content script about logout
-            this.notifyContentScript('logout');
-        } catch (error) {
-            console.error('Logout error:', error);
-            this.showStatus(`Logout failed: ${error.message}`, 'error');
-        }
-    }
-
-    async handleQuit() {
-        try {
-            // Info notification removed
-            
-            // First, stop the content script and clear all icons
-            console.log('🧹 Cleaning up content script before quitting...');
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-                if (tabs[0]) {
-                    // Send cleanup message to content script
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: 'cleanupAndQuit'
-                    }, () => {
-                        // Continue with extension disable even if message fails
-                        this.disableExtension();
-                    });
-                } else {
-                    // No active tab, just disable extension
-                    this.disableExtension();
-                }
-            });
-        } catch (error) {
-            console.error('Quit error:', error);
-            this.showStatus(`Failed to quit: ${error.message}`, 'error');
-        }
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('✅ DOM loaded');
+    
+    // Wait for config to be available
+    console.log('⏳ Waiting for config to load...');
+    let configLoadAttempts = 0;
+    const maxAttempts = 20; // Wait up to 2 seconds
+    
+    while (!window.CONFIG && configLoadAttempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        configLoadAttempts++;
     }
     
-    disableExtension() {
-        // Disable the extension
-        chrome.management.setEnabled(this.extensionId, false, () => {
-            if (chrome.runtime.lastError) {
-                console.error('Error disabling extension:', chrome.runtime.lastError);
-                this.showStatus('Failed to quit extension', 'error');
-            } else {
-                // Success notification removed
-                // Close the popup
-                window.close();
+    if (window.CONFIG) {
+        console.log('✅ Config loaded successfully:', window.CONFIG.getApiUrl());
+    } else {
+        console.warn('⚠️ Config not loaded, using fallback URL');
+    }
+    
+    // Get elements
+    const authSection = document.getElementById('auth-section');
+    const nameSection = document.getElementById('name-section');
+    const userSection = document.getElementById('user-section');
+    const statsSection = document.getElementById('stats-section');
+    const actionsSection = document.getElementById('actions-section');
+    const loginBtn = document.getElementById('login-btn');
+    const nameInput = document.getElementById('name-input');
+    const saveNameBtn = document.getElementById('save-name-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userNameSpan = document.getElementById('user-name');
+    const userEmailSpan = document.getElementById('user-email');
+    const userAvatarImg = document.getElementById('user-avatar');
+    const enhancedCountSpan = document.getElementById('enhanced-count');
+
+    const loginText = document.getElementById('login-text');
+    const loginLoading = document.getElementById('login-loading');
+    const toggleBtn = document.getElementById('toggle-btn');
+    const toggleText = document.getElementById('toggle-text');
+
+    // Check if already logged in
+    checkLogin();
+
+    // Login button click
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            console.log('🔐 Login button clicked');
+            
+            // Show loading state
+            if (loginText) loginText.classList.add('hidden');
+            if (loginLoading) loginLoading.classList.remove('hidden');
+            loginBtn.disabled = true;
+            
+            login();
+        });
+    }
+
+    // Save name button click
+    if (saveNameBtn) {
+        saveNameBtn.addEventListener('click', () => {
+            console.log('💾 Save name button clicked');
+            saveName();
+        });
+    }
+
+    // Logout button click
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            console.log('🚪 Logout button clicked');
+            logout();
+        });
+    }
+
+    // Toggle button click (Start/Stop functionality)
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            console.log('🔄 Toggle button clicked');
+            toggleExtension();
+        });
+    }
+
+    // Enter key on name input
+    if (nameInput) {
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                saveName();
             }
         });
     }
 
-    async handleStartStop() {
-        const startStopBtn = document.getElementById('start-stop-btn');
-        const isCurrentlyActive = startStopBtn.classList.contains('stopped');
+    // Check login status
+    function checkLogin() {
+        console.log('🔍 Checking login status...');
         
-        if (isCurrentlyActive) {
-            // Currently active, so stop
-            await this.handleStop();
-        } else {
-            // Currently inactive, so start
-            await this.handleStart();
-        }
-    }
-
-    async handleStart() {
-        try {
-            const startStopBtn = document.getElementById('start-stop-btn');
-            startStopBtn.disabled = true;
-            startStopBtn.textContent = 'Starting...';
+        chrome.runtime.sendMessage({ action: 'check_login' }, (response) => {
+            console.log('📬 Check login response:', response);
             
-            // Send message to content script to start the extension
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-                if (!tabs[0]) {
-                    console.error('❌ No active tab found');
-                    this.showStatus('No active tab found', 'error');
-                    startStopBtn.disabled = false;
-                    startStopBtn.textContent = 'Start';
-                    return;
-                }
-                
-                console.log('📡 Found active tab:', tabs[0].id, tabs[0].url);
-                
-                // Always try to inject content script first
-                        this.injectContentScriptAndStart(tabs[0], startStopBtn);
-            });
-        } catch (error) {
-            console.error('❌ Start error:', error);
-            this.showStatus(`Failed to start: ${error.message}`, 'error');
-            const startStopBtn = document.getElementById('start-stop-btn');
-            startStopBtn.disabled = false;
-            startStopBtn.textContent = 'Start';
-        }
-    }
-    
-    injectContentScriptAndStart(tab, startStopBtn) {
-        console.log('🔄 Injecting content script...');
-        chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['magical-enhancer.js']
-        }, () => {
-            if (chrome.runtime.lastError) {
-                console.error('❌ Failed to inject content script:', chrome.runtime.lastError);
-                this.showStatus('Failed to inject content script', 'error');
-                startStopBtn.disabled = false;
-                startStopBtn.textContent = 'Start';
-            } else {
-                console.log('✅ Content script injected, waiting then starting...');
-                setTimeout(() => {
-                    this.sendStartMessage(tab, startStopBtn);
-                }, 1000);
-            }
-        });
-    }
-    
-    sendStartMessage(tab, startStopBtn) {
-        console.log('📤 Sending startExtension message...');
-        chrome.tabs.sendMessage(tab.id, {
-            action: 'startExtension'
-        }, (response) => {
-            console.log('📡 Start response:', response);
-            
-            if (chrome.runtime.lastError) {
-                console.error('❌ Start message failed:', chrome.runtime.lastError);
-                this.showStatus(`Failed to start: ${chrome.runtime.lastError.message}`, 'error');
-                startStopBtn.disabled = false;
-                startStopBtn.textContent = 'Start';
-            } else if (response && response.success) {
-                console.log('✅ Extension started successfully');
-                startStopBtn.textContent = 'Stop';
-                startStopBtn.classList.add('stopped');
-                startStopBtn.disabled = false;
-                
-                // Add debug scan after successful start
-                setTimeout(() => {
-                    chrome.tabs.sendMessage(tab.id, {
-                        action: 'debugScan'
-                    });
-                }, 1000);
-            } else {
-                console.error('❌ No success response:', response);
-                this.showStatus('Failed to start extension - no response', 'error');
-                startStopBtn.disabled = false;
-                startStopBtn.textContent = 'Start';
-            }
-        });
-    }
-    // Old duplicate code removed
-
-    async handleStop() {
-        try {
-            const startStopBtn = document.getElementById('start-stop-btn');
-            startStopBtn.disabled = true;
-            startStopBtn.textContent = 'Stopping...';
-            
-            // Send message to content script to stop the extension
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-                if (tabs[0]) {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: 'stopExtension'
-                    }, (response) => {
-                        if (chrome.runtime.lastError) {
-                            console.log('Content script not available, but that\'s okay');
-                            // Still update UI state
-                            startStopBtn.textContent = 'Start';
-                            startStopBtn.classList.remove('stopped');
-                            startStopBtn.disabled = false;
-                        } else {
-                            startStopBtn.textContent = 'Start';
-                            startStopBtn.classList.remove('stopped');
-                            startStopBtn.disabled = false;
-                        }
-                    });
+            if (response && response.loggedIn) {
+                // Check if user has display_name, if not show name input
+                if (response.userInfo && !response.userInfo.display_name) {
+                    console.log('👤 User logged in but needs to enter name');
+                    showNameInput();
                 } else {
-                    this.showStatus('No active tab found', 'error');
-                    startStopBtn.disabled = false;
-                    startStopBtn.textContent = 'Stop';
-                }
-            });
-        } catch (error) {
-            console.error('Stop error:', error);
-            this.showStatus(`Failed to stop: ${error.message}`, 'error');
-            const startStopBtn = document.getElementById('start-stop-btn');
-            startStopBtn.disabled = false;
-            startStopBtn.textContent = 'Stop';
-        }
-    }
-
-    async launchOAuthFlow() {
-        return new Promise((resolve, reject) => {
-            console.log('🚀 Launching OAuth flow...');
-            console.log('🔑 Client ID:', this.clientId);
-            console.log('📋 Scopes:', this.scopes);
-            
-            const authUrl = `https://accounts.google.com/o/oauth2/auth?` +
-                `client_id=${this.clientId}&` +
-                `response_type=id_token&` +
-                `scope=${this.scopes.join(' ')}&` +
-                `redirect_uri=${chrome.identity.getRedirectURL()}&` +
-                `state=${this.generateState()}&` +
-                `nonce=${this.generateNonce()}`;
-
-            console.log('🌐 Auth URL:', authUrl);
-            console.log('🔄 Redirect URI:', chrome.identity.getRedirectURL());
-
-            chrome.identity.launchWebAuthFlow({
-                url: authUrl,
-                interactive: true
-            }, (redirectUrl) => {
-                console.log('🔄 OAuth callback received');
-                console.log('📡 Redirect URL:', redirectUrl);
-                
-                if (chrome.runtime.lastError) {
-                    console.error('❌ Chrome runtime error:', chrome.runtime.lastError);
-                    reject(new Error(chrome.runtime.lastError.message));
-                    return;
-                }
-
-                if (!redirectUrl) {
-                    console.log('❌ No redirect URL - user cancelled');
-                    resolve(null); // User cancelled
-                    return;
-                }
-
-                try {
-                    console.log('🔍 Parsing redirect URL...');
-                    // Extract id_token from redirect URL
-                    const url = new URL(redirectUrl);
-                    const fragment = url.hash.substring(1);
-                    const params = new URLSearchParams(fragment);
-                    const idToken = params.get('id_token');
-                    
-                    console.log('🔍 URL fragment:', fragment);
-                    console.log('🔍 ID token found:', !!idToken);
-                    
-                    if (idToken) {
-                        console.log('✅ ID token extracted successfully');
-                        resolve(idToken);
-                    } else {
-                        console.error('❌ No ID token in redirect URL');
-                        reject(new Error('No ID token received'));
+                    console.log('👤 User fully logged in with name');
+                    showUserDashboard(response.userInfo);
+                    // Also fetch current count for already logged in user
+                    if (response.userInfo.email) {
+                        fetchEnhancedCount(response.userInfo.email);
                     }
-                } catch (error) {
-                    console.error('❌ Error parsing redirect URL:', error);
-                    reject(new Error('Failed to parse redirect URL'));
                 }
-            });
-        });
-    }
-
-    async getUserInfo(idToken) {
-        try {
-            // Decode JWT token to get user info
-            const payload = this.decodeJWT(idToken);
-            
-            return {
-                id: payload.sub,
-                email: payload.email,
-                name: payload.name,
-                picture: payload.picture,
-                given_name: payload.given_name,
-                family_name: payload.family_name,
-                email_verified: payload.email_verified
-            };
-        } catch (error) {
-            console.error('Error decoding JWT:', error);
-            throw new Error('Failed to decode user information');
-        }
-    }
-
-    decodeJWT(token) {
-        try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        } catch (error) {
-            throw new Error('Invalid JWT token');
-        }
-    }
-
-    async verifyToken(token) {
-        try {
-            // Basic token validation - check if it's not expired
-            const payload = this.decodeJWT(token);
-            const currentTime = Math.floor(Date.now() / 1000);
-            
-            if (payload.exp && payload.exp < currentTime) {
-                return false;
-            }
-            
-            return true;
-        } catch (error) {
-            return false;
-        }
-    }
-
-    async getValidToken() {
-        try {
-            const token = await this.getStoredToken();
-            if (!token) {
-                console.log('❌ No token stored');
-                return null;
-            }
-
-            // Check if token is valid
-            const isValid = await this.verifyToken(token);
-            if (isValid) {
-                console.log('✅ Token is valid');
-                return token;
-            }
-
-            console.log('⚠️ Token expired, attempting refresh...');
-            return await this.refreshToken();
-        } catch (error) {
-            console.error('❌ Error getting valid token:', error);
-            return null;
-        }
-    }
-
-    async refreshToken() {
-        try {
-            console.log('🔄 Starting token refresh...');
-            
-            // Get stored user info to know who we're refreshing for
-            const userInfo = await this.getStoredUserInfo();
-            if (!userInfo || !userInfo.email) {
-                console.log('❌ No user info available for refresh');
-                return null;
-            }
-
-            // Launch new OAuth flow to get fresh token
-            const newToken = await this.launchOAuthFlow();
-            if (!newToken) {
-                console.log('❌ Token refresh failed - user cancelled');
-                return null;
-            }
-
-            // Verify the new token
-            const isValid = await this.verifyToken(newToken);
-            if (!isValid) {
-                console.log('❌ Refreshed token is invalid');
-                return null;
-            }
-
-            // Get user info from new token
-            const newUserInfo = await this.getUserInfo(newToken);
-            
-            // Store the new token and user info
-            await this.storeUserData(newToken, newUserInfo);
-            
-            console.log('✅ Token refreshed successfully');
-            return newToken;
-        } catch (error) {
-            console.error('❌ Token refresh failed:', error);
-            return null;
-        }
-    }
-
-    async silentTokenRefresh() {
-        try {
-            console.log('🔄 Attempting silent token refresh...');
-            
-            // For now, we can't do truly silent refresh with Google ID tokens
-            // Google requires user interaction for OAuth flows
-            // In a production system, you'd use refresh tokens instead
-            
-            // For now, we'll just check if the current token is still valid
-            const tokenStatus = await this.checkTokenExpiry();
-            
-            if (tokenStatus.valid) {
-                console.log('✅ Current token is still valid');
-                return await this.getStoredToken();
             } else {
-                console.log('❌ Token is invalid, user needs to re-authenticate');
-                return null;
+                console.log('❌ User not logged in');
+                showAuthSection();
             }
-        } catch (error) {
-            console.error('❌ Silent token refresh failed:', error);
-            return null;
-        }
+        });
     }
 
-    async checkTokenExpiry() {
-        try {
-            const token = await this.getStoredToken();
-            if (!token) {
-                return { valid: false, reason: 'no_token' };
-            }
-
-            const payload = this.decodeJWT(token);
-            const currentTime = Math.floor(Date.now() / 1000);
-            const timeUntilExpiry = payload.exp ? payload.exp - currentTime : 0;
-
-            // Token is expired
-            if (timeUntilExpiry <= 0) {
-                return { valid: false, reason: 'expired' };
-            }
-
-            // Token expires in less than 5 minutes (300 seconds)
-            if (timeUntilExpiry < 300) {
-                return { valid: true, reason: 'expiring_soon', timeUntilExpiry };
-            }
-
-            return { valid: true, reason: 'valid', timeUntilExpiry };
-        } catch (error) {
-            console.error('❌ Error checking token expiry:', error);
-            return { valid: false, reason: 'error' };
-        }
-    }
-
-    startTokenRefreshMonitoring() {
-        // Clear any existing monitoring
-        if (this.tokenRefreshInterval) {
-            clearInterval(this.tokenRefreshInterval);
-        }
-
-        // Check token every 2 minutes
-        this.tokenRefreshInterval = setInterval(async () => {
-            try {
-                const tokenStatus = await this.checkTokenExpiry();
-                
-                if (tokenStatus.reason === 'expiring_soon') {
-                    const minutesLeft = Math.ceil(tokenStatus.timeUntilExpiry / 60);
-                    console.log(`⚠️ Token expires in ${minutesLeft} minutes - checking validity`);
-                    
-                    // Try silent refresh first (just check if token is still valid)
-                    const validToken = await this.silentTokenRefresh();
-                    if (validToken) {
-                        console.log('✅ Token is still valid');
-                    } else {
-                        console.log('⚠️ Token will expire soon - user may need to re-authenticate');
-                        const minutesLeft = Math.ceil(tokenStatus.timeUntilExpiry / 60);
-                        this.showStatus(`Your session will expire in ${minutesLeft} minutes.`, 'warning');
-                    }
-                } else if (tokenStatus.reason === 'expired') {
-                    console.log('❌ Token expired - user needs to re-authenticate');
-                    this.showStatus('Your session has expired. Please sign in again.', 'error');
-                    this.showLoginForm();
-                }
-            } catch (error) {
-                console.error('❌ Error in token refresh monitoring:', error);
-            }
-        }, 120000); // Check every 2 minutes
-    }
-
-    stopTokenRefreshMonitoring() {
-        if (this.tokenRefreshInterval) {
-            clearInterval(this.tokenRefreshInterval);
-            this.tokenRefreshInterval = null;
-        }
-    }
-
-    async revokeToken() {
-        try {
-            const token = await this.getStoredToken();
-            if (token) {
-                // Google doesn't provide a direct way to revoke ID tokens
-                // The token will expire naturally
-                console.log('Token will expire naturally');
-            }
-        } catch (error) {
-            console.error('Error revoking token:', error);
-        }
-    }
-
-    // Storage methods
-    async storeUserData(token, userInfo) {
-        try {
-            // Store sensitive data encrypted
-            await this.secureStorage.setEncrypted('google_token', token);
-            await this.secureStorage.setEncrypted('user_info', userInfo);
+    // Login function
+    function login() {
+        console.log('🔐 Starting login...');
+        
+        // The loading state is already handled by the button click event
+        // Don't interfere with it here
+        
+        chrome.runtime.sendMessage({ action: 'login' }, (response) => {
+            console.log('📬 Login response:', response);
             
-            // Store non-sensitive data in plain text
-            return new Promise((resolve) => {
-                chrome.storage.local.set({
-                    'login_time': Date.now()
-                }, resolve);
-            });
-        } catch (error) {
-            console.error('Failed to store user data securely:', error);
-            // Fallback to plain storage
-        return new Promise((resolve) => {
-            chrome.storage.local.set({
-                'google_token': token,
-                'user_info': userInfo,
-                'login_time': Date.now()
-            }, resolve);
-        });
-        }
-    }
-
-    async storeTokenOnly(token) {
-        return new Promise((resolve) => {
-            chrome.storage.local.set({
-                'google_token': token,
-                'login_time': Date.now()
-            }, resolve);
-        });
-    }
-
-    async getStoredToken() {
-        try {
-            return await this.secureStorage.getEncrypted('google_token');
-        } catch (error) {
-            console.error('Failed to get encrypted token:', error);
-            // Fallback to plain storage
-        return new Promise((resolve) => {
-            chrome.storage.local.get(['google_token'], (result) => {
-                resolve(result.google_token || null);
-            });
-        });
-        }
-    }
-
-    async getStoredUserInfo() {
-        try {
-            return await this.secureStorage.getEncrypted('user_info');
-        } catch (error) {
-            console.error('Failed to get encrypted user info:', error);
-            // Fallback to plain storage
-        return new Promise((resolve) => {
-            chrome.storage.local.get(['user_info'], (result) => {
-                resolve(result.user_info || null);
-            });
-        });
-        }
-    }
-
-    async getCachedPromptCount() {
-        return new Promise((resolve) => {
-            chrome.storage.local.get(['cached_prompt_count'], (result) => {
-                resolve(result.cached_prompt_count || 0);
-            });
-        });
-    }
-
-    async clearStoredData() {
-        try {
-            // Clear encrypted data
-            await this.secureStorage.removeEncrypted('google_token');
-            await this.secureStorage.removeEncrypted('user_info');
+            // Reset login button state
+            if (loginText) loginText.classList.remove('hidden');
+            if (loginLoading) loginLoading.classList.add('hidden');
+            if (loginBtn) loginBtn.disabled = false;
             
-            // Clear plain text data
-            return new Promise((resolve) => {
-                chrome.storage.local.remove(['login_time'], resolve);
-            });
-        } catch (error) {
-            console.error('Failed to clear encrypted data:', error);
-            // Fallback to plain storage clearing
-        return new Promise((resolve) => {
-            chrome.storage.local.remove(['google_token', 'user_info', 'login_time'], resolve);
-        });
-        }
-    }
-
-    // UI methods - Updated for new HTML structure
-    showLoginForm() {
-        const authSection = document.getElementById('auth-section');
-        const nameInputSection = document.getElementById('name-input-section');
-        const userSection = document.getElementById('user-section');
-        const statsSection = document.getElementById('stats-section');
-        
-        // Clear stats refresh interval
-        if (this.statsRefreshInterval) {
-            clearInterval(this.statsRefreshInterval);
-            this.statsRefreshInterval = null;
-        }
-        
-        // Stop token refresh monitoring
-        this.stopTokenRefreshMonitoring();
-        
-        // Clear user info
-        const userNameElement = document.getElementById('user-name');
-        const userEmailElement = document.getElementById('user-email');
-        if (userNameElement) userNameElement.textContent = '';
-        if (userEmailElement) userEmailElement.textContent = '';
-        
-        // Clear enhanced count
-        const enhancedCountElement = document.getElementById('enhanced-count');
-        if (enhancedCountElement) enhancedCountElement.textContent = '0';
-        
-        // Clear name input
-        const nameInputField = document.getElementById('name-input-field');
-        if (nameInputField) {
-            nameInputField.value = '';
-        }
-        
-        // Hide all sections except auth
-        if (nameInputSection) nameInputSection.classList.add('hidden');
-        if (userSection) userSection.classList.add('hidden');
-        if (statsSection) statsSection.classList.add('hidden');
-        
-        // Hide quit button
-        const quitSection = document.getElementById('extension-control-section');
-        if (quitSection) quitSection.classList.add('hidden');
-        
-        // Show auth section
-        if (authSection) {
-            authSection.classList.remove('hidden');
-            authSection.classList.add('fade-in');
-        }
-    }
-
-    showNameInputForm(userInfo) {
-        const authSection = document.getElementById('auth-section');
-        const nameInputSection = document.getElementById('name-input-section');
-        const userSection = document.getElementById('user-section');
-        const statsSection = document.getElementById('stats-section');
-        
-        // Hide auth section
-        if (authSection) authSection.classList.add('hidden');
-        
-        // Hide logged-in sections
-        if (userSection) userSection.classList.add('hidden');
-        if (statsSection) statsSection.classList.add('hidden');
-        
-        // Hide quit button
-        const quitSection = document.getElementById('extension-control-section');
-        if (quitSection) quitSection.classList.add('hidden');
-        
-        // Show name input section
-        if (nameInputSection) {
-            nameInputSection.classList.remove('hidden');
-            nameInputSection.classList.add('fade-in');
-        }
-        
-        // Pre-fill name input with Google name if available
-        const nameInputField = document.getElementById('name-input-field');
-        if (nameInputField && userInfo.name) {
-            nameInputField.value = userInfo.name;
-            nameInputField.focus();
-            nameInputField.select();
-        }
-        
-        // Store user info temporarily for later use
-        this.tempUserInfo = userInfo;
-    }
-
-    showUserInfo() {
-        this.getStoredUserInfo().then(userInfo => {
-            if (userInfo) {
-                // Update user info
-                const displayName = userInfo.display_name || userInfo.name || 'User';
-                const userNameElement = document.getElementById('user-name');
-                const userEmailElement = document.getElementById('user-email');
-                if (userNameElement) userNameElement.textContent = displayName;
-                if (userEmailElement) userEmailElement.textContent = userInfo.email || '';
-                
-                // Get DOM elements
-                const authSection = document.getElementById('auth-section');
-                const nameInputSection = document.getElementById('name-input-section');
-                const userSection = document.getElementById('user-section');
-                const statsSection = document.getElementById('stats-section');
-                
-                // Hide auth and name input sections
-                if (authSection) authSection.classList.add('hidden');
-                if (nameInputSection) nameInputSection.classList.add('hidden');
-                
-                // Show logged-in sections
-                if (userSection) userSection.classList.remove('hidden');
-                if (statsSection) statsSection.classList.remove('hidden');
-                
-                // Show quit button
-                const quitSection = document.getElementById('extension-control-section');
-                if (quitSection) quitSection.classList.remove('hidden');
-                
-                // Add fade-in animation
-                if (userSection) userSection.classList.add('fade-in');
-                if (statsSection) statsSection.classList.add('fade-in');
-                if (quitSection) quitSection.classList.add('fade-in');
-                
-                // Check and set Start/Stop button state
-                const startStopBtn = document.getElementById('start-stop-btn');
-                if (startStopBtn) {
-                    // Check if extension is active
-                    chrome.storage.local.get(['extension_active'], (result) => {
-                        if (result.extension_active) {
-                            startStopBtn.textContent = 'Stop';
-                            startStopBtn.classList.add('stopped');
-                        } else {
-                            startStopBtn.textContent = 'Start';
-                            startStopBtn.classList.remove('stopped');
-                        }
-                        startStopBtn.disabled = false;
-                    });
+            if (response && response.success) {
+                console.log('✅ Login successful!');
+                if (response.needsName) {
+                    console.log('👤 User needs to enter name');
+                    showNameInput();
+                } else {
+                    console.log('👤 User fully logged in');
+                    showUserDashboard(response.userInfo);
                 }
-                
-                // Load and display real enhanced count immediately
-                this.loadEnhancedCount();
-                
-                // Also refresh every 30 seconds while popup is open
-                if (this.statsRefreshInterval) {
-                    clearInterval(this.statsRefreshInterval);
-                }
-                this.statsRefreshInterval = setInterval(() => {
-                    this.loadEnhancedCount();
-                }, 30000);
-                
-                // Start background token refresh monitoring
-                this.startTokenRefreshMonitoring();
-            }
-        });
-    }
-
-    setLoading(loading) {
-        const loginBtn = document.getElementById('login-btn');
-        const loginText = document.getElementById('login-text');
-        const loginLoading = document.getElementById('login-loading');
-        
-        if (loginBtn && loginText && loginLoading) {
-            if (loading) {
-                loginBtn.disabled = true;
-                loginText.classList.add('hidden');
-                loginLoading.classList.remove('hidden');
             } else {
-                loginBtn.disabled = false;
-                loginText.classList.remove('hidden');
-                loginLoading.classList.add('hidden');
-            }
-        }
-    }
-
-    showStatus(message, type = 'info') {
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.textContent = message;
-            statusEl.className = `status ${type}`;
-            statusEl.classList.remove('hidden');
-            
-            // Auto-hide success messages after 3 seconds
-            if (type === 'success') {
-                setTimeout(() => {
-                    if (statusEl) statusEl.classList.add('hidden');
-                }, 3000);
-            }
-        }
-    }
-
-    // Utility methods
-    generateState() {
-        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    }
-
-    generateNonce() {
-        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    }
-
-    // Communication with content script
-    notifyContentScript(action, data = null) {
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-            if (tabs[0]) {
-                chrome.tabs.sendMessage(tabs[0].id, {
-                    action: action,
-                    data: data
-                }).catch(() => {
-                    // Content script might not be loaded, which is fine
-                    console.log('Content script not available for notification');
-                });
+                console.error('❌ Login failed:', response?.error);
+                console.error('❌ Login failed:', response?.error || 'Unknown error');
             }
         });
     }
 
-    setupMessageListener() {
-        // Listen for enhanced count updates from content script
-        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-            if (message.action === 'updateEnhancedCount') {
-                // Reload from backend instead of using local count
-                this.loadEnhancedCount();
+    // Logout function
+    function logout() {
+        chrome.runtime.sendMessage({ action: 'logout' }, (response) => {
+            if (response && response.success) {
+                console.log('✅ Logout successful!');
+                showAuthSection();
             }
         });
     }
 
-    async loadEnhancedCount() {
-        try {
-            console.log('🔄 Loading enhanced count...');
-            
-            // Get user token for API call
-            const token = await this.getStoredToken();
-            
-            if (!token) {
-                console.log('❌ No token available, showing 0');
-                this.updateEnhancedCountDisplay(0);
-                return;
-            }
-            
-            console.log('🔑 Token available, fetching stats...');
-            console.log('🔑 Token preview:', token.substring(0, 20) + '...');
-            console.log('🔑 Token length:', token.length);
-            
-            // Check if backend is likely available (quick health check)
-            try {
-                        const healthCheck = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.health}`, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(2000) // 2 second timeout
-                });
+    // Show login section
+    function showLogin() {
+        console.log('👋 Showing login section');
+        if (loginSection) loginSection.style.display = 'block';
+        if (loggedInSection) loggedInSection.style.display = 'none';
+        hideError();
+    }
+
+    // Save name function
+    function saveName() {
+        const displayName = nameInput.value.trim();
+        
+        if (!displayName) {
+            console.error('❌ Please enter your display name');
+            return;
+        }
+
+        console.log('💾 Saving name:', displayName);
+        
+        // Store the name and update database
+        chrome.storage.local.get(['user_info'], (data) => {
+            const userInfo = { ...data.user_info, display_name: displayName };
+            chrome.storage.local.set({ user_info: userInfo }, () => {
+                console.log('✅ Name saved locally!');
                 
-                if (!healthCheck.ok) {
-                    throw new Error('Backend health check failed');
-                }
-            } catch (healthError) {
-                console.log('📡 Backend appears unavailable, using cached count');
-                const cachedCount = await this.getCachedPromptCount();
-                this.updateEnhancedCountDisplay(cachedCount);
-                return;
-            }
-            
-            // Get user email from stored user info
-            const userInfo = await this.getStoredUserInfo();
-            if (!userInfo || !userInfo.email) {
-                console.log('❌ No user email available, showing 0');
-                this.updateEnhancedCountDisplay(0);
-                return;
-            }
-            
-            console.log('📧 User email:', userInfo.email);
-            
-            // Fetch user count from backend with timeout (no auth required)
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-            
-            try {
-                        const response = await fetch(`${CONFIG.getApiUrl()}${CONFIG.endpoints.userCount}/${encodeURIComponent(userInfo.email)}`, {
-                    method: 'GET',
+                // Update user in database with display name
+                const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+                fetch(`${apiUrl}/api/v1/users`, {
+                    method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    signal: controller.signal
+                    body: JSON.stringify({
+                        email: userInfo.email,
+                        name: displayName // Use display name instead of Google name
+                    })
+                }).then(response => {
+                    console.log('✅ User updated in database with display name');
+                    showUserDashboard(userInfo);
+                }).catch(error => {
+                    console.error('❌ Failed to update user in database:', error);
+                    // Still show logged in even if database update fails
+                    showUserDashboard(userInfo);
                 });
-                
-                clearTimeout(timeoutId);
+            });
+        });
+    }
+
+    // Show name section
+    function showNameSection() {
+        console.log('📝 Showing name input section');
+        if (loginSection) loginSection.style.display = 'none';
+        if (nameSection) nameSection.style.display = 'block';
+        if (loggedInSection) loggedInSection.style.display = 'none';
+        if (nameInput) nameInput.focus();
+        hideError();
+    }
+
+    // Show logged in section
+    function showLoggedIn(userInfo) {
+        console.log('👤 Showing logged in section:', userInfo);
+        if (loginSection) loginSection.style.display = 'none';
+        if (nameSection) nameSection.style.display = 'none';
+        if (loggedInSection) loggedInSection.style.display = 'block';
+        
+        if (userNameSpan && userInfo) {
+            userNameSpan.textContent = userInfo.display_name || userInfo.name || userInfo.email || 'User';
+        }
+        hideError();
+    }
+
+
+    // Update functions for new UI
+    function showAuthSection() {
+        if (authSection) authSection.classList.remove('hidden');
+        if (nameSection) nameSection.classList.add('hidden');
+        if (userSection) userSection.classList.add('hidden');
+        if (statsSection) statsSection.classList.add('hidden');
+        if (actionsSection) actionsSection.classList.add('hidden');
+        
+        // Reset login button
+        if (loginText) loginText.classList.remove('hidden');
+        if (loginLoading) loginLoading.classList.add('hidden');
+        if (loginBtn) loginBtn.disabled = false;
+    }
+
+    function showNameInput() {
+        console.log('📝 Showing name input section');
+        if (authSection) {
+            authSection.classList.add('hidden');
+            console.log('✅ Hidden auth section');
+        }
+        if (nameSection) {
+            nameSection.classList.remove('hidden');
+            console.log('✅ Shown name section');
+        }
+        if (userSection) userSection.classList.add('hidden');
+        if (statsSection) statsSection.classList.add('hidden');
+        if (actionsSection) actionsSection.classList.add('hidden');
+        if (nameInput) {
+            nameInput.focus();
+            console.log('✅ Focused name input');
+        }
+    }
+
+    function showUserDashboard(userInfo) {
+        if (authSection) authSection.classList.add('hidden');
+        if (nameSection) nameSection.classList.add('hidden');
+        if (userSection) userSection.classList.remove('hidden');
+        if (statsSection) statsSection.classList.remove('hidden');
+        if (actionsSection) actionsSection.classList.remove('hidden');
+        
+        // Add fade-in animation
+        if (userSection) userSection.classList.add('fade-in');
+        if (statsSection) statsSection.classList.add('fade-in');
+        
+        if (userInfo) {
+            // Set user name
+            if (userNameSpan) {
+                userNameSpan.textContent = userInfo.display_name || userInfo.name || 'User';
+            }
             
-            console.log(`📡 Response status: ${response.status}`);
+            // Set user email
+            if (userEmailSpan) {
+                userEmailSpan.textContent = userInfo.email || '';
+            }
+            
+            // Set user avatar
+            if (userAvatarImg && userInfo.picture) {
+                userAvatarImg.src = userInfo.picture;
+            } else if (userAvatarImg) {
+                // Create avatar with initials
+                const initials = (userInfo.name || userInfo.email || 'U').charAt(0).toUpperCase();
+                userAvatarImg.src = `https://via.placeholder.com/40x40/007AFF/FFFFFF?text=${initials}`;
+            }
+            
+            // 💰 Initialize payment system with user email
+            paymentManager.setUserEmail(userInfo.email);
+            paymentManager.init();
+            
+            // Fetch real enhanced count from database
+            if (userInfo.email) {
+                fetchEnhancedCount(userInfo.email);
+                // 💳 Load subscription status
+                paymentManager.loadSubscriptionStatus();
+            } else {
+                updateEnhancedCount(0);
+            }
+        }
+        
+        console.log('✅ Successfully signed in!');
+        
+        // Initialize extension state
+        checkExtensionState();
+    }
+
+    // Update enhanced count
+    function updateEnhancedCount(count) {
+        if (enhancedCountSpan) {
+            enhancedCountSpan.textContent = count || 0;
+        }
+    }
+
+    // Fetch enhanced count from database
+    async function fetchEnhancedCount(userEmail) {
+        try {
+            console.log('📊 Fetching enhanced count for:', userEmail);
+            
+            // Get API URL from config
+            const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+            console.log('🌐 Using API URL:', apiUrl);
+            
+            const fullUrl = `${apiUrl}/api/v1/users/${encodeURIComponent(userEmail)}`;
+            console.log('🔗 Full URL:', fullUrl);
+            
+            const response = await fetch(fullUrl);
+            console.log('📡 Response status:', response.status, response.statusText);
             
             if (response.ok) {
                 const userData = await response.json();
-                console.log('📊 Raw user data response:', userData);
-                
-                const totalPrompts = userData.count;
-                
-                this.updateEnhancedCountDisplay(totalPrompts);
-                
-                // Check rate limit headers
-                this.checkRateLimitHeaders(response);
-                
-                console.log('✅ Loaded user count from backend:', userData);
-                console.log(`📊 Total prompts: ${totalPrompts}`);
+                console.log('✅ User data from database:', userData);
+                const count = userData.enhanced_prompts || 0;
+                console.log('📈 Enhanced prompts count:', count);
+                updateEnhancedCount(count);
+                return count;
             } else {
+                console.warn('⚠️ Failed to fetch user data from database');
                 const errorText = await response.text();
-                console.log(`📡 Backend returned ${response.status}: ${errorText}`);
-                
-                // Use cached count as fallback silently
-                const cachedCount = await this.getCachedPromptCount();
-                console.log(`🔄 Using cached count as fallback: ${cachedCount}`);
-                console.log(`🔄 Cached count type: ${typeof cachedCount}`);
-                this.updateEnhancedCountDisplay(cachedCount);
-            }
-            } catch (fetchError) {
-                clearTimeout(timeoutId);
-                if (fetchError.name === 'AbortError') {
-                    console.log('⏰ User stats fetch timed out, using cached count');
-                } else {
-                    console.log(`📡 User stats fetch failed, using cached count`);
-                }
-                
-                // Use cached count as fallback
-                const cachedCount = await this.getCachedPromptCount();
-                console.log(`🔄 Using cached count as fallback: ${cachedCount}`);
-                this.updateEnhancedCountDisplay(cachedCount);
+                console.warn('❌ Error response:', errorText);
+                updateEnhancedCount(0);
+                return 0;
             }
         } catch (error) {
-            console.log('📡 Enhanced count loading failed, using cached count');
-            
-            // Use cached count as fallback silently
-            const cachedCount = await this.getCachedPromptCount();
-            console.log(`🔄 Using cached count as fallback: ${cachedCount}`);
-            this.updateEnhancedCountDisplay(cachedCount);
+            console.error('❌ Error fetching enhanced count:', error);
+            updateEnhancedCount(0);
+            return 0;
         }
     }
 
-    updateEnhancedCountDisplay(count) {
-        const enhancedCountElement = document.getElementById('enhanced-count');
-        if (enhancedCountElement) {
-            enhancedCountElement.textContent = count.toString();
-            console.log(`📊 Updated enhanced count display: ${count}`);
-            console.log(`📊 Element text content: ${enhancedCountElement.textContent}`);
-            
-            // Store count locally as fallback
-            chrome.storage.local.set({ 'cached_prompt_count': count }, () => {
-                console.log(`💾 Cached prompt count: ${count}`);
-            });
+    // Toggle extension functionality
+    let isExtensionActive = false;
+
+    function toggleExtension() {
+        console.log('🔄 Toggling extension state. Current:', isExtensionActive);
+        
+        if (isExtensionActive) {
+            // Stop the extension
+            stopExtension();
         } else {
-            console.log('❌ Enhanced count element not found!');
+            // Start the extension
+            startExtension();
         }
     }
+
+    function startExtension() {
+        console.log('▶️ Starting AI Magic extension...');
+        
+        // Disable button temporarily
+        toggleBtn.disabled = true;
+        toggleText.textContent = 'Starting...';
+        
+        // Send message to content script to activate
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'activate' }, (response) => {
+                    console.log('✅ Extension activated:', response);
+                    
+                    isExtensionActive = true;
+                    updateToggleButton();
+                    console.log('✅ Started! Icons will appear on input boxes.');
+                    
+                    // Store state
+                    chrome.storage.local.set({ 'extension_active': true });
+                });
+            }
+        });
+    }
+
+    function stopExtension() {
+        console.log('⏹️ Stopping AI Magic extension...');
+        
+        // Disable button temporarily
+        toggleBtn.disabled = true;
+        toggleText.textContent = 'Stopping...';
+        
+        // Send message to content script to deactivate
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'deactivate' }, (response) => {
+                    console.log('✅ Extension deactivated:', response);
+                    
+                    isExtensionActive = false;
+                    updateToggleButton();
+                    console.log('ℹ️ Stopped. Icons removed from input boxes.');
+                    
+                    // Store state
+                    chrome.storage.local.set({ 'extension_active': false });
+                });
+            }
+        });
+    }
+
+    function updateToggleButton() {
+        if (!toggleBtn || !toggleText) return;
+        
+        // Re-enable button
+        toggleBtn.disabled = false;
+        
+        if (isExtensionActive) {
+            // Show "Stop" state
+            toggleBtn.classList.add('active');
+            toggleText.textContent = 'Stop';
+        } else {
+            // Show "Start" state
+            toggleBtn.classList.remove('active');
+            toggleText.textContent = 'Start';
+        }
+    }
+
+    function checkExtensionState() {
+        // Check stored state
+        chrome.storage.local.get(['extension_active'], (result) => {
+            isExtensionActive = result.extension_active || false;
+            updateToggleButton();
+            console.log('🔍 Extension state loaded:', isExtensionActive);
+        });
+    }
+
+    // Override the old functions to use new UI
+    const originalShowLogin = window.showLogin;
+    window.showLogin = showAuthSection;
     
-    checkRateLimitHeaders(response) {
-        // Check and display rate limit information
-        const userHourly = response.headers.get('X-RateLimit-User-Hourly');
-        const userMinute = response.headers.get('X-RateLimit-User-Minute');
-        const ipHourly = response.headers.get('X-RateLimit-IP-Hourly');
-        const ipMinute = response.headers.get('X-RateLimit-IP-Minute');
-        const resetTime = response.headers.get('X-RateLimit-Reset');
-        
-        if (userHourly) {
-            const [current, limit] = userHourly.split('/');
-            const remaining = limit - current;
-            console.log(`📊 Rate Limit - User Hourly: ${remaining}/${limit} remaining`);
-            
-            // Show warning if getting close to limit
-            if (remaining <= 5) {
-                this.showStatus(`⚠️ You have ${remaining} requests remaining this hour`, 'warning');
-            }
-        }
-        
-        if (userMinute) {
-            const [current, limit] = userMinute.split('/');
-            const remaining = limit - current;
-            console.log(`📊 Rate Limit - User Minute: ${remaining}/${limit} remaining`);
-        }
-    }
-
-
-
-
-
-    async handleNameSubmit() {
-        try {
-            const nameInputField = document.getElementById('name-input-field');
-            const nameSubmitBtn = document.getElementById('name-submit-btn');
-            const nameSubmitText = document.getElementById('name-submit-text');
-            const nameSubmitLoading = document.getElementById('name-submit-loading');
-            
-            const displayName = nameInputField.value.trim();
-            
-            if (!displayName) {
-                this.showStatus('Please enter your name', 'error');
-                nameInputField.focus();
-                return;
-            }
-            
-            // Show loading state
-            nameSubmitBtn.disabled = true;
-            nameSubmitText.classList.add('hidden');
-            nameSubmitLoading.classList.remove('hidden');
-            
-            // Get stored token
-            const token = await this.getStoredToken();
-            if (!token) {
-                throw new Error('No authentication token found');
-            }
-            
-            // Update user info with custom display name
-            const updatedUserInfo = {
-                ...this.tempUserInfo,
-                display_name: displayName,
-                name: displayName // Use display name as the primary name
-            };
-            
-            // Store complete user data
-            await this.storeUserData(token, updatedUserInfo);
-            
-            // Store name locally (backend update will happen later)
-            console.log(`✅ Name stored locally: ${displayName}`);
-            
-            // Clear any old local enhanced count when new user logs in
-            chrome.storage.local.remove(['enhanced_count', 'cached_prompt_count'], () => {
-                console.log('Cleared old enhanced count for new user login');
-            });
-            
-            // Success notification removed
-            this.showUserInfo();
-            
-            // Notify content script about login
-            this.notifyContentScript('login', updatedUserInfo);
-            
-            // Clear temporary user info
-            this.tempUserInfo = null;
-            
-        } catch (error) {
-            console.error('Name submission error:', error);
-            this.showStatus(`Failed to complete sign in: ${error.message}`, 'error');
-            
-            // Reset loading state
-            const nameSubmitBtn = document.getElementById('name-submit-btn');
-            const nameSubmitText = document.getElementById('name-submit-text');
-            const nameSubmitLoading = document.getElementById('name-submit-loading');
-            
-            nameSubmitBtn.disabled = false;
-            nameSubmitText.classList.remove('hidden');
-            nameSubmitLoading.classList.add('hidden');
-        }
-    }
-}
-
-// Initialize the login manager when popup loads
-document.addEventListener('DOMContentLoaded', () => {
-    new GoogleLoginManager();
+    const originalShowNameSection = window.showNameSection;
+    window.showNameSection = showNameInput;
+    
+    const originalShowLoggedIn = window.showLoggedIn;
+    window.showLoggedIn = showUserDashboard;
 });
 
-// Handle messages from content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'getUserInfo') {
-        // Return user info to content script
-        chrome.storage.local.get(['user_info'], (result) => {
-            sendResponse({userInfo: result.user_info});
-        });
-        return true; // Keep message channel open for async response
+    console.log('✅ Popup script ready!');
+
+    // ====================================
+    // 💰 PAYMENT SYSTEM
+    // ====================================
+
+    // Payment Manager Class
+    class PaymentManager {
+        constructor() {
+            this.apiBaseUrl = CONFIG.getApiUrl();
+            this.currentUserEmail = null;
+            this.subscriptionStatus = 'free';
+        }
+
+        // Initialize payment system
+        async init() {
+            this.setupEventListeners();
+        }
+
+        // Setup all payment-related event listeners
+        setupEventListeners() {
+            // Upgrade button click
+            const upgradeBtn = document.getElementById('upgrade-btn');
+            if (upgradeBtn) {
+                upgradeBtn.addEventListener('click', () => {
+                    this.openPaymentModal();
+                });
+            }
+
+            // Pay now button click
+            const payNowBtn = document.getElementById('pay-now-btn');
+            if (payNowBtn) {
+                payNowBtn.addEventListener('click', () => {
+                    this.initiatePayment();
+                });
+            }
+
+            // Close payment modal
+            const closePaymentBtn = document.getElementById('close-payment');
+            if (closePaymentBtn) {
+                closePaymentBtn.addEventListener('click', () => {
+                    this.closePaymentModal();
+                });
+            }
+
+            // Modal backdrop click to close
+            const paymentModal = document.getElementById('payment-modal');
+            if (paymentModal) {
+                paymentModal.addEventListener('click', (e) => {
+                    if (e.target === paymentModal) {
+                        this.closePaymentModal();
+                    }
+                });
+            }
+        }
+
+        // Set current user email
+        setUserEmail(email) {
+            this.currentUserEmail = email;
+        }
+
+        // Open payment modal
+        openPaymentModal() {
+            const modal = document.getElementById('payment-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                console.log('💳 Payment modal opened');
+            }
+        }
+
+        // Close payment modal
+        closePaymentModal() {
+            const modal = document.getElementById('payment-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                console.log('✖️ Payment modal closed');
+            }
+        }
+
+        // Initiate payment process
+        async initiatePayment() {
+            if (!this.currentUserEmail) {
+                console.error('❌ Please sign in first');
+                return;
+            }
+
+            try {
+                this.setPaymentLoading(true);
+                console.log('🚀 Initiating payment for:', this.currentUserEmail);
+
+                // Create payment order
+                const order = await this.createOrder();
+                
+                if (!order) {
+                    throw new Error('Failed to create payment order');
+                }
+
+                // Open Razorpay checkout
+                await this.openRazorpayCheckout(order);
+
+            } catch (error) {
+                console.error('❌ Payment initiation failed:', error);
+                console.error('❌ Payment failed. Please try again.');
+                this.setPaymentLoading(false);
+            }
+        }
+
+        // Create payment order via API
+        async createOrder() {
+            try {
+                const response = await fetch(`${this.apiBaseUrl}/api/v1/payment/create-order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_email: this.currentUserEmail
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('✅ Payment order created:', result.order.order_id);
+                
+                return result.order;
+
+            } catch (error) {
+                console.error('❌ Failed to create order:', error);
+                throw error;
+            }
+        }
+
+        // Open Razorpay checkout
+        async openRazorpayCheckout(order) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const options = {
+                        key: order.key_id,
+                        amount: order.amount,
+                        currency: order.currency,
+                        name: 'AI Magic Pro',
+                        description: 'Unlimited Prompt Enhancements',
+                        order_id: order.order_id,
+                        handler: async (response) => {
+                            try {
+                                await this.handlePaymentSuccess(response);
+                                resolve(response);
+                            } catch (error) {
+                                reject(error);
+                            }
+                        },
+                        prefill: {
+                            email: this.currentUserEmail
+                        },
+                        theme: {
+                            color: '#34C759'
+                        },
+                        modal: {
+                            ondismiss: () => {
+                                console.log('💭 Payment dismissed by user');
+                                this.setPaymentLoading(false);
+                                resolve(null);
+                            }
+                        }
+                    };
+
+                    console.log('💳 Opening Razorpay checkout...');
+                    const rzp = new Razorpay(options);
+                    rzp.open();
+
+                } catch (error) {
+                    console.error('❌ Razorpay checkout error:', error);
+                    reject(error);
+                }
+            });
+        }
+
+        // Handle successful payment
+        async handlePaymentSuccess(response) {
+            try {
+                console.log('✅ Payment successful:', response.razorpay_payment_id);
+                
+                // Verify payment with backend
+                const verificationResult = await this.verifyPayment(response);
+                
+                if (verificationResult && verificationResult.success) {
+                    // Store pro status in local storage
+                    await this.storeProStatus();
+                    
+                    // Update UI to show pro status
+                    this.updateSubscriptionUI('pro');
+                    
+                    // Close payment modal
+                    this.closePaymentModal();
+                    
+                    // Show success message
+                    console.log('🎉 Welcome to Pro! You now have unlimited access.');
+                    
+                    console.log('🎉 User upgraded to Pro successfully');
+                } else {
+                    throw new Error('Payment verification failed');
+                }
+
+            } catch (error) {
+                console.error('❌ Payment handling failed:', error);
+                console.error('❌ Payment verification failed. Please contact support.');
+            } finally {
+                this.setPaymentLoading(false);
+            }
+        }
+
+        // Verify payment with backend
+        async verifyPayment(response) {
+            try {
+                const verifyResponse = await fetch(`${this.apiBaseUrl}/api/v1/payment/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_signature: response.razorpay_signature,
+                        user_email: this.currentUserEmail
+                    })
+                });
+
+                if (!verifyResponse.ok) {
+                    throw new Error(`Verification failed: ${verifyResponse.status}`);
+                }
+
+                const result = await verifyResponse.json();
+                console.log('✅ Payment verified successfully');
+                
+                return result;
+
+            } catch (error) {
+                console.error('❌ Payment verification error:', error);
+                throw error;
+            }
+        }
+
+        // Store pro status in chrome storage
+        async storeProStatus() {
+            return new Promise((resolve) => {
+                chrome.storage.local.set({
+                    subscription_tier: 'pro',
+                    subscription_updated: Date.now()
+                }, () => {
+                    console.log('✅ Pro status stored locally');
+                    resolve();
+                });
+            });
+        }
+
+        // Get subscription status from storage
+        async getStoredSubscriptionStatus() {
+            return new Promise((resolve) => {
+                chrome.storage.local.get(['subscription_tier'], (result) => {
+                    resolve(result.subscription_tier || 'free');
+                });
+            });
+        }
+
+        // Update subscription UI based on tier
+        updateSubscriptionUI(tier) {
+            // For now, just store the status - UI is simplified
+            this.subscriptionStatus = tier;
+            console.log(`🔄 Subscription status updated to: ${tier}`);
+        }
+
+        // Set payment button loading state
+        setPaymentLoading(isLoading) {
+            const payBtn = document.getElementById('pay-now-btn');
+            const payBtnText = document.getElementById('pay-btn-text');
+            const payLoading = document.getElementById('pay-loading');
+
+            if (payBtn && payBtnText && payLoading) {
+                payBtn.disabled = isLoading;
+                
+                if (isLoading) {
+                    payBtnText.classList.add('hidden');
+                    payLoading.classList.remove('hidden');
+                } else {
+                    payBtnText.classList.remove('hidden');
+                    payLoading.classList.add('hidden');
+                }
+            }
+        }
+
+
+
+        // Load and display user subscription status
+        async loadSubscriptionStatus() {
+            if (!this.currentUserEmail) return;
+
+            try {
+                // Check stored status first
+                const storedStatus = await this.getStoredSubscriptionStatus();
+                
+                // Update UI with stored status
+                this.updateSubscriptionUI(storedStatus);
+
+                // Fetch fresh status from backend
+                const response = await fetch(
+                    `${this.apiBaseUrl}/api/v1/payment/subscription-status/${this.currentUserEmail}`
+                );
+
+                if (response.ok) {
+                    const status = await response.json();
+                    
+                    // Update UI if status changed
+                    if (status.subscription_tier !== storedStatus) {
+                        this.updateSubscriptionUI(status.subscription_tier);
+                        
+                        // Update stored status
+                        chrome.storage.local.set({
+                            subscription_tier: status.subscription_tier
+                        });
+                    }
+
+                    console.log('🔄 Subscription status loaded:', status.subscription_tier);
+                }
+
+            } catch (error) {
+                console.error('❌ Failed to load subscription status:', error);
+            }
+        }
     }
-}); 
+
+    // Initialize payment manager
+    const paymentManager = new PaymentManager();
+
+    // ====================================
+    // 🔄 ENHANCED USER DASHBOARD FUNCTION
+    // ====================================

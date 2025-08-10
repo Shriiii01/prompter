@@ -10,124 +10,140 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 import asyncio
+import httpx
+import json
 
 from app.models.response import EnhancementResult, PromptAnalysis
 from app.models.request import LLMModel
 from app.core.analyzer import PromptAnalyzer
 from app.core.prompts import ModelSpecificPrompts
-from app.services.openai import OpenAIService
+from app.services.multi_provider import MultiProviderService
 from app.services.cache import CacheService
+from app.core.config import config
 
 logger = logging.getLogger(__name__)
 
 @dataclass
 class UnifiedEnhancementSettings:
-    """Settings for unified Llama-4-Maverick-17B-128E-Instruct-FP8 enhancement"""
-    # Quality thresholds
-    min_quality_for_enhancement: float = 30.0  # Lowered from 50.0 to 30.0 for Chrome extension compatibility
-    max_quality_skip_enhancement: float = 85.0
-    min_length_for_enhancement: int = 1  # Lowered from 3 to 1 word to enhance single words
+    """Settings for unified enhancement - ULTRA OPTIMIZED FOR SPEED"""
+    # Quality thresholds - ULTRA AGGRESSIVE for speed
+    min_quality_for_enhancement: float = 15.0  # Even lower for speed
+    max_quality_skip_enhancement: float = 95.0  # Higher threshold to skip more
+    min_length_for_enhancement: int = 1  # Keep at 1 for Chrome extension
     
-    # Llama-4-Maverick-17B-128E-Instruct-FP8 parameters for all models - OPTIMIZED FOR QUALITY
-    temperature: float = 0.7
-    max_tokens: int = 1500  # Increased for comprehensive, high-quality enhancements
-    timeout_seconds: float = 10.0  # Optimized timeout for reliability
+    # ULTRA SPEED OPTIMIZED parameters
+    temperature: float = 0.3  # Lower for consistency and speed
+    max_tokens: int = 300  # ULTRA REDUCED for speed
+    timeout_seconds: float = 2.0  # ULTRA AGGRESSIVE timeout for speed
     
 class ModelSpecificEnhancer:
     """
-    Unified enhancer that uses Llama-4-Maverick-17B-128E-Instruct-FP8 for ALL models
+    Unified enhancer that uses MultiProviderService for ALL models
     but applies model-specific system prompts
     """
     
     def __init__(self, 
-                 openai_service: Optional[OpenAIService] = None,
+                 multi_provider_service: Optional[MultiProviderService] = None,
                  cache_service: Optional[CacheService] = None):
-        self.openai_service = openai_service
+        self.multi_provider_service = multi_provider_service
         self.cache = cache_service or CacheService()
         self.analyzer = PromptAnalyzer()
         self.settings = UnifiedEnhancementSettings()
         
-        # Simple in-memory cache for speed
+        # FAST IN-MEMORY CACHE for speed
         self._memory_cache = {}
+        self._cache_size_limit = 1000  # Prevent memory bloat
         
         # Log initialization status
-        if self.openai_service:
-            logger.info("🚀 Initialized Model-Specific Enhancer (OpenAI GPT-4o-mini for all models)")
+        if self.multi_provider_service:
+            logger.info("🚀 Initialized Model-Specific Enhancer (MultiProviderService for all models) - OPTIMIZED FOR SPEED")
         else:
-            logger.warning("⚠️ Initialized Model-Specific Enhancer without OpenAI service - using basic fallback enhancement")
+            logger.warning("⚠️ Initialized Model-Specific Enhancer without MultiProviderService - using fast fallback enhancement")
     
     async def enhance(self, prompt: str, target_model: LLMModel, 
                      context: Optional[str] = None) -> EnhancementResult:
         """
-        Enhance prompt using Llama-4-Maverick-17B-128E-Instruct-FP8 with model-specific system prompts
+        Enhance prompt using MultiProviderService with model-specific system prompts - OPTIMIZED FOR SPEED
         """
         start_time = time.time()
         model_name = target_model.value
         
-        # Minimal logging for speed
-        # logger.info(f"🎯 Enhancing for {model_name}")
+        logger.info(f"🎯 Starting enhancement for '{prompt[:50]}...' with model {model_name}")
         
-        # Check memory cache first for speed (FASTEST)
-        cache_key = f"unified_v3:{hash(prompt)}:{model_name}"
-        
-        # Check in-memory cache first (fastest) - OPTIMIZED FOR SPEED
+        # FAST CACHE CHECK
+        cache_key = f"{prompt[:100]}_{model_name}"
         if cache_key in self._memory_cache:
-            cached_data = self._memory_cache[cache_key]
-            if time.time() - cached_data['timestamp'] < 7200:  # 2 hours
-                # logger.info("✅ Memory cache hit - instant response")
-                return EnhancementResult(**cached_data['data'])
-        
-        # Skip Redis cache check for speed (only use memory cache)
-        # cached_result = await self.cache.get(cache_key)
-        # if cached_result:
-        #     logger.info("✅ Redis cache hit - returning cached result")
-        #     # Also store in memory cache for next time
-        #     self._memory_cache[cache_key] = {
-        #         'data': cached_result,
-        #         'timestamp': time.time()
-        #     }
-        #     return EnhancementResult(**cached_result)
+            cached_result = self._memory_cache[cache_key]
+            logger.info(f"⚡ Cache hit! Returning cached enhancement in {time.time() - start_time:.3f}s")
+            return EnhancementResult(
+                original=prompt,
+                enhanced=cached_result,
+                model_used=f"cached-{model_name}",
+                improvements=["Cached enhancement"],
+                analysis=self.analyzer.analyze(prompt),
+                enhancement_time=time.time() - start_time,
+                cached=True,
+                timestamp=datetime.now()
+            )
         
         try:
-            # Step 1: Analyze if enhancement is needed
-            should_enhance, reasoning = self._should_enhance_prompt(prompt)
-            
-            if not should_enhance:
-                # logger.info(f"⏭️ Skipping enhancement: {reasoning}")
-                analysis = self.analyzer.analyze(prompt)
-                return EnhancementResult(
-                    original=prompt,
-                    enhanced=prompt,
-                    model_used=f"skip-{model_name}",
-                    improvements=["No enhancement needed - prompt is already effective"],
-                    analysis=analysis,
-                    enhancement_time=time.time() - start_time,
-                    cached=False,
-                    timestamp=datetime.now()
-                )
-            
-            # Step 2: Use OpenAI GPT-4o-mini for all enhancements with model-specific prompts
-            if self.openai_service:
-                try:
-                    enhanced_prompt = await self._enhance_with_openai(prompt, model_name)
-                    model_used = f"gpt-4o-mini-for-{model_name}"
-                    logger.info("✅ Successfully used OpenAI GPT-4o-mini enhancement")
-                except Exception as openai_error:
-                    logger.error(f"OpenAI GPT-4o-mini failed: {str(openai_error)}")
-                    enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
-                    model_used = f"basic-fallback-for-{model_name}"
+            # Validate MultiProviderService
+            if not self.multi_provider_service:
+                logger.error("❌ No MultiProviderService available - using fast fallback")
+                enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
+                model_used = f"fallback-no-multi-provider-{model_name}"
             else:
-                # No OpenAI service available
-                enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
-                model_used = f"basic-fallback-for-{model_name}"
+                logger.info(f"✅ MultiProviderService available: {type(self.multi_provider_service)}")
+                
+                # SPEED OPTIMIZATION: Skip expensive analysis for most prompts
+                should_enhance, reasoning = self._should_enhance_prompt(prompt)
+                logger.info(f"🔍 Enhancement decision: {should_enhance} - {reasoning}")
+                
+                if not should_enhance:
+                    logger.info(f"⏭️ Skipping enhancement: {reasoning}")
+                    analysis = self.analyzer.analyze(prompt)
+                    return EnhancementResult(
+                        original=prompt,
+                        enhanced=prompt,
+                        model_used=f"skip-{model_name}",
+                        improvements=["No enhancement needed - prompt is already effective"],
+                        analysis=analysis,
+                        enhancement_time=time.time() - start_time,
+                        cached=False,
+                        timestamp=datetime.now()
+                    )
+                
+                # Use MultiProviderService for all enhancements
+                try:
+                    logger.info(f"🚀 Attempting MultiProviderService enhancement for {model_name}")
+                    enhanced_prompt, is_fallback = await self._enhance_with_multi_provider(prompt, model_name)
+                    
+                    if is_fallback:
+                        # Fallback was used due to exception
+                        model_used = f"fallback-exception-{model_name}"
+                        logger.info(f"✅ Fallback enhancement used due to exception: {enhanced_prompt[:100]}...")
+                    else:
+                        # Validate the enhancement from MultiProviderService
+                        if enhanced_prompt and enhanced_prompt.strip():
+                            model_used = f"multi-provider-for-{model_name}"
+                            logger.info(f"✅ MultiProviderService enhancement successful: {enhanced_prompt[:100]}...")
+                        else:
+                            logger.warning(f"⚠️ MultiProviderService returned empty enhancement, using fast fallback")
+                            enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
+                            model_used = f"fallback-invalid-response-{model_name}"
+                        
+                except Exception as multi_provider_error:
+                    logger.error(f"❌ MultiProviderService enhancement failed: {str(multi_provider_error)}")
+                    enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
+                    model_used = f"fallback-exception-{model_name}"
             
-            if not enhanced_prompt or enhanced_prompt == prompt:
-                logger.warning(f"⚠️ Enhancement failed or returned same prompt")
-                enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
-            
-            # Step 3: Create result
+            # SPEED OPTIMIZATION: Skip expensive analysis for result
             analysis = self.analyzer.analyze(prompt)
             improvements = self._identify_improvements(prompt, enhanced_prompt)
+            
+            # CACHE THE RESULT
+            if len(self._memory_cache) < self._cache_size_limit:
+                self._memory_cache[cache_key] = enhanced_prompt
             
             result = EnhancementResult(
                 original=prompt,
@@ -140,24 +156,12 @@ class ModelSpecificEnhancer:
                 timestamp=datetime.now()
             )
             
-            # Cache the result - OPTIMIZED FOR SPEED
-            result_dict = result.dict()
-            
-            # Store in memory cache (fastest)
-            self._memory_cache[cache_key] = {
-                'data': result_dict,
-                'timestamp': time.time()
-            }
-            
-            # Skip Redis cache storage for speed
-            # await self.cache.set(cache_key, result_dict, ttl=7200)  # 2 hours
-            
-            # logger.info(f"✅ Enhancement completed in {result.enhancement_time:.2f}s")
+            logger.info(f"✅ Enhancement completed in {result.enhancement_time:.2f}s")
             return result
             
         except Exception as e:
             logger.error(f"❌ Enhancement failed: {str(e)}")
-            # Return fallback result
+            # Return fast fallback result
             analysis = self.analyzer.analyze(prompt)
             return EnhancementResult(
                 original=prompt,
@@ -171,22 +175,21 @@ class ModelSpecificEnhancer:
             )
     
     def _should_enhance_prompt(self, prompt: str) -> tuple[bool, str]:
-        """Determine if prompt needs enhancement - OPTIMIZED FOR SPEED"""
+        """Determine if prompt needs enhancement - ULTRA OPTIMIZED FOR SPEED"""
         
         word_count = len(prompt.split())
         
-        # FAST CHECK: Skip very short prompts (less than 1 word)
+        # ULTRA FAST CHECK: Skip very short prompts (less than 1 word)
         if word_count < self.settings.min_length_for_enhancement:
             return False, f"Too short ({word_count} words)"
         
-        # FAST CHECK: Only skip very basic single-word greetings
-        simple_phrases = ['hello', 'hi', 'thanks', 'yes', 'no', 'ok']
+        # ULTRA FAST CHECK: Skip basic greetings and responses
+        simple_phrases = ['hello', 'hi', 'thanks', 'yes', 'no', 'ok', 'okay', 'good', 'bad', 'cool']
         if prompt.lower().strip() in simple_phrases:
             return False, "Basic greeting/response"
         
-        # SKIP EXPENSIVE ANALYSIS: For speed, enhance most prompts
-        # Only do analysis for very long prompts (>50 words) to save time
-        if word_count > 50:
+        # SPEED OPTIMIZATION: Skip analysis for most prompts - only analyze very long ones (>100 words)
+        if word_count > 100:
             analysis = self.analyzer.analyze(prompt)
             if analysis.overall_score >= self.settings.max_quality_skip_enhancement:
                 return False, f"Already high quality ({analysis.overall_score:.1f}/100)"
@@ -194,101 +197,65 @@ class ModelSpecificEnhancer:
         # For Chrome extension compatibility, enhance most prompts for speed
         return True, f"Enhancement beneficial ({word_count} words)"
     
-
-    
-    async def _enhance_with_openai(self, prompt: str, target_model: str) -> str:
+    async def _enhance_with_multi_provider(self, prompt: str, target_model: str) -> tuple[str, bool]:
         """
-        Use OpenAI GPT-4o-mini with model-specific system prompts for enhancement (fallback)
+        Use MultiProviderService for all enhancements - OPTIMIZED FOR SPEED
+        Returns: (enhanced_prompt, is_fallback)
         """
         
-        logger.info(f"🚀 Using {target_model}-specific prompts with OpenAI GPT-4o-mini")
+        logger.info(f"🚀 Using MultiProviderService for {target_model}")
         
         try:
-            # Use GPT-4o-mini for enhancement with model-specific prompts
-            response = await asyncio.wait_for(
-                self.openai_service.enhance_with_model_specific_prompt(prompt, target_model),
-                timeout=self.settings.timeout_seconds  # Quality timeout for comprehensive responses
-            )
+            # Use the MultiProviderService with aggressive timeouts
+            enhanced_prompt = await self.multi_provider_service.enhance_prompt(prompt, target_model)
             
-            enhanced_prompt = response.strip()
-            
-            # Clean up any meta-commentary
-            enhanced_prompt = self.openai_service.clean_enhanced_text(enhanced_prompt)
-            
-            logger.info(f"✅ OpenAI GPT-4o-mini enhancement successful for {target_model}")
-            return enhanced_prompt
+            logger.info(f"✅ MultiProviderService enhancement successful for {target_model}")
+            return enhanced_prompt, False
                 
         except Exception as e:
-            logger.error(f"OpenAI GPT-4o-mini enhancement failed: {str(e)}")
-            raise e
+            logger.error(f"❌ MultiProviderService failed for {target_model}: {str(e)}")
+            fallback_prompt = self._create_fallback_enhancement(prompt, target_model)
+            return fallback_prompt, True
     
     def _create_fallback_enhancement(self, prompt: str, model_name: str) -> str:
-        """Create a high-quality enhancement using the same system prompts as AI services"""
+        """Create a high-quality enhanced prompt using simple but effective techniques"""
         
-        # Skip logging for speed
-        # logger.info(f"🔄 Creating fallback enhancement for {model_name}")
+        logger.info(f"🔄 Creating fallback enhancement for {model_name}")
         
-        # Use the SAME high-quality system prompts from prompts.py
-        # This ensures consistency between AI services and fallback
-        try:
-            # Get the model-specific system prompt from prompts.py
-            system_prompt = ModelSpecificPrompts.get_system_prompt(model_name)
-            
-            # Create the enhancement using the same format as AI services
-            # This ensures fallback quality matches AI service quality
-            enhanced_prompt = f"""{system_prompt}
-
-USER'S PROMPT:
-"{prompt}"
-
-TRANSFORMATION MISSION: Transform this prompt using the proven prompt engineering techniques outlined above while maintaining natural, professional language.
-
-ESSENTIAL IMPROVEMENTS:
-1. **Clarity & Specificity**: Make the intent crystal clear and actionable with precise language
-2. **Strategic Structure**: Add logical organization that guides the AI's thinking process
-3. **Context Enhancement**: Provide relevant background and context when helpful
-4. **Output Specification**: Define clear expectations for response format, depth, and scope
-5. **Quality Constraints**: Set appropriate boundaries, requirements, and quality standards
-6. **Expertise Context**: Establish appropriate professional context when beneficial
-
-PROFESSIONAL TRANSFORMATION GUIDELINES:
-- Maintain natural, professional tone that feels human and approachable
-- Add structure that enhances clarity without being robotic or overly formal
-- Specify output format only when it adds significant value to the response
-- Include examples, scenarios, or use cases when they improve understanding
-- Set appropriate depth and scope expectations based on the complexity of the request
-- Use role assignment when helpful ("You are a [specific expert] with [relevant experience]")
-- Add structured thinking for complex tasks with systematic approaches
-- Request step-by-step reasoning for analytical tasks
-- Ensure the enhanced prompt leads to comprehensive, actionable, and valuable responses
-
-OPTIMIZED PROMPT:"""
-            
-            return enhanced_prompt
-            
-        except Exception as e:
-            # If there's any issue with the system prompts, fall back to a good template
-            logger.warning(f"Failed to use system prompt for {model_name}, using template: {e}")
-            
-            # High-quality template as backup
-            return f"""You are an expert assistant with deep knowledge and practical experience. 
-
-TASK: {prompt}
-
-APPROACH:
-• Provide comprehensive, well-structured analysis
-• Include practical examples and actionable insights
-• Consider multiple perspectives and approaches
-• Offer step-by-step guidance when applicable
-• Ensure clarity and thoroughness in explanations
-
-DELIVERABLES:
-• Detailed response with clear organization
-• Practical applications and real-world examples
-• Actionable recommendations and next steps
-• Additional resources or considerations when relevant
-
-Please deliver a response that demonstrates expertise, thoroughness, and practical value."""
+        # Create enhanced prompts, not answers
+        enhanced_parts = []
+        
+        # 1. Add expert role and context
+        if len(prompt.split()) < 10:
+            enhanced_parts.append(f"You are an expert in this field. Please provide a comprehensive explanation of: {prompt}")
+        else:
+            enhanced_parts.append(f"You are an expert. Please provide a detailed analysis of: {prompt}")
+        
+        # 2. Add structure for complex requests
+        if any(word in prompt.lower() for word in ['explain', 'how', 'what', 'why', 'analyze', 'compare']):
+            enhanced_parts.append("Please structure your response with clear sections and provide practical examples.")
+        
+        # 3. Add depth for technical topics
+        if any(word in prompt.lower() for word in ['quantum', 'algorithm', 'code', 'programming', 'technology', 'science']):
+            enhanced_parts.append("Please include relevant technical details, examples, and practical applications.")
+        
+        # 4. Add professional context
+        if any(word in prompt.lower() for word in ['business', 'strategy', 'management', 'marketing', 'finance']):
+            enhanced_parts.append("Please provide actionable insights and real-world applications.")
+        
+        # 5. Add step-by-step for process questions
+        if any(word in prompt.lower() for word in ['steps', 'process', 'procedure', 'guide', 'tutorial']):
+            enhanced_parts.append("Please provide a step-by-step approach with clear instructions.")
+        
+        # Combine all enhancements
+        enhanced_prompt = " ".join(enhanced_parts)
+        
+        # Ensure it's different from original and is a prompt, not an answer
+        if enhanced_prompt == prompt or "certainly" in enhanced_prompt.lower() or "here" in enhanced_prompt.lower():
+            enhanced_prompt = f"You are an expert. Please provide a comprehensive and detailed response to: {prompt}"
+        
+        logger.info(f"✅ Fallback enhancement created: {enhanced_prompt[:100]}...")
+        return enhanced_prompt
     
     def _identify_improvements(self, original: str, enhanced: str) -> list[str]:
         """Identify what improvements were made"""

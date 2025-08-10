@@ -18,9 +18,10 @@ logger = logging.getLogger(__name__)
 
 class AdvancedRateLimiter:
     def __init__(self):
-        # Rate limits
-        self.user_hourly_limit = 30
-        self.user_minute_limit = 5
+        # Rate limits - 30 requests per month per user
+        self.user_monthly_limit = 30
+        self.user_hourly_limit = 10  # Hourly limit for burst protection
+        self.user_minute_limit = 3   # Minute limit for burst protection
         self.ip_hourly_limit = 100
         self.ip_minute_limit = 20
         
@@ -43,8 +44,8 @@ class AdvancedRateLimiter:
         self.redis_client = None
         self.redis_available = False
         
-        # Initialize Redis
-        self._init_redis()
+        # Initialize Redis (will be called asynchronously when needed)
+        # self._init_redis()  # Commented out to avoid async warning
     
     async def _init_redis(self):
         """Initialize Redis connection for distributed rate limiting"""
@@ -183,6 +184,27 @@ class AdvancedRateLimiter:
         """Main rate limiting middleware"""
         start_time = time.time()
         
+        # Skip rate limiting for authentication and sign-in endpoints
+        auth_endpoints = [
+            "/api/v1/auth",
+            "/api/v1/signin", 
+            "/api/v1/sign-in",
+            "/api/v1/login",
+            "/api/v1/oauth",
+            "/api/v1/google",
+            "/api/v1/user/stats",
+            "/api/v1/user/count",
+            "/health",
+            "/api/v1/health"
+        ]
+        
+        # Check if this is an authentication endpoint
+        for auth_endpoint in auth_endpoints:
+            if request.url.path.startswith(auth_endpoint):
+                logger.info(f"🔓 Skipping rate limiting for auth endpoint: {request.url.path}")
+                response = await call_next(request)
+                return response
+        
         # Get identifiers
         client_ip = self._get_client_ip(request)
         user_id = self._get_user_identifier(request)
@@ -214,6 +236,9 @@ class AdvancedRateLimiter:
         
         # User-based limits (if authenticated)
         if user_id:
+            user_monthly_allowed, user_monthly_count, user_monthly_limit = await self._check_rate_limit(
+                f"user:{user_id}", self.user_monthly_limit, 2592000, f"rate_limit:user_monthly:{user_id}"  # 30 days in seconds
+            )
             user_hourly_allowed, user_hourly_count, user_hourly_limit = await self._check_rate_limit(
                 f"user:{user_id}", self.user_hourly_limit, 3600, f"rate_limit:user_hourly:{user_id}"
             )
@@ -221,6 +246,7 @@ class AdvancedRateLimiter:
                 f"user:{user_id}", self.user_minute_limit, 60, f"rate_limit:user_minute:{user_id}"
             )
             rate_limit_checks.extend([
+                ("user_monthly", user_monthly_allowed, user_monthly_count, user_monthly_limit),
                 ("user_hourly", user_hourly_allowed, user_hourly_count, user_hourly_limit),
                 ("user_minute", user_minute_allowed, user_minute_count, user_minute_limit)
             ])
@@ -270,6 +296,7 @@ class AdvancedRateLimiter:
         
         # Add rate limit headers
         if user_id:
+            response.headers["X-RateLimit-User-Monthly"] = f"{user_monthly_count}/{user_monthly_limit}"
             response.headers["X-RateLimit-User-Hourly"] = f"{user_hourly_count}/{user_hourly_limit}"
             response.headers["X-RateLimit-User-Minute"] = f"{user_minute_count}/{user_minute_limit}"
         

@@ -1,2 +1,0 @@
-# Backend requirements
--r backend/requirements.txt 

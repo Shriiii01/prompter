@@ -32,6 +32,10 @@ class HealthMonitor:
         self.is_healthy = True
         self.last_check = time.time()
         
+        # Database health tracking
+        self.db_health_status = None
+        self.last_db_check = 0
+        
     def record_request(self, path: str, method: str, response_time: float, status_code: int):
         """Record a request for monitoring"""
         self.request_count += 1
@@ -56,6 +60,21 @@ class HealthMonitor:
                 self.is_healthy = False
                 logger.error(f"System marked as unhealthy due to {self.error_count} errors")
     
+    async def check_database_health(self):
+        """Check database health status"""
+        try:
+            from app.services.database import db_service
+            self.db_health_status = await db_service.health_check()
+            self.last_db_check = time.time()
+            logger.info("Database health check completed")
+        except Exception as e:
+            logger.error(f"Failed to check database health: {e}")
+            self.db_health_status = {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+    
     def update_system_metrics(self):
         """Update system resource usage"""
         try:
@@ -73,9 +92,13 @@ class HealthMonitor:
         except Exception as e:
             logger.error(f"Failed to update system metrics: {e}")
     
-    def get_health_status(self) -> Dict[str, Any]:
-        """Get comprehensive health status"""
+    async def get_health_status(self) -> Dict[str, Any]:
+        """Get comprehensive health status including database health"""
         self.update_system_metrics()
+        
+        # Check database health if not checked recently
+        if time.time() - self.last_db_check > 60:  # Check every minute
+            await self.check_database_health()
         
         # Calculate response time statistics
         avg_response_time = sum(self.response_times) / len(self.response_times) if self.response_times else 0
@@ -88,8 +111,14 @@ class HealthMonitor:
         # Uptime
         uptime = time.time() - self.start_time
         
+        # Overall health depends on system and database health
+        overall_healthy = self.is_healthy and (
+            self.db_health_status is None or 
+            self.db_health_status.get("status") == "healthy"
+        )
+        
         return {
-            "status": "healthy" if self.is_healthy else "unhealthy",
+            "status": "healthy" if overall_healthy else "unhealthy",
             "uptime_seconds": int(uptime),
             "uptime_formatted": str(timedelta(seconds=int(uptime))),
             "request_count": self.request_count,
@@ -105,6 +134,7 @@ class HealthMonitor:
                 "memory_usage_percent": round(self.memory_usage, 2),
                 "disk_usage_percent": round(self.disk_usage, 2)
             },
+            "database_health": self.db_health_status,
             "recent_errors": list(self.error_log)[-10:],  # Last 10 errors
             "top_endpoints": dict(sorted(
                 self.performance_metrics.items(), 
@@ -113,12 +143,24 @@ class HealthMonitor:
             )[:10])  # Top 10 endpoints
         }
     
-    def get_simple_health(self) -> Dict[str, Any]:
+    async def get_simple_health(self) -> Dict[str, Any]:
         """Get simple health check for load balancers"""
+        # Check database health if not checked recently
+        if time.time() - self.last_db_check > 60:
+            await self.check_database_health()
+        
+        db_healthy = (
+            self.db_health_status is None or 
+            self.db_health_status.get("status") == "healthy"
+        )
+        
+        overall_healthy = self.is_healthy and db_healthy
+        
         return {
-            "status": "healthy" if self.is_healthy else "unhealthy",
+            "status": "healthy" if overall_healthy else "unhealthy",
             "timestamp": datetime.now().isoformat(),
-            "uptime_seconds": int(time.time() - self.start_time)
+            "uptime_seconds": int(time.time() - self.start_time),
+            "database_healthy": db_healthy
         }
     
     def reset_metrics(self):
@@ -129,6 +171,8 @@ class HealthMonitor:
         self.error_log.clear()
         self.performance_metrics.clear()
         self.is_healthy = True
+        self.db_health_status = None
+        self.last_db_check = 0
         logger.info("Health monitoring metrics reset")
 
 # Global health monitor instance
