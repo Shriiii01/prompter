@@ -1,5 +1,6 @@
 // 🔐 SUPER SIMPLE POPUP SCRIPT - JUST WORKS
 console.log('🚀 Popup starting...');
+console.log('🔧 Payment system debugging enabled');
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('✅ DOM loaded');
@@ -34,6 +35,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userEmailSpan = document.getElementById('user-email');
     const userAvatarImg = document.getElementById('user-avatar');
     const enhancedCountSpan = document.getElementById('enhanced-count');
+
+    // Seed count immediately to avoid 0→N blink
+    if (enhancedCountSpan) {
+        enhancedCountSpan.textContent = '—';
+        try {
+            chrome.storage.local.get(['last_known_prompt_count'], (res) => {
+                if (typeof res.last_known_prompt_count === 'number') {
+                    enhancedCountSpan.textContent = res.last_known_prompt_count;
+                }
+            });
+        } catch (e) {
+            // ignore
+        }
+    }
 
     const loginText = document.getElementById('login-text');
     const loginLoading = document.getElementById('login-loading');
@@ -295,16 +310,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // 💰 Initialize payment system with user email
+            console.log('💰 Initializing payment system for:', userInfo.email);
             paymentManager.setUserEmail(userInfo.email);
             paymentManager.init();
             
-            // Fetch real enhanced count from database
+            // Test payment system
+            console.log('🧪 Testing payment system...');
+            setTimeout(() => {
+                console.log('🧪 PaymentManager state:', {
+                    currentUserEmail: paymentManager.currentUserEmail,
+                    hasInit: paymentManager.init
+                });
+            }, 1000);
+            
+            // Seed count from local cache first (already seeded on load, but ensure latest)
+            if (enhancedCountSpan) {
+                try {
+                    chrome.storage.local.get(['last_known_prompt_count'], (res) => {
+                        if (typeof res.last_known_prompt_count === 'number') {
+                            updateEnhancedCount(res.last_known_prompt_count);
+                        }
+                    });
+                } catch (e) { /* ignore */ }
+            }
+
+            // Fetch real enhanced count from database and reconcile
             if (userInfo.email) {
                 fetchEnhancedCount(userInfo.email);
                 // 💳 Load subscription status
                 paymentManager.loadSubscriptionStatus();
-            } else {
-                updateEnhancedCount(0);
             }
         }
         
@@ -347,13 +381,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.warn('⚠️ Failed to fetch user data from database');
                 const errorText = await response.text();
                 console.warn('❌ Error response:', errorText);
-                updateEnhancedCount(0);
-                return 0;
+                // Fall back to last known count from local storage if available
+                try {
+                    const last = await new Promise((resolve) => chrome.storage.local.get(['last_known_prompt_count'], r => resolve(r.last_known_prompt_count || 0)));
+                    updateEnhancedCount(last || 0);
+                    return last || 0;
+                } catch (e) {
+                    updateEnhancedCount(0);
+                    return 0;
+                }
             }
         } catch (error) {
             console.error('❌ Error fetching enhanced count:', error);
-            updateEnhancedCount(0);
-            return 0;
+            try {
+                const last = await new Promise((resolve) => chrome.storage.local.get(['last_known_prompt_count'], r => resolve(r.last_known_prompt_count || 0)));
+                updateEnhancedCount(last || 0);
+                return last || 0;
+            } catch (e) {
+                updateEnhancedCount(0);
+                return 0;
+            }
         }
     }
 
@@ -473,25 +520,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Initialize payment system
         async init() {
+            console.log('🚀 PaymentManager init() called');
             this.setupEventListeners();
+            console.log('✅ PaymentManager init() completed');
         }
 
         // Setup all payment-related event listeners
         setupEventListeners() {
+            console.log('🔧 Setting up payment event listeners...');
+            
             // Upgrade button click
             const upgradeBtn = document.getElementById('upgrade-btn');
             if (upgradeBtn) {
+                console.log('✅ Found upgrade button, adding click listener');
                 upgradeBtn.addEventListener('click', () => {
+                    console.log('🔘 Upgrade button clicked!');
                     this.openPaymentModal();
                 });
+            } else {
+                console.error('❌ Upgrade button not found!');
             }
 
             // Pay now button click
             const payNowBtn = document.getElementById('pay-now-btn');
             if (payNowBtn) {
+                console.log('✅ Found pay now button, adding click listener');
                 payNowBtn.addEventListener('click', () => {
+                    console.log('🔘 Pay now button clicked!');
                     this.initiatePayment();
                 });
+            } else {
+                console.error('❌ Pay now button not found!');
             }
 
             // Close payment modal
@@ -515,7 +574,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Set current user email
         setUserEmail(email) {
+            console.log('📧 Setting user email in PaymentManager:', email);
             this.currentUserEmail = email;
+        }
+
+        // Dynamically load Razorpay script
+        async loadRazorpayScript() {
+            return new Promise((resolve, reject) => {
+                // Check if already loaded
+                if (typeof Razorpay !== 'undefined') {
+                    console.log('✅ Razorpay already loaded');
+                    resolve();
+                    return;
+                }
+
+                console.log('📥 Loading Razorpay script...');
+                
+                // Create script element
+                const script = document.createElement('script');
+                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                script.onload = () => {
+                    console.log('✅ Razorpay script loaded successfully');
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error('❌ Failed to load Razorpay script');
+                    reject(new Error('Failed to load Razorpay script'));
+                };
+                
+                // Add to document head
+                document.head.appendChild(script);
+            });
         }
 
         // Open payment modal
@@ -544,17 +633,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             try {
+                console.log('🚀 Starting payment process...');
                 this.setPaymentLoading(true);
                 console.log('🚀 Initiating payment for:', this.currentUserEmail);
 
                 // Create payment order
+                console.log('📝 Creating payment order...');
                 const order = await this.createOrder();
                 
                 if (!order) {
                     throw new Error('Failed to create payment order');
                 }
 
+                console.log('✅ Order created successfully:', order);
+
                 // Open Razorpay checkout
+                console.log('💳 Opening Razorpay checkout...');
                 await this.openRazorpayCheckout(order);
 
             } catch (error) {
@@ -567,6 +661,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Create payment order via API
         async createOrder() {
             try {
+                console.log('📡 Calling create-order API...');
                 const response = await fetch(`${this.apiBaseUrl}/api/v1/payment/create-order`, {
                     method: 'POST',
                     headers: {
@@ -577,64 +672,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                     })
                 });
 
+                console.log('📡 API Response status:', response.status);
+                console.log('📡 API Response headers:', response.headers);
+
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('❌ API Error:', errorText);
+                    throw new Error(`API error: ${response.status} - ${errorText}`);
                 }
 
-                const result = await response.json();
-                console.log('✅ Payment order created:', result.order.order_id);
-                
-                return result.order;
+                const order = await response.json();
+                console.log('✅ Order response:', order);
+                return order;
 
             } catch (error) {
-                console.error('❌ Failed to create order:', error);
+                console.error('❌ Create order failed:', error);
                 throw error;
             }
         }
 
         // Open Razorpay checkout
         async openRazorpayCheckout(order) {
-            return new Promise((resolve, reject) => {
-                try {
-                    const options = {
-                        key: order.key_id,
-                        amount: order.amount,
-                        currency: order.currency,
-                        name: 'AI Magic Pro',
-                        description: 'Unlimited Prompt Enhancements',
-                        order_id: order.order_id,
-                        handler: async (response) => {
-                            try {
-                                await this.handlePaymentSuccess(response);
-                                resolve(response);
-                            } catch (error) {
-                                reject(error);
-                            }
-                        },
-                        prefill: {
-                            email: this.currentUserEmail
-                        },
-                        theme: {
-                            color: '#34C759'
-                        },
-                        modal: {
-                            ondismiss: () => {
-                                console.log('💭 Payment dismissed by user');
-                                this.setPaymentLoading(false);
-                                resolve(null);
-                            }
-                        }
-                    };
-
-                    console.log('💳 Opening Razorpay checkout...');
-                    const rzp = new Razorpay(options);
-                    rzp.open();
-
-                } catch (error) {
-                    console.error('❌ Razorpay checkout error:', error);
-                    reject(error);
-                }
-            });
+            // To avoid CSP issues inside the extension, open a hosted checkout page
+            try {
+                const checkoutUrl = `${this.apiBaseUrl}/api/v1/payment/checkout-page?order_id=${encodeURIComponent(order.order_id)}&user_email=${encodeURIComponent(this.currentUserEmail)}`;
+                console.log('💳 Opening hosted checkout page:', checkoutUrl);
+                // Open in a new tab so Razorpay can load freely
+                window.open(checkoutUrl, '_blank');
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to open hosted checkout page:', error);
+                throw error;
+            }
         }
 
         // Handle successful payment
@@ -792,6 +861,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize payment manager
     const paymentManager = new PaymentManager();
+    
+    // Test function for debugging
+    window.testPaymentSystem = () => {
+        console.log('🧪 Testing payment system manually...');
+        console.log('🔍 Looking for payment buttons...');
+        
+        const upgradeBtn = document.getElementById('upgrade-btn');
+        const payNowBtn = document.getElementById('pay-now-btn');
+        const paymentModal = document.getElementById('payment-modal');
+        
+        console.log('🔘 Upgrade button:', upgradeBtn);
+        console.log('🔘 Pay now button:', payNowBtn);
+        console.log('💳 Payment modal:', paymentModal);
+        
+        console.log('💰 PaymentManager state:', {
+            currentUserEmail: paymentManager.currentUserEmail,
+            hasInit: paymentManager.init
+        });
+        
+        // Test button clicks
+        if (upgradeBtn) {
+            console.log('🔘 Testing upgrade button click...');
+            upgradeBtn.click();
+        }
+        
+        if (payNowBtn) {
+            console.log('🔘 Testing pay now button click...');
+            payNowBtn.click();
+        }
+    };
 
     // ====================================
     // 🔄 ENHANCED USER DASHBOARD FUNCTION

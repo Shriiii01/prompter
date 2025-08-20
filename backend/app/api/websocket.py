@@ -42,7 +42,7 @@ async def handle_enhance(payload: dict, enhancer: PromptEnhancer) -> dict:
         result = await enhancer.enhance(
             prompt=request.prompt,
             target_model=request.target_model,
-            context=request.context
+            context=request.context,
         )
         
         return {
@@ -103,3 +103,9 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {str(e)}")
         manager.disconnect(websocket)
+
+
+
+
+
+        

@@ -116,7 +116,6 @@ class DatabaseService:
                         return 0
                 else:
                     raise Exception(f"Database query failed: {response.status}")
-    
     async def increment_user_prompt_count(self, user_id: str) -> int:
         """Increment user's prompt count and return new count."""
         if not self._is_configured():
@@ -411,6 +410,40 @@ class DatabaseService:
                     return data[0] if data else None
                 else:
                     raise Exception(f"Failed to get user: {response.status}")
+    # ADD THESE METHODS RIGHT HERE (around line 412)
+    
+    async def get_user_stats(self, email: str) -> Optional[Dict]:
+        """Get user stats by email - matches what user endpoints need."""
+        try:
+            user = await self.get_user_by_email(email)
+            if user:
+                return {
+                    "id": user.get("id"),
+                    "email": user.get("email"),
+                    "name": user.get("name", "User"),
+                    "enhanced_prompts": user.get("enhanced_prompts", 0),
+                    "created_at": user.get("created_at")
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Error getting user stats: {str(e)}")
+            return None
+
+    async def get_or_create_user(self, email: str, user_data: Dict) -> Dict:
+        """Get existing user or create new one - matches what user endpoints need."""
+        try:
+            # First try to get existing user
+            existing_user = await self.get_user_by_email(email)
+            if existing_user:
+                return existing_user
+            
+            # If no existing user, create new one
+            new_user = await self.create_user(user_data)
+            return new_user
+        except Exception as e:
+            logger.error(f"Error in get_or_create_user: {str(e)}")
+            # Return user_data as fallback
+            return user_data
 
 # Global database service instance
 database_service = DatabaseService() 

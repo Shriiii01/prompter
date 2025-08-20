@@ -3,10 +3,18 @@ import logging
 from typing import Optional
 from pydantic_settings import BaseSettings
 from pydantic import validator
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from nearest .env up the tree
+try:
+    dotenv_path = find_dotenv()
+    if dotenv_path:
+        load_dotenv(dotenv_path=dotenv_path, override=False)
+    else:
+        load_dotenv()
+except Exception:
+    # Fallback silently if dotenv loading fails
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +47,7 @@ class Settings(BaseSettings):
     # Payment Configuration (Razorpay)
     razorpay_key_id: Optional[str] = None
     razorpay_secret_key: Optional[str] = None
+    razorpay_webhook_secret: Optional[str] = None
     
     # Rate Limiting
     rate_limit_per_minute: int = 120

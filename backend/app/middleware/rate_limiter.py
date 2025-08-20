@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 class AdvancedRateLimiter:
     def __init__(self):
-        # Rate limits - 30 requests per month per user
-        self.user_monthly_limit = 30
-        self.user_hourly_limit = 10  # Hourly limit for burst protection
-        self.user_minute_limit = 3   # Minute limit for burst protection
+        # Rate limits - 1000 requests per month per user (much more reasonable)
+        self.user_monthly_limit = 1000
+        self.user_hourly_limit = 100  # Hourly limit for burst protection (10x increase)
+        self.user_minute_limit = 30   # Minute limit for burst protection (10x increase)
         self.ip_hourly_limit = 100
         self.ip_minute_limit = 20
         
@@ -184,7 +184,7 @@ class AdvancedRateLimiter:
         """Main rate limiting middleware"""
         start_time = time.time()
         
-        # Skip rate limiting for authentication and sign-in endpoints
+        # Skip rate limiting for authentication, sign-in, and user endpoints
         auth_endpoints = [
             "/api/v1/auth",
             "/api/v1/signin", 
@@ -192,6 +192,7 @@ class AdvancedRateLimiter:
             "/api/v1/login",
             "/api/v1/oauth",
             "/api/v1/google",
+            "/api/v1/users",  # ADD THIS - NO RATE LIMITING FOR USER ENDPOINTS!
             "/api/v1/user/stats",
             "/api/v1/user/count",
             "/health",

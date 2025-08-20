@@ -7,6 +7,7 @@ import aiohttp
 import json
 
 from ..core.config import config
+from ..core.prompts import ModelSpecificPrompts
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +160,8 @@ class AIService:
             "Content-Type": "application/json"
         }
         
-        system_prompt = self._get_system_prompt_for_model(target_model)
+        # Use centralized system prompts for consistency across providers
+        system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
         data = {
             "model": "gpt-4",
@@ -185,36 +187,53 @@ class AIService:
                 return result["choices"][0]["message"]["content"]
     
     async def _enhance_with_gemini(self, prompt: str, target_model: str) -> str:
-        """Enhance prompt using Gemini API."""
+        """Enhance prompt using Gemini API with system prompts from prompts.py."""
         headers = {
             "Content-Type": "application/json"
         }
-        
-        system_prompt = self._get_system_prompt_for_model(target_model)
-        full_prompt = f"{system_prompt}\n\nUser prompt: {prompt}"
-        
+
+        # Centralized system prompt
+        system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
+
+        # Choose model endpoint from target_model if present; fallback to gemini-pro
+        model_name = (target_model or "").strip() or "gemini-pro"
+        if not model_name.lower().startswith("gemini"):
+            model_name = "gemini-pro"
+
+        # Gemini v1beta supports systemInstruction separately
         data = {
+            "systemInstruction": {
+                "role": "system",
+                "parts": [{"text": system_prompt}]
+            },
             "contents": [{
-                "parts": [{"text": full_prompt}]
+                "role": "user",
+                "parts": [{"text": prompt}]
             }],
             "generationConfig": {
                 "temperature": 0.7,
                 "maxOutputTokens": 2000
             }
         }
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={config.settings.gemini_api_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={config.settings.gemini_api_key}",
                 headers=headers,
                 json=data,
                 timeout=aiohttp.ClientTimeout(total=30)
             ) as response:
                 if response.status != 200:
-                    raise Exception(f"Gemini API error: {response.status}")
-                
+                    body = await response.text()
+                    raise Exception(f"Gemini API error: {response.status} {body}")
+
                 result = await response.json()
-                return result["candidates"][0]["content"]["parts"][0]["text"]
+                # Defensive extraction
+                try:
+                    return result["candidates"][0]["content"]["parts"][0]["text"]
+                except Exception:
+                    # Some responses use 'text' at root in newer variants
+                    return result.get("text") or ""
     
     async def _enhance_with_together(self, prompt: str, target_model: str) -> str:
         """Enhance prompt using Together API."""
@@ -223,7 +242,8 @@ class AIService:
             "Content-Type": "application/json"
         }
         
-        system_prompt = self._get_system_prompt_for_model(target_model)
+        # Use centralized system prompts for consistency across providers
+        system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
         data = {
             "model": "meta-llama/Llama-2-70b-chat-hf",
@@ -249,16 +269,17 @@ class AIService:
                 return result["choices"][0]["message"]["content"]
     
     def _get_system_prompt_for_model(self, target_model: str) -> str:
-        """Get appropriate system prompt based on target model."""
-        base_prompt = """You are an expert AI prompt enhancer. Your task is to improve user prompts to be more effective, clear, and detailed while maintaining the original intent. Focus on:
-
-1. Clarity and specificity
-2. Context and background information
-3. Desired output format
-4. Constraints and requirements
-5. Examples when helpful
-
-Return only the enhanced prompt without any explanations or additional text."""
+        """Get appropriate system prompt based on target model. Strictly prevent answering the prompt."""
+        base_prompt = (
+            "You are an expert AI prompt enhancer. Your job is to REWRITE the user's prompt so that another LLM can answer it better.\n"
+            "Rules (MUST FOLLOW):\n"
+            "- NEVER answer the user's prompt.\n"
+            "- NEVER include explanations, disclaimers, or extra commentary.\n"
+            "- Output ONLY the rewritten/enhanced prompt, nothing else.\n"
+            "- Keep the user's original intent.\n"
+            "- Improve clarity, add missing context, specify desired format, constraints, and examples when helpful.\n"
+            "- Do NOT wrap the output in quotes or code fences.\n"
+        )
         
         model_specific_prompts = {
             "chatgpt": base_prompt + "\n\nOptimize for ChatGPT's conversational style and capabilities.",

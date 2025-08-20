@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from app.api import enhance, websocket
-from app.api.v1.endpoints import enhance as enhance_v1_endpoints, health as health_v1_endpoints, users as users_v1_endpoints, payment as payment_endpoints
+from app.api.v1.endpoints import enhance as enhance_v1_endpoints, users as users_v1_endpoints, payment as payment_endpoints
 from app.middleware.rate_limiter import rate_limiter
 from app.monitoring.health_monitor import get_health_monitor
 from app.core.config import config
@@ -104,10 +104,9 @@ async def log_requests(request, call_next):
             }
         )
 
-# Include routers
-app.include_router(enhance.router)
+# Include routers - route legacy enhancer under /api/legacy to avoid path conflicts
+app.include_router(enhance.router, prefix="/api/legacy")
 app.include_router(enhance_v1_endpoints.router, prefix="/api/v1")
-app.include_router(health_v1_endpoints.router, prefix="/api/v1")
 app.include_router(users_v1_endpoints.router, prefix="/api/v1")
 app.include_router(payment_endpoints.router, prefix="/api/v1/payment", tags=["payment"])
 app.include_router(websocket.router)
@@ -177,7 +176,8 @@ async def not_found_handler(request, exc):
             "message": f"The requested endpoint {request.url.path} does not exist",
             "available_endpoints": [
                 "/",
-                "/api/v1/health",
+                "/health",
+                "/health_detailed",
                 "/api/v1/enhance",
                 "/api/v1/analyze",
                 "/api/v1/models",
@@ -210,4 +210,4 @@ def clean_enhanced_text(text):
 if __name__ == "__main__":
     logger.info("Starting Prompt Assistant API server...")
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info") 
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

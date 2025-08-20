@@ -17,6 +17,9 @@ class PaymentService:
         self.key_id = config.settings.razorpay_key_id
         self.secret_key = config.settings.razorpay_secret_key
         
+        logger.info(f"🔑 Razorpay Key ID: {self.key_id[:10]}..." if self.key_id else "None")
+        logger.info(f"🔑 Razorpay Secret Key: {self.secret_key[:10]}..." if self.secret_key else "None")
+        
         if not self.key_id or not self.secret_key:
             logger.warning("⚠️ Razorpay credentials not configured")
             self.client = None

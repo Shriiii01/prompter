@@ -3,7 +3,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
-from ....utils.database import database_service
+from ....services.database import DatabaseService
+db_service = DatabaseService()
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["users-v1"])
@@ -36,7 +37,7 @@ async def create_user(request: UserCreateRequest):
         logger.info(f"Creating user: {request.email}")
         
         # Check if user already exists
-        existing_user = await database_service.get_user_stats(request.email)
+        existing_user = await db_service.get_user_stats(request.email)
         if existing_user:
             logger.info(f"User already exists: {request.email}")
             return UserResponse(
@@ -54,7 +55,7 @@ async def create_user(request: UserCreateRequest):
             "enhanced_prompts": 0
         }
         
-        new_user = await database_service.get_or_create_user(request.email, user_data)
+        new_user = await db_service.get_or_create_user(request.email, user_data)
         
         logger.info(f"User created successfully: {request.email}")
         return UserResponse(
@@ -81,7 +82,7 @@ async def get_user_by_email(email: str):
         User data if found
     """
     try:
-        user = await database_service.get_user_stats(email)
+        user = await db_service.get_user_stats(email)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         

@@ -114,6 +114,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         return true;
     }
+
+    // Perform enhancement in background (robust against content-script context invalidation)
+    if (request.action === 'enhance_prompt') {
+        (async () => {
+            try {
+                const { apiUrl, prompt, targetModel, userEmail, platform, idempotencyKey } = request;
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 30000);
+
+                const res = await fetch(`${apiUrl}/api/v1/enhance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-ID': userEmail || '',
+                        'X-Idempotency-Key': idempotencyKey || `${Date.now()}-${Math.random()}`,
+                        'X-Platform': (platform || '').toLowerCase()
+                    },
+                    body: JSON.stringify({ prompt, target_model: targetModel || 'auto' }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+
+                if (!res.ok) {
+                    const txt = await res.text().catch(() => '');
+                    sendResponse({ success: false, error: `API ${res.status}: ${txt}` });
+                    return;
+                }
+
+                const data = await res.json();
+
+                // Best-effort write of last known count
+                try {
+                    if (typeof data.user_prompt_count === 'number') {
+                        chrome.storage.local.set({ last_known_prompt_count: data.user_prompt_count });
+                    }
+                } catch (e) {}
+
+                sendResponse({ success: true, enhanced_prompt: data.enhanced_prompt, data });
+            } catch (e) {
+                sendResponse({ success: false, error: e?.message || 'Enhance failed' });
+            }
+        })();
+        return true; // Keep channel open for async response
+    }
 });
 
 // Function to activate content script on all tabs

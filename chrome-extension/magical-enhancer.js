@@ -1136,25 +1136,39 @@ class MagicalEnhancer {
             
             console.log('🚀 Enhancing with API:', { model: targetModel, promptLength: text.length });
 
-            const response = await fetch('http://localhost:8000/api/v1/test-enhance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
+            const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+            const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+            const platform = this.detectTargetModel();
+
+            // Use background to perform the network call so content-script context invalidation cannot break it
+            const data = await new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({
+                    action: 'enhance_prompt',
+                    apiUrl,
                     prompt: text,
-                    target_model: targetModel
-                })
+                    targetModel,
+                    userEmail: (this.userInfo && this.userInfo.email) ? this.userInfo.email : '',
+                    platform,
+                    idempotencyKey
+                }, (resp) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                        return;
+                    }
+                    if (!resp || !resp.success) {
+                        reject(new Error(resp?.error || 'Enhance failed'));
+                    } else {
+                        resolve(resp.data);
+                    }
+                });
             });
-
-            if (!response.ok) {
-                const errorData = await response.text();
-                console.error('❌ API response error:', response.status, errorData);
-                throw new Error(`Enhancement failed: ${response.status}`);
-            }
-
-            const data = await response.json();
             console.log('✅ Enhancement successful:', data.enhanced_prompt.substring(0, 100) + '...');
+            // Update local last-known count immediately (no popup blink)
+            if (typeof data.user_prompt_count === 'number') {
+                try {
+                    chrome.storage.local.set({ last_known_prompt_count: data.user_prompt_count });
+                } catch (e) { /* ignore */ }
+            }
             return data.enhanced_prompt;
             
         } catch (error) {
