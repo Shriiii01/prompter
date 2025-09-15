@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  # AI Magic Prompt Enhancer Backend
-  ai-magic-backend:
+  # PromptGrammerly Prompt Enhancer Backend
+  promptgrammerly-backend:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    container_name: ai-magic-backend
+    container_name: promptgrammerly-backend
     ports:
       - "8000:8000"
     environment:
