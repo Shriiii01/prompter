@@ -487,6 +487,12 @@ class MagicalEnhancer {
 
         // Clean up any orphaned icons before scanning
         this.cleanupOrphanedIcons();
+        
+        // Debug: Log current page info
+        if (window.location.hostname.includes('perplexity.ai')) {
+            console.log('🔍 Scanning Perplexity AI for input fields...');
+            console.log('🔍 Current URL:', window.location.href);
+        }
 
         // Optimized selectors for faster detection - focus on main chat inputs only
         const selectors = [
@@ -498,8 +504,11 @@ class MagicalEnhancer {
             'div[contenteditable="true"][data-placeholder*="Talk with Claude"]',
             // Gemini main input  
             'textarea[placeholder*="Enter a prompt here"]',
-            // Perplexity main input
+            // Perplexity main input - enhanced selectors
             'textarea[placeholder*="Ask anything"]',
+            'textarea[placeholder*="Ask anything or @mention"]',
+            'textarea[data-testid*="composer"]',
+            'div[contenteditable="true"][role="textbox"]',
             // Generic main chat inputs (as fallback)
             'textarea[data-testid*="composer"]',
             'div[contenteditable="true"]:not([role="textbox"]):not([aria-label*="search"])'
