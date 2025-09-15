@@ -520,7 +520,7 @@ async def get_service_stats(enhancer: PromptEnhancer = Depends(get_enhancer)):
         global_stats = await db_service.get_global_stats()
         
         return {
-            "service": "AI Magic Prompt Enhancer",
+            "service": "PromptGrammerly Prompt Enhancer",
                             "version": config.settings.app_version,
             "status": "operational",
             "enhancement_engine": "GPT-4o mini with model-specific prompts",

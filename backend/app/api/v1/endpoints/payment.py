@@ -270,7 +270,7 @@ async def checkout_page(order_id: str, user_email: str):
   <head>
     <meta charset=\"utf-8\" />
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-    <title>AI Magic Pro - Secure Checkout</title>
+    <title>PromptGrammerly - Secure Checkout</title>
   </head>
   <body style=\"font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;\"> 
     <h2>Secure Checkout</h2>
@@ -286,8 +286,8 @@ async def checkout_page(order_id: str, user_email: str):
           key: {json.dumps(key_id)},
           amount: {amount},
           currency: {json.dumps(currency)},
-          name: 'AI Magic Pro',
-          description: 'Unlimited Prompt Enhancements',
+          name: 'PromptGrammerly',
+          description: 'Unlimited Prompt Enhancements with PromptGrammerly',
           order_id: {json.dumps(order_id)},
           prefill: {{ email: {json.dumps(user_email)} }},
           handler: async function (response) {{

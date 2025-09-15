@@ -1,4 +1,4 @@
-// 🪄 AI Magic - Prompt Enhancer Content Script (RESTORED ORIGINAL)
+// 🪄 PromptGrammerly - Prompt Enhancer Content Script (RESTORED ORIGINAL)
 // ✅ FIXED: Extension context invalidated error with safe storage handling
 
 class MagicalEnhancer {
@@ -763,7 +763,7 @@ class MagicalEnhancer {
             const icon = document.createElement('button');
             icon.className = 'ce-icon';
             icon.innerHTML = this.createPLogo();
-            icon.title = 'Enhance with AI Magic';
+            icon.title = 'Enhance with PromptGrammerly';
             icon.setAttribute('data-input-id', inputId);
             
             // Fast positioning - immediate placement without complex calculations
