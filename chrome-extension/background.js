@@ -161,7 +161,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     },
                     body: JSON.stringify({ 
                         prompt, 
-                        target_model: targetModel || 'auto' 
+                        target_model: targetModel || 'gpt-4o-mini' 
                     }),
                     signal: controller.signal
                 });
