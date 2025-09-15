@@ -492,6 +492,20 @@ class MagicalEnhancer {
         if (window.location.hostname.includes('perplexity.ai')) {
             console.log('🔍 Scanning Perplexity AI for input fields...');
             console.log('🔍 Current URL:', window.location.href);
+            console.log('🔍 Document ready state:', document.readyState);
+            console.log('🔍 All textareas found:', document.querySelectorAll('textarea').length);
+            console.log('🔍 All contenteditable divs found:', document.querySelectorAll('div[contenteditable="true"]').length);
+            
+            // Log all textareas with their attributes
+            const allTextareas = document.querySelectorAll('textarea');
+            allTextareas.forEach((textarea, index) => {
+                console.log(`🔍 Textarea ${index}:`, {
+                    placeholder: textarea.placeholder,
+                    id: textarea.id,
+                    className: textarea.className,
+                    visible: textarea.offsetWidth > 0 && textarea.offsetHeight > 0
+                });
+            });
         }
         if (window.location.hostname.includes('meta.ai')) {
             console.log('🔍 Scanning Meta AI for input fields...');
@@ -513,8 +527,15 @@ class MagicalEnhancer {
             'textarea[placeholder*="Ask anything or @mention"]',
             'textarea[placeholder*="Ask anything or @mention a Space"]',
             'textarea[data-testid*="composer"]',
+            'textarea[data-testid*="search"]',
+            'textarea[data-testid*="input"]',
             'div[contenteditable="true"][role="textbox"]',
             'div[contenteditable="true"][aria-label*="Ask anything"]',
+            'div[contenteditable="true"][aria-label*="search"]',
+            'div[contenteditable="true"][aria-label*="input"]',
+            // More generic Perplexity selectors
+            'textarea',
+            'div[contenteditable="true"]',
             // Meta AI main input - comprehensive selectors
             'textarea[placeholder*="Ask Meta AI"]',
             'textarea[placeholder*="Ask anything"]',
@@ -533,6 +554,11 @@ class MagicalEnhancer {
         for (const selector of selectors) {
             const elements = document.querySelectorAll(selector);
             totalFound += elements.length;
+            
+            // Debug for Perplexity
+            if (window.location.hostname.includes('perplexity.ai') && elements.length > 0) {
+                console.log(`🔍 Selector "${selector}" found ${elements.length} elements`);
+            }
             
             for (const element of elements) {
                 const inputId = this.getInputId(element);
@@ -577,7 +603,15 @@ class MagicalEnhancer {
                 }
                 
                 if (this.isValidInputFast(element)) { // Use fast validation
-
+                    // Debug for Perplexity
+                    if (window.location.hostname.includes('perplexity.ai')) {
+                        console.log(`✅ Adding icon to element:`, {
+                            tagName: element.tagName,
+                            placeholder: element.placeholder,
+                            className: element.className,
+                            id: element.id
+                        });
+                    }
                     this.addIconToInput(element);
                     newlyAdded++;
                     
