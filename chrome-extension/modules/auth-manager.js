@@ -1,7 +1,7 @@
 // 🔐 Authentication Manager - Simplified and Focused
 class AuthManager {
     constructor() {
-        this.clientId = '20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com';
+        this.clientId = null; // OAuth2 disabled - using simple auth
         this.scopes = [
             'https://www.googleapis.com/auth/userinfo.email',
             'https://www.googleapis.com/auth/userinfo.profile',
