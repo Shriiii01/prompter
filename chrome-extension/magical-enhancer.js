@@ -503,7 +503,20 @@ class MagicalEnhancer {
                     placeholder: textarea.placeholder,
                     id: textarea.id,
                     className: textarea.className,
-                    visible: textarea.offsetWidth > 0 && textarea.offsetHeight > 0
+                    visible: textarea.offsetWidth > 0 && textarea.offsetHeight > 0,
+                    rect: textarea.getBoundingClientRect()
+                });
+            });
+            
+            // Log all contenteditable divs
+            const allContentEditable = document.querySelectorAll('div[contenteditable="true"]');
+            allContentEditable.forEach((div, index) => {
+                console.log(`🔍 ContentEditable ${index}:`, {
+                    role: div.getAttribute('role'),
+                    ariaLabel: div.getAttribute('aria-label'),
+                    className: div.className,
+                    visible: div.offsetWidth > 0 && div.offsetHeight > 0,
+                    rect: div.getBoundingClientRect()
                 });
             });
         }
@@ -514,37 +527,31 @@ class MagicalEnhancer {
 
         // Optimized selectors for faster detection - focus on main chat inputs only
         const selectors = [
-            // ChatGPT main input - most common
+            // Perplexity AI specific selectors (prioritized)
+            'textarea[placeholder*="Ask anything or @mention a Space"]',
+            'textarea[placeholder*="Ask anything or @mention"]',
             'textarea[placeholder*="Ask anything"]',
+            'div[contenteditable="true"][role="textbox"][aria-label*="Ask anything"]',
+            'div[contenteditable="true"][role="textbox"]',
+            'textarea[data-testid*="composer"]',
+            'textarea[data-testid*="search"]',
+            'textarea[data-testid*="input"]',
+            // ChatGPT main input - most common
             'textarea[placeholder*="Message ChatGPT"]',
             'div[contenteditable="true"][data-id*="root"]',
             // Claude main input
             'div[contenteditable="true"][data-placeholder*="Talk with Claude"]',
             // Gemini main input  
             'textarea[placeholder*="Enter a prompt here"]',
-            // Perplexity main input - comprehensive selectors
-            'textarea[placeholder*="Ask anything"]',
-            'textarea[placeholder*="Ask anything or @mention"]',
-            'textarea[placeholder*="Ask anything or @mention a Space"]',
-            'textarea[data-testid*="composer"]',
-            'textarea[data-testid*="search"]',
-            'textarea[data-testid*="input"]',
-            'div[contenteditable="true"][role="textbox"]',
-            'div[contenteditable="true"][aria-label*="Ask anything"]',
-            'div[contenteditable="true"][aria-label*="search"]',
-            'div[contenteditable="true"][aria-label*="input"]',
-            // More generic Perplexity selectors
-            'textarea',
-            'div[contenteditable="true"]',
             // Meta AI main input - comprehensive selectors
             'textarea[placeholder*="Ask Meta AI"]',
-            'textarea[placeholder*="Ask anything"]',
-            'div[contenteditable="true"][role="textbox"]',
             'div[contenteditable="true"][aria-label*="Ask Meta AI"]',
-            'textarea[data-testid*="composer"]',
             // Generic main chat inputs (as fallback)
             'textarea[data-testid*="composer"]',
-            'div[contenteditable="true"]:not([role="textbox"]):not([aria-label*="search"])'
+            'div[contenteditable="true"]:not([role="textbox"]):not([aria-label*="search"])',
+            // More generic selectors (last resort)
+            'textarea',
+            'div[contenteditable="true"]'
         ];
 
         let totalFound = 0;
