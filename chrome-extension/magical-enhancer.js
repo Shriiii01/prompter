@@ -1,6 +1,5 @@
 // 🪄 AI Magic - Prompt Enhancer Content Script (RESTORED ORIGINAL)
 // ✅ FIXED: Extension context invalidated error with safe storage handling
-console.log('🚀 AI Magic Content Script Loaded');
 
 class MagicalEnhancer {
     constructor() {
@@ -33,9 +32,7 @@ class MagicalEnhancer {
         this.checkAndRestoreActiveState();
         
         // Don't auto-activate - wait for toggle button (unless already active)
-        console.log('✨ AI Magic ready - checking previous state');
-        
-        console.log('✨ AI Magic initialized');
+
     }
 
     // Safe storage utility methods
@@ -44,18 +41,18 @@ class MagicalEnhancer {
             if (this.isStorageAvailable()) {
                 chrome.storage.local.get(keys, (result) => {
                     if (chrome.runtime.lastError) {
-                        console.warn('⚠️ Storage get error:', chrome.runtime.lastError.message);
+
                         callback(null);
                         return;
                     }
                     callback(result);
                 });
             } else {
-                console.warn('⚠️ Chrome storage not available');
+
                 callback(null);
             }
         } catch (error) {
-            console.warn('⚠️ Storage operation failed:', error.message);
+
             callback(null);
         }
     }
@@ -74,18 +71,18 @@ class MagicalEnhancer {
             if (this.isStorageAvailable()) {
                 chrome.storage.local.set(data, () => {
                     if (chrome.runtime.lastError) {
-                        console.warn('⚠️ Storage set error:', chrome.runtime.lastError.message);
+
                     } else {
-                        console.log('✅ Storage operation successful');
+
                     }
                     callback();
                 });
             } else {
-                console.warn('⚠️ Chrome storage not available');
+
                 callback();
             }
         } catch (error) {
-            console.warn('⚠️ Storage operation failed:', error.message);
+
             callback();
         }
     }
@@ -94,7 +91,7 @@ class MagicalEnhancer {
         // Remove any existing icons from previous instances
         const existingIcons = document.querySelectorAll('.ce-icon');
         if (existingIcons.length > 0) {
-            console.log(`🧹 Cleaning up ${existingIcons.length} existing icons from previous instance`);
+
             existingIcons.forEach(icon => icon.remove());
         }
         
@@ -120,7 +117,7 @@ class MagicalEnhancer {
         // Remove duplicates, keeping only the first one
         iconGroups.forEach((icons, inputId) => {
             if (icons.length > 1) {
-                console.log(`🧹 Removing ${icons.length - 1} duplicate icons for input ${inputId}`);
+
                 for (let i = 1; i < icons.length; i++) {
                     icons[i].remove();
                 }
@@ -132,11 +129,9 @@ class MagicalEnhancer {
         // Check if the extension was active before page reload
         this.safeStorageGet(['extension_active'], (result) => {
             if (!result) return;
-            
-            console.log('🔍 Checking previous extension state:', result);
-            
+
             if (result.extension_active) {
-                console.log('🔄 Extension was active before reload - restoring icons');
+
                 this.isActive = true;
                 
                 // Immediate attempt for instant results
@@ -147,21 +142,19 @@ class MagicalEnhancer {
                 
                 restoreAttempts.forEach((delay, index) => {
                     setTimeout(() => {
-                        console.log(`🔄 Restore attempt ${index + 1}: scanning for inputs`);
-                        
+
                         // Force scan even with debouncing during restore
                         this.scanForInputs(true); // Bypass debounce
                         
                         // Check if we found any inputs
                         if (this.icons.size > 0) {
-                            console.log(`✅ Successfully restored ${this.icons.size} icons on attempt ${index + 1}`);
+
                         } else {
-                            console.log(`⏳ No inputs found yet on attempt ${index + 1} - will keep trying`);
-                            
+
                             // If this is the last attempt and we still haven't found anything,
                             // try a less restrictive scan
                             if (index === restoreAttempts.length - 1) {
-                                console.log('🔄 Final attempt with relaxed validation');
+
                                 this.scanForInputsRelaxed();
                             }
                         }
@@ -174,12 +167,12 @@ class MagicalEnhancer {
                 // Also listen for page readiness changes
                 if (document.readyState !== 'complete') {
                     document.addEventListener('DOMContentLoaded', () => {
-                        console.log('📄 DOMContentLoaded - scanning again');
+
                         this.scanForInputs(true); // Bypass debounce
                     });
                     
                     window.addEventListener('load', () => {
-                        console.log('🌐 Window loaded - final scan');
+
                         this.scanForInputs(true); // Bypass debounce
                     });
                 }
@@ -187,7 +180,7 @@ class MagicalEnhancer {
                 // Monitor for dynamic content changes more aggressively during restore
                 const restoreObserver = new MutationObserver(() => {
                     if (this.isActive && this.icons.size === 0) {
-                        console.log('🔄 DOM change detected during restore - scanning');
+
                         this.scanForInputs(true); // Bypass debounce
                     }
                 });
@@ -200,11 +193,11 @@ class MagicalEnhancer {
                 // Stop aggressive monitoring after 5 seconds (reduced from 10)
                 setTimeout(() => {
                     restoreObserver.disconnect();
-                    console.log('🔄 Stopped aggressive restore monitoring');
+
                 }, 5000);
                 
             } else {
-                console.log('💤 Extension was inactive before reload');
+
             }
         });
     }
@@ -226,7 +219,7 @@ class MagicalEnhancer {
                 const afterCount = this.icons.size;
                 
                 if (afterCount > beforeCount) {
-                    console.log(`🔍 Periodic check found ${afterCount - beforeCount} new inputs`);
+
                 }
             }
         }, 1000); // Reduced from 3000ms to 1000ms for faster detection
@@ -240,7 +233,7 @@ class MagicalEnhancer {
             this.icons.delete(oldElement);
             this.icons.set(newElement, icon);
             icon._targetElement = newElement;
-            console.log('🔄 Transferred icon to new input element');
+
         }
     }
 
@@ -324,7 +317,6 @@ class MagicalEnhancer {
                 padding-bottom: 60px !important; /* Space for the insert button */
             }
 
-
             .ce-close-btn {
                 background: none !important;
                 border: none !important;
@@ -365,7 +357,6 @@ class MagicalEnhancer {
                 color: #6b7280 !important;
                 text-align: center !important;
             }
-
 
             .ce-insert-btn {
                 background: #2D9CDB !important;
@@ -408,13 +399,12 @@ class MagicalEnhancer {
 
     activate() {
         if (this.isActive) {
-            console.log('✨ AI Magic already active');
+
             return;
         }
         
         this.isActive = true;
-        console.log('✨ AI Magic activated - scanning for inputs');
-        
+
         // Save active state for page reloads
         this.safeStorageSet({ extension_active: true });
         
@@ -483,14 +473,14 @@ class MagicalEnhancer {
         }
         this.stopPeriodicCheck();
         this.stopGlobalDuplicatePrevention();
-        console.log('🛑 AI Magic deactivated');
+
     }
 
     scanForInputs(bypassDebounce = false) {
         // Reduced debouncing for faster response
         const now = Date.now();
         if (!bypassDebounce && now - this.lastScanTime < 100) { // Reduced from 500ms to 100ms
-            console.log('🚫 Scan blocked - too frequent (debounced)');
+
             return;
         }
         this.lastScanTime = now;
@@ -515,12 +505,6 @@ class MagicalEnhancer {
             'div[contenteditable="true"]:not([role="textbox"]):not([aria-label*="search"])'
         ];
 
-        console.log('🔍 Fast scanning for inputs...', { 
-            isActive: this.isActive, 
-            currentIcons: this.icons.size,
-            readyState: document.readyState
-        });
-
         let totalFound = 0;
         let newlyAdded = 0;
 
@@ -534,19 +518,19 @@ class MagicalEnhancer {
                 
                 // ROBUST duplicate check - multiple layers to prevent duplicates
                 if (this.icons.has(element)) {
-                    console.log('🚫 Input element already has icon - skipping');
+
                     continue;
                 }
                 
                 if (this.iconCreationLock.has(inputId)) {
-                    console.log('🚫 Icon creation already in progress - skipping');
+
                     continue;
                 }
                 
                 // Check if there's already an icon in the DOM for this input
                 const existingIcon = document.querySelector(`[data-input-id="${inputId}"]`);
                 if (existingIcon) {
-                    console.log('🚫 Found existing icon in DOM - skipping duplicate creation');
+
                     continue;
                 }
                 
@@ -561,7 +545,7 @@ class MagicalEnhancer {
                         Math.pow(iconRect.top - rect.top, 2)
                     );
                     if (distance < 100) { // If icon is within 100px, consider it a duplicate
-                        console.log('🚫 Found nearby icon - preventing duplicate');
+
                         hasNearbyIcon = true;
                         break;
                     }
@@ -572,13 +556,13 @@ class MagicalEnhancer {
                 }
                 
                 if (this.isValidInputFast(element)) { // Use fast validation
-                    console.log('✅ Adding icon to new input:', selector, inputId);
+
                     this.addIconToInput(element);
                     newlyAdded++;
                     
                     // Early exit if we found enough inputs (performance optimization)
                     if (newlyAdded >= 3) {
-                        console.log('🚀 Found sufficient inputs, stopping scan for performance');
+
                         break;
                     }
                 }
@@ -588,13 +572,11 @@ class MagicalEnhancer {
             if (newlyAdded > 0) break;
         }
 
-        console.log(`🔍 Fast scan complete: ${totalFound} total inputs found, ${newlyAdded} new icons added, ${this.icons.size} total icons`);
     }
 
     scanForInputsRelaxed() {
         // Fast relaxed scanning for restore attempts
-        console.log('🔄 Fast relaxed scan for restore attempt');
-        
+
         const relaxedSelectors = [
             'textarea',
             'div[contenteditable="true"]',
@@ -625,8 +607,7 @@ class MagicalEnhancer {
                     !element.closest('.ce-popup') &&
                     !element.hasAttribute('readonly') &&
                     !element.disabled) {
-                    
-                    console.log('✅ Adding icon to input (relaxed validation):', selector, element);
+
                     this.addIconToInput(element);
                     newlyAdded++;
                     
@@ -639,7 +620,6 @@ class MagicalEnhancer {
             if (newlyAdded > 0) break;
     }
 
-        console.log(`🔄 Fast relaxed scan complete: ${totalFound} total inputs found, ${newlyAdded} new icons added`);
     }
 
     isValidInputFast(element) {
@@ -683,19 +663,19 @@ class MagicalEnhancer {
         
         // ROBUST duplicate prevention - multiple layers of checking
         if (this.icons.has(inputElement)) {
-            console.log('🚫 Icon already exists for this input element - skipping');
+
             return;
         }
         
         if (this.iconCreationLock.has(inputId)) {
-            console.log('🚫 Icon creation already in progress - skipping');
+
             return;
         }
         
         // Check if there's already an icon in the DOM for this input
         const existingIcon = document.querySelector(`[data-input-id="${inputId}"]`);
         if (existingIcon) {
-            console.log('🚫 Found existing icon in DOM - skipping duplicate creation');
+
             return;
         }
         
@@ -709,15 +689,14 @@ class MagicalEnhancer {
                 Math.pow(iconRect.top - rect.top, 2)
             );
             if (distance < 100) { // If icon is within 100px, consider it a duplicate
-                console.log('🚫 Found nearby icon - preventing duplicate');
+
                 return;
             }
         }
         
         // Lock this input to prevent duplicates during creation
         this.iconCreationLock.add(inputId);
-        console.log(`🔒 Locked input ${inputId} for icon creation`);
-        
+
         try {
             const icon = document.createElement('button');
             icon.className = 'ce-icon';
@@ -737,14 +716,12 @@ class MagicalEnhancer {
             
             // Store reference for positioning updates
             icon._targetElement = inputElement;
-            
-            console.log('✅ Icon added and positioned immediately');
-            
+
         } finally {
             // Always unlock after creation attempt
             setTimeout(() => {
                 this.iconCreationLock.delete(inputId);
-                console.log(`🔓 Unlocked input ${inputId}`);
+
             }, 50); // Reduced from 100ms to 50ms
         }
     }
@@ -756,7 +733,7 @@ class MagicalEnhancer {
         this.icons.forEach((icon, inputElement) => {
             // Check if the input element still exists in the DOM
             if (!document.contains(inputElement)) {
-                console.log('🧹 Removing icon for non-existent input element');
+
                 iconsToRemove.push(inputElement);
                 return;
             }
@@ -766,7 +743,7 @@ class MagicalEnhancer {
             if (rect.width === 0 || rect.height === 0 ||
                 inputElement.hasAttribute('readonly') ||
                 inputElement.disabled) {
-                console.log('🧹 Removing icon for invalid/disabled input');
+
                 iconsToRemove.push(inputElement);
                 return;
             }
@@ -775,7 +752,7 @@ class MagicalEnhancer {
             const inputId = icon.getAttribute('data-input-id');
             const allIconsForInput = document.querySelectorAll(`[data-input-id="${inputId}"]`);
             if (allIconsForInput.length > 1) {
-                console.log(`🧹 Found ${allIconsForInput.length} icons for same input, removing duplicates`);
+
                 // Keep only the first icon, remove the rest
                 for (let i = 1; i < allIconsForInput.length; i++) {
                     allIconsForInput[i].remove();
@@ -793,7 +770,7 @@ class MagicalEnhancer {
         });
         
         if (iconsToRemove.length > 0) {
-            console.log(`🧹 Cleaned up ${iconsToRemove.length} orphaned icons`);
+
         }
     }
 
@@ -847,9 +824,7 @@ class MagicalEnhancer {
             const rect = icon.getBoundingClientRect();
             startLeft = rect.left;
             startTop = rect.top;
-            
-            console.log(`�� Starting drag from actual position: ${startLeft}, ${startTop}`);
-            
+
             icon.style.cursor = 'grabbing';
             icon.style.zIndex = '9999999';
             
@@ -892,14 +867,14 @@ class MagicalEnhancer {
             
             // If it was a quick click with minimal movement, treat as click
             if (dragDuration < 200 && totalMovement < 10) {
-                console.log('🎯 Quick click detected - starting enhancement');
+
                 icon.classList.add('processing');
                 this.handleIconClick(inputElement, icon);
             } else {
-                console.log('🎯 Icon dragged - saving final position');
+
                 const finalLeft = parseInt(icon.style.left);
                 const finalTop = parseInt(icon.style.top);
-                console.log(`💾 Saving position: ${finalLeft}, ${finalTop}`);
+
                 this.saveIconPosition(inputElement, finalLeft, finalTop);
             }
             
@@ -921,7 +896,7 @@ class MagicalEnhancer {
                 this.safeStorageSet({ iconPositions: positions });
             });
         } catch (error) {
-            console.warn('⚠️ Error saving icon position:', error.message);
+
         }
     }
 
@@ -946,7 +921,7 @@ class MagicalEnhancer {
                 }
             });
         } catch (error) {
-            console.warn('⚠️ Error loading icon position:', error.message);
+
             callback(null, null);
         }
     }
@@ -992,15 +967,36 @@ class MagicalEnhancer {
 
     async handleIconClick(inputElement, icon) {
         if (this.isProcessing || icon.isProcessing) {
-            console.log('🚫 Already processing, ignoring click');
+
             return;
         }
 
         const text = this.getInputText(inputElement);
         if (!text.trim()) {
-            console.log('🚫 No text to enhance');
+
             icon.classList.remove('processing');
             return;
+        }
+
+        // Check if user has reached daily limit BEFORE starting enhancement
+        try {
+            const userData = await new Promise((resolve) => {
+                chrome.storage.local.get(['user_info', 'last_known_prompt_count'], resolve);
+            });
+
+            const promptCount = userData.last_known_prompt_count || 0;
+            const userTier = userData.user_info?.subscription_tier || 'free';
+
+            // If free user and has used 10+ prompts, show notification and return
+            if (userTier === 'free' && promptCount >= 10) {
+
+                this.showLimitNotification(inputElement);
+                icon.classList.remove('processing');
+                return;
+            }
+        } catch (error) {
+
+            // Continue with enhancement if we can't check limit
         }
 
         if (this.activePopup) {
@@ -1009,9 +1005,7 @@ class MagicalEnhancer {
 
         this.isProcessing = true;
         icon.isProcessing = true;
-        
-        console.log('🚀 Processing enhancement');
-        
+
         try {
             await this.showEnhancementPopup(inputElement, icon, text);
         } finally {
@@ -1019,7 +1013,7 @@ class MagicalEnhancer {
             icon.isProcessing = false;
             // Stop processing animation
             icon.classList.remove('processing');
-            console.log('🛑 Enhancement complete');
+
         }
     }
 
@@ -1059,24 +1053,22 @@ class MagicalEnhancer {
         this.startStreaming(inputElement, iconElement, inputText, popup);
     }
 
-
     showInsertButton(popup, finalText, inputElement) {
-        const insertBtn = popup.querySelector('#insert-btn');
-        if (insertBtn) {
-            insertBtn.style.display = 'block';
-            insertBtn.disabled = false;
+            const insertBtn = popup.querySelector('#insert-btn');
+            if (insertBtn) {
+                insertBtn.style.display = 'block';
+                insertBtn.disabled = false;
             insertBtn.textContent = 'Insert';
 
             // Simple click handler - increment count when inserting
             insertBtn.onclick = async () => {
                 // Insert the text
                 this.insertText(finalText, inputElement);
-                this.closePopup();
+                    this.closePopup();
                 
                 // Increment count by making a simple API call
                 try {
-                    console.log('📊 Incrementing count after insert...');
-                    
+
                     // Get user email
                     const userData = await new Promise((resolve) => {
                         chrome.storage.local.get(['user_info'], resolve);
@@ -1091,20 +1083,18 @@ class MagicalEnhancer {
                         });
                     }
                 } catch (e) {
-                    console.error('❌ Failed to increment count:', e);
+
                 }
             };
 
-            console.log('✅ Insert button ready');
         }
     }
 
     async startStreaming(inputElement, iconElement, inputText, popup) {
-        console.log('🚀 SIMPLE: Starting API call for:', inputText.substring(0, 50) + '...');
 
         const streamText = popup.querySelector('#stream-text');
         if (!streamText) {
-            console.error('❌ Stream text container not found!');
+
             return;
         }
 
@@ -1121,8 +1111,11 @@ class MagicalEnhancer {
             } else if (message.action === 'stream_complete') {
                 this.showInsertButton(popup, streamText.textContent, inputElement);
             } else if (message.action === 'limit_reached') {
-                // User has reached daily limit - show upgrade modal
-                this.showUpgradeModal(popup, message.details);
+                // Backend detected limit reached during streaming
+
+                this.showLimitNotification(inputElement);
+                // Close popup since limit is reached
+                this.closePopup();
             } else if (message.action === 'stream_error') {
                 streamText.textContent = `Error: ${message.error}`;
             }
@@ -1146,15 +1139,9 @@ class MagicalEnhancer {
                     });
                 });
                 userEmail = popupEmail;
-                console.log('📧 User email from popup:', userEmail);
-                console.log('🔍 DEBUGGING EMAIL FLOW:');
-                console.log('  - Email received:', userEmail);
-                console.log('  - Email length:', userEmail?.length);
-                console.log('  - Email type:', typeof userEmail);
-                console.log('  - Email is empty?', !userEmail);
+
             } catch (popupError) {
-                console.warn('⚠️ Could not get email from popup:', popupError);
-                console.error('❌ EMAIL RETRIEVAL FAILED FROM POPUP!');
+
             }
             
             // Fallback: try storage
@@ -1164,40 +1151,50 @@ class MagicalEnhancer {
                         chrome.storage.local.get(['user_info'], resolve);
                     });
                     userEmail = userData.user_info?.email || '';
-                    console.log('📧 User email from storage:', userEmail);
+
                 } catch (storageError) {
-                    console.warn('⚠️ Chrome storage not available:', storageError);
+
                 }
             }
             
             if (!userEmail) {
-                console.error('❌ NO USER EMAIL FOUND! Enhancement will not be counted!');
-                console.error('🔍 DEBUGGING: Failed to get user email from any source');
-                console.error('🔍 DEBUGGING: This is the ROOT CAUSE of count not incrementing!');
+
                 // Don't proceed without user email
                 streamText.textContent = 'Error: User not logged in. Please refresh and try again.';
                 return;
             }
 
-            console.log('✅ USER EMAIL FOUND! Proceeding with enhancement...');
-            console.log('🚀 CONTENT SCRIPT: About to send message to background');
-
             // Check if background script is available
             if (!chrome.runtime) {
-                console.error('❌ Chrome runtime not available');
+
                 streamText.textContent = 'Error: Extension not properly loaded. Please refresh the page.';
                 return;
             }
 
+            // FINAL CHECK: Verify limit before making API call
+            const finalCheckData = await new Promise((resolve) => {
+                chrome.storage.local.get(['user_info', 'last_known_prompt_count'], resolve);
+            });
+
+            const finalPromptCount = finalCheckData.last_known_prompt_count || 0;
+            const finalUserTier = finalCheckData.user_info?.subscription_tier || 'free';
+
+            if (finalUserTier === 'free' && finalPromptCount >= 10) {
+
+                this.showLimitNotification(inputElement);
+                streamText.textContent = 'Daily limit reached! Upgrade to Pro for unlimited prompts.';
+                return;
+            }
+
             // Test background script connectivity first
-            console.log('🏓 Testing background script connectivity...');
+
             chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
                 if (chrome.runtime.lastError) {
-                    console.error('❌ Background script not responding to ping:', chrome.runtime.lastError);
+
                     streamText.textContent = 'Error: Background script not running. Please refresh the page.';
                     return;
                 }
-                console.log('✅ Background script is responsive:', response);
+
             });
 
             const messageData = {
@@ -1210,16 +1207,9 @@ class MagicalEnhancer {
                 idempotencyKey: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
             };
 
-            console.log('📤 CONTENT SCRIPT: SENDING message:', {
-                action: messageData.action,
-                prompt: inputText.substring(0, 50) + '...',
-                userEmail: userEmail,
-                apiUrl: apiUrl
-            });
-            
             // Add timeout for message sending
             const messageTimeout = setTimeout(() => {
-                console.error('❌ CONTENT SCRIPT: Message timeout - background script not responding');
+
                 streamText.textContent = 'Error: Background script not responding. Please refresh the page.';
             }, 5000);
 
@@ -1227,27 +1217,22 @@ class MagicalEnhancer {
                 clearTimeout(messageTimeout);
                 
                 if (chrome.runtime.lastError) {
-                    console.error('❌ CONTENT SCRIPT: Failed to send message:', chrome.runtime.lastError);
-                    console.error('❌ Error details:', chrome.runtime.lastError.message);
+
                     streamText.textContent = 'Error: Failed to send request. Please try again.';
                     return;
                 }
 
-                console.log('✅ CONTENT SCRIPT: Message sent successfully to background');
-                console.log('📨 CONTENT SCRIPT: Background response:', response);
             });
 
         } catch (error) {
-            console.error('❌ API call failed:', error);
+
             streamText.textContent = 'Enhancement failed. Please try again.';
         }
     }
 
-
-
     abortStreaming() {
         if (this.isStreaming && this.currentStreamAbortController) {
-            console.log('🛑 Aborting stream...');
+
             this.currentStreamAbortController.abort();
             this.isStreaming = false;
         }
@@ -1279,9 +1264,9 @@ class MagicalEnhancer {
             // but still keep it close
             if (left < iconRect.left - popupWidth - spacing) {
                 left = iconRect.left - popupWidth - spacing;
-                console.log('📍 Positioning popup to LEFT of icon (staying close)');
+
             } else {
-                console.log('📍 Shifting popup left by', overflowAmount, 'pixels (staying close)');
+
             }
         }
         
@@ -1296,11 +1281,11 @@ class MagicalEnhancer {
             const aboveTop = iconRect.top - popupHeight - spacing;
             if (aboveTop >= 8) {
                 top = aboveTop;
-                console.log('📍 Positioning popup ABOVE icon (close positioning)');
+
             } else {
                 // If no space above, position at top but keep horizontal position close to icon
                 top = 8;
-                console.log('📍 Positioning popup at TOP of viewport (staying horizontally close to icon)');
+
             }
         }
         if (top < 8) {
@@ -1311,14 +1296,12 @@ class MagicalEnhancer {
         popup.style.left = `${left}px`;
         popup.style.top = `${top}px`;
         popup.style.zIndex = '1000000';
-        
-        console.log(`📍 Popup positioned CLOSE to icon - Icon center: ${(iconRect.left + iconRect.right)/2}, ${(iconRect.top + iconRect.bottom)/2} | Popup: ${left}, ${top}`);
+
     }
 
     // This method is now deprecated - we use showFinalResult instead
     showUpgradeModal(popup, details) {
-        console.log('🚫 Daily limit reached - showing upgrade modal');
-        
+
         const content = popup.querySelector('.ce-content');
         content.innerHTML = `
             <div class="ce-upgrade-modal">
@@ -1429,6 +1412,64 @@ class MagicalEnhancer {
         document.head.appendChild(style);
     }
 
+    // Center notification - 3 seconds only
+    showLimitNotification(inputElement) {
+        // Remove any existing notification
+        const existingNotification = document.querySelector('.ce-limit-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        // Create center notification
+        const notification = document.createElement('div');
+        notification.className = 'ce-limit-notification';
+        notification.innerHTML = `
+            <div style="
+                background: #DC2626;
+                color: #FFFFFF;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: 500;
+                text-align: center;
+                box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+                z-index: 99999;
+                position: fixed;
+                top: 10%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(0.8);
+                border-radius: 6px;
+                border: 2px solid #B91C1C;
+                white-space: normal;
+                transition: transform 0.3s ease-out;
+                max-width: 280px;
+                line-height: 1.3;
+            ">
+                Daily limit reached. Upgrade to Pro for unlimited access.
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Animate in from center
+        setTimeout(() => {
+            const notificationBar = notification.querySelector('div');
+            notificationBar.style.transform = 'translate(-50%, -50%) scale(1)';
+        }, 10);
+
+        // Auto remove after 3 seconds with animation
+        setTimeout(() => {
+            if (notification.parentNode) {
+                const notificationBar = notification.querySelector('div');
+                notificationBar.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }
+        }, 3000);
+    }
+
     async showEnhancedResultWithAnimation(popup, enhancedText, inputElement) {
         const content = popup.querySelector('.ce-content');
 
@@ -1457,7 +1498,6 @@ class MagicalEnhancer {
     }
     
     animateTextWordByWord(container, text, onComplete = () => {}) {
-        console.log('🎬 Starting ultra-fast word-by-word animation for text:', text.substring(0, 50) + '...');
 
         const words = text.split(' ');
         let currentIndex = 0;
@@ -1489,13 +1529,13 @@ class MagicalEnhancer {
                 // ULTRA FAST animation - 5ms between words (lightning fast!)
                 setTimeout(animateNextWord, 5);
             } else {
-                console.log('✅ Word-by-word animation completed');
+
                 onComplete();
             }
         };
 
         // Start animation immediately
-        console.log(`🎬 Animating ${words.length} words at lightning speed`);
+
         animateNextWord();
 
         // Return promise that resolves when animation completes
@@ -1512,7 +1552,6 @@ class MagicalEnhancer {
     }
 
     showFinalResult(container, finalText, inputElement, popup) {
-        console.log('🎯 Showing final result with insert button');
 
         // Create text container for final result
         const textContainer = document.createElement('div');
@@ -1537,7 +1576,6 @@ class MagicalEnhancer {
                 this.startApiGenerationOnInsert();
             };
 
-            console.log('✅ Insert button ready for final text - will start API generation on click');
         }
     }
 
@@ -1551,14 +1589,12 @@ class MagicalEnhancer {
             });
 
             if (!authToken) {
-                console.warn('⚠️ No auth token found - user needs to sign in');
+
                 return null; // This will trigger auth required message
             }
 
             // Detect target model based on current site
             const targetModel = this.detectTargetModel();
-            
-            console.log('🚀 Enhancing with API:', { model: targetModel, promptLength: text.length });
 
             const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
             const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -1569,16 +1605,11 @@ class MagicalEnhancer {
                 chrome.storage.local.get(['user_info'], resolve);
             });
             const userEmail = userData.user_info?.email || '';
-            console.log('📧 User email for enhance_prompt:', userEmail);
-            console.log('📧 Full user data:', userData.user_info);
-            
+
             if (!userEmail) {
-                console.error('❌ NO USER EMAIL FOUND! This will cause count issues!');
-                console.log('🔍 Available storage keys:', Object.keys(userData));
+
             }
-            
-            console.log('🚀 CONTENT SCRIPT: Sending enhance_prompt message to background');
-            
+
             // Use background to perform the network call so content-script context invalidation cannot break it
             const data = await new Promise((resolve, reject) => {
                 const messageData = {
@@ -1590,14 +1621,7 @@ class MagicalEnhancer {
                     platform,
                     idempotencyKey
                 };
-                
-                console.log('📤 CONTENT SCRIPT: Message data:', {
-                    action: messageData.action,
-                    userEmail: messageData.userEmail,
-                    promptLength: messageData.prompt?.length,
-                    apiUrl: messageData.apiUrl
-                });
-                
+
                 chrome.runtime.sendMessage(messageData, (resp) => {
                     if (chrome.runtime.lastError) {
                         reject(new Error(chrome.runtime.lastError.message));
@@ -1610,7 +1634,7 @@ class MagicalEnhancer {
                     }
                 });
             });
-            console.log('✅ Enhancement successful:', data.enhanced_prompt.substring(0, 100) + '...');
+
             // Update local last-known count immediately (no popup blink)
             if (typeof data.user_prompt_count === 'number') {
                 try {
@@ -1620,7 +1644,7 @@ class MagicalEnhancer {
             return data.enhanced_prompt;
             
         } catch (error) {
-            console.error('❌ Enhancement error:', error);
+
             return this.getFallbackEnhancement(text);
         }
     }
@@ -1714,7 +1738,7 @@ Additional context: Please structure your response in a clear, organized manner 
         }
         
         inputElement.focus();
-        console.log('✅ Text insertion completed with formatting');
+
     }
 
     closePopup() {
@@ -1725,8 +1749,7 @@ Additional context: Please structure your response in a clear, organized manner 
     }
 
     removeAllIcons() {
-        console.log(`🧹 Removing ${this.icons.size} icons`);
-        
+
         this.icons.forEach((icon, inputElement) => {
             if (icon.intervalUpdate) {
                 clearInterval(icon.intervalUpdate);
@@ -1741,19 +1764,17 @@ Additional context: Please structure your response in a clear, organized manner 
         
         // Clear all creation locks
         this.iconCreationLock.clear();
-        console.log('🔓 Cleared all creation locks');
-        
+
         // Also clean up any orphaned icons in the DOM
         const orphanedIcons = document.querySelectorAll('.ce-icon');
         orphanedIcons.forEach(icon => {
-            console.log('🧹 Removing orphaned icon');
+
             icon.remove();
         });
         
         // Clean up any remaining duplicate icons
         this.cleanupOrphanedIcons();
-        
-        console.log('✅ All icons cleaned up');
+
     }
 
     setupGlobalListeners() {
@@ -1791,7 +1812,7 @@ Additional context: Please structure your response in a clear, organized manner 
             const newChatId = this.extractChatId(newUrl);
             
             if (newUrl !== currentUrl || newChatId !== currentChatId) {
-                console.log('🔄 URL or chat changed - AGGRESSIVE cleanup of all icons');
+
                 currentUrl = newUrl;
                 currentChatId = newChatId;
                 
@@ -1801,7 +1822,7 @@ Additional context: Please structure your response in a clear, organized manner 
                 // Wait for new chat to load, then scan for new inputs
                 setTimeout(() => {
                     if (this.isActive) {
-                        console.log('🔄 Scanning for inputs in new chat');
+
                         this.scanForInputs(true);
                     }
                 }, 200); // Reduced delay for faster response
@@ -1810,7 +1831,7 @@ Additional context: Please structure your response in a clear, organized manner 
         
         // Also listen for navigation events
         window.addEventListener('popstate', () => {
-            console.log('🔄 Navigation detected - AGGRESSIVE cleanup');
+
             this.aggressiveCleanup();
             
             setTimeout(() => {
@@ -1845,8 +1866,7 @@ Additional context: Please structure your response in a clear, organized manner 
     }
 
     aggressiveCleanup() {
-        console.log('🧹 AGGRESSIVE cleanup - removing ALL icons and clearing state');
-        
+
         // Clear all internal state
         this.icons.clear();
         this.iconCreationLock.clear();
@@ -1854,18 +1874,17 @@ Additional context: Please structure your response in a clear, organized manner 
         // Remove ALL icons from DOM (including any hidden or orphaned ones)
         const allIcons = document.querySelectorAll('.ce-icon');
         allIcons.forEach(icon => {
-            console.log('🧹 Removing icon during aggressive cleanup');
+
             icon.remove();
         });
         
         // Also remove any icons that might be in the body
         const bodyIcons = document.body.querySelectorAll('.ce-icon');
         bodyIcons.forEach(icon => {
-            console.log('🧹 Removing body icon during aggressive cleanup');
+
             icon.remove();
         });
-        
-        console.log(`🧹 Aggressive cleanup complete - removed ${allIcons.length + bodyIcons.length} icons`);
+
     }
 
     listenForChatGPTSpecificEvents() {
@@ -1889,7 +1908,7 @@ Additional context: Please structure your response in a clear, organized manner 
                     });
                     
                     if (hasChatSwitch) {
-                        console.log('🔄 ChatGPT chat switch detected - cleaning up icons');
+
                         this.aggressiveCleanup();
                         
                         setTimeout(() => {
@@ -1916,12 +1935,12 @@ Additional context: Please structure your response in a clear, organized manner 
             
             this.userInfo = result.user_info;
             if (this.userInfo) {
-                console.log('✅ User is logged in:', this.userInfo.name || this.userInfo.email);
+
             } else {
-                console.log('❌ No user logged in');
+
             }
         } catch (error) {
-            console.error('❌ Error checking login status:', error);
+
         }
     }
 

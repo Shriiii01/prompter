@@ -1,12 +1,9 @@
 // 🔐 SUPER SIMPLE POPUP SCRIPT - JUST WORKS
-console.log('🚀 Popup starting...');
-console.log('🔧 Payment system debugging enabled');
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('✅ DOM loaded');
-    
+
     // Wait for config to be available
-    console.log('⏳ Waiting for config to load...');
+
     let configLoadAttempts = 0;
     const maxAttempts = 20; // Wait up to 2 seconds
     
@@ -16,9 +13,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (window.CONFIG) {
-        console.log('✅ Config loaded successfully:', window.CONFIG.getApiUrl());
+
     } else {
-        console.warn('⚠️ Config not loaded, using fallback URL');
+
     }
     
     // Get elements
@@ -44,14 +41,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         enhancedCountSpan.style.cursor = 'pointer';
         enhancedCountSpan.title = 'Click to refresh count';
         enhancedCountSpan.addEventListener('click', () => {
-            console.log('🔄 Manual count refresh requested');
-            
+
             let userEmail = '';
             
             // Try to get email from popup display first (most reliable)
             if (userEmailSpan && userEmailSpan.textContent) {
                 userEmail = userEmailSpan.textContent.trim();
-                console.log('🔄 Using email from popup display:', userEmail);
+
             }
             
             // Fallback: try storage
@@ -64,11 +60,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             enhancedCountSpan.textContent = '...';
                             fetchEnhancedCount(userEmail);
                         } else {
-                            console.error('❌ No user email found for refresh!');
+
                         }
                     });
                 } catch (storageError) {
-                    console.warn('⚠️ Chrome storage not available:', storageError);
+
                 }
             }
             
@@ -76,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 enhancedCountSpan.textContent = '...';
                 fetchEnhancedCount(userEmail);
             } else {
-                console.error('❌ No user email found for refresh!');
+
             }
         });
         
@@ -102,8 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Login button click
     if (loginBtn) {
         loginBtn.addEventListener('click', () => {
-            console.log('🔐 Login button clicked');
-            
+
             // Show loading state
             if (loginText) loginText.classList.add('hidden');
             if (loginLoading) loginLoading.classList.remove('hidden');
@@ -116,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Save name button click
     if (saveNameBtn) {
         saveNameBtn.addEventListener('click', () => {
-            console.log('💾 Save name button clicked');
+
             saveName();
         });
     }
@@ -124,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Logout button click
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            console.log('🚪 Logout button clicked');
+
             logout();
         });
     }
@@ -132,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Toggle button click (Start/Stop functionality)
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
-            console.log('🔄 Toggle button clicked');
+
             toggleExtension();
         });
     }
@@ -148,18 +143,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Check login status
     function checkLogin() {
-        console.log('🔍 Checking login status...');
 
         chrome.runtime.sendMessage({ action: 'check_login' }, (response) => {
-            console.log('📬 Check login response:', response);
-            
+
             if (response && response.loggedIn) {
                 // Check if user has display_name, if not show name input
                 if (response.userInfo && !response.userInfo.display_name) {
-                    console.log('👤 User logged in but needs to enter name');
+
                     showNameInput();
                 } else {
-                    console.log('👤 User fully logged in with name');
+
                     showUserDashboard(response.userInfo);
                     // Also fetch current count for already logged in user
                     if (response.userInfo.email) {
@@ -167,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
             } else {
-                console.log('❌ User not logged in');
+
                 showAuthSection();
             }
         });
@@ -175,31 +168,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Login function
     function login() {
-        console.log('🔐 Starting login...');
-        
+
         // The loading state is already handled by the button click event
         // Don't interfere with it here
         
         chrome.runtime.sendMessage({ action: 'login' }, (response) => {
-            console.log('📬 Login response:', response);
-            
+
             // Reset login button state
             if (loginText) loginText.classList.remove('hidden');
             if (loginLoading) loginLoading.classList.add('hidden');
             if (loginBtn) loginBtn.disabled = false;
             
             if (response && response.success) {
-                console.log('✅ Login successful!');
+
                 if (response.needsName) {
-                    console.log('👤 User needs to enter name');
+
                     showNameInput();
                 } else {
-                    console.log('👤 User fully logged in');
+
                     showUserDashboard(response.userInfo);
                 }
             } else {
-                console.error('❌ Login failed:', response?.error);
-                console.error('❌ Login failed:', response?.error || 'Unknown error');
+
             }
         });
     }
@@ -208,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function logout() {
         chrome.runtime.sendMessage({ action: 'logout' }, (response) => {
             if (response && response.success) {
-                console.log('✅ Logout successful!');
+
                 showAuthSection();
             }
         });
@@ -216,7 +206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Show login section
     function showLogin() {
-        console.log('👋 Showing login section');
+
         if (loginSection) loginSection.style.display = 'block';
         if (loggedInSection) loggedInSection.style.display = 'none';
         hideError();
@@ -227,18 +217,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const displayName = nameInput.value.trim();
         
         if (!displayName) {
-            console.error('❌ Please enter your display name');
+
             return;
         }
 
-        console.log('💾 Saving name:', displayName);
-        
         // Store the name and update database
         chrome.storage.local.get(['user_info'], (data) => {
             const userInfo = { ...data.user_info, display_name: displayName };
             chrome.storage.local.set({ user_info: userInfo }, () => {
-                console.log('✅ Name saved locally!');
-                
+
                 // Update user in database with display name
                 const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
                 fetch(`${apiUrl}/api/v1/users`, {
@@ -251,10 +238,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         name: displayName // Use display name instead of Google name
                     })
                 }).then(response => {
-                    console.log('✅ User updated in database with display name');
+
                     showUserDashboard(userInfo);
                 }).catch(error => {
-                    console.error('❌ Failed to update user in database:', error);
+
                     // Still show logged in even if database update fails
                     showUserDashboard(userInfo);
                 });
@@ -264,7 +251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Show name section
     function showNameSection() {
-        console.log('📝 Showing name input section');
+
         if (loginSection) loginSection.style.display = 'none';
         if (nameSection) nameSection.style.display = 'block';
         if (loggedInSection) loggedInSection.style.display = 'none';
@@ -274,7 +261,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Show logged in section
     function showLoggedIn(userInfo) {
-        console.log('👤 Showing logged in section:', userInfo);
+
         if (loginSection) loginSection.style.display = 'none';
         if (nameSection) nameSection.style.display = 'none';
         if (loggedInSection) loggedInSection.style.display = 'block';
@@ -284,7 +271,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         hideError();
     }
-
 
     // Update functions for new UI
     function showAuthSection() {
@@ -301,21 +287,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function showNameInput() {
-        console.log('📝 Showing name input section');
+
         if (authSection) {
             authSection.classList.add('hidden');
-            console.log('✅ Hidden auth section');
+
         }
         if (nameSection) {
             nameSection.classList.remove('hidden');
-            console.log('✅ Shown name section');
+
         }
         if (userSection) userSection.classList.add('hidden');
         if (statsSection) statsSection.classList.add('hidden');
         if (actionsSection) actionsSection.classList.add('hidden');
         if (nameInput) {
             nameInput.focus();
-            console.log('✅ Focused name input');
+
         }
     }
 
@@ -351,17 +337,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // 💰 Initialize payment system with user email
-            console.log('💰 Initializing payment system for:', userInfo.email);
+
             paymentManager.setUserEmail(userInfo.email);
             paymentManager.init();
             
             // Test payment system
-            console.log('🧪 Testing payment system...');
+
             setTimeout(() => {
-                console.log('🧪 PaymentManager state:', {
-                    currentUserEmail: paymentManager.currentUserEmail,
-                    hasInit: paymentManager.init
-                });
+
             }, 1000);
             
             // Seed count from local cache first (already seeded on load, but ensure latest)
@@ -382,16 +365,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 paymentManager.loadSubscriptionStatus();
             }
         }
-        
-        console.log('✅ Successfully signed in!');
-        
+
     // Initialize extension state
     checkExtensionState();
     
     // Listen for count updates from background script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === 'count_updated') {
-            console.log('📊 Count updated in popup:', request.count);
+
             updateEnhancedCount(request.count);
             // Also update local storage to prevent future mismatches
             chrome.storage.local.set({ last_known_prompt_count: request.count });
@@ -399,7 +380,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Get the displayed email from the popup
             const userEmailSpan = document.getElementById('user-email');
             const email = userEmailSpan ? userEmailSpan.textContent : '';
-            console.log('📧 Getting displayed email:', email);
+
             sendResponse({ email: email });
         }
     });
@@ -425,34 +406,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Try to get email from popup display first (most reliable)999999eirja9 
         if (userEmailSpan && userEmailSpan.textContent) {
             userEmail = userEmailSpan.textContent.trim();
-            console.log('🔄 Using email from popup display:', userEmail);
+
         }
         
         // Fallback: try storage
         if (!userEmail) {
             try {
                 chrome.storage.local.get(['user_info'], (data) => {
-                    console.log('🔍 Popup user data:', data.user_info);
+
                     userEmail = data.user_info?.email || '';
                     
                     if (userEmail) {
-                        console.log('🔄 Force refreshing count for:', userEmail);
+
                         fetchEnhancedCount(userEmail);
                     } else {
-                        console.error('❌ No user email found in popup!');
-                        console.log('🔍 Available storage keys:', Object.keys(data));
+
                     }
                 });
             } catch (storageError) {
-                console.warn('⚠️ Chrome storage not available:', storageError);
+
             }
         }
         
         if (userEmail) {
-            console.log('🔄 Force refreshing count for:', userEmail);
+
             fetchEnhancedCount(userEmail);
         } else {
-            console.error('❌ No user email found anywhere!');
+
         }
     }, 100); // Faster refresh
 }
@@ -471,19 +451,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Fetch enhanced count from database
     async function fetchEnhancedCount(userEmail) {
         try {
-            console.log('📊 Fetching enhanced count for:', userEmail);
-            
+
             // Get API URL from config
             const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
-            console.log('🌐 Using API URL:', apiUrl);
-            
+
             const fullUrl = `${apiUrl}/api/v1/users/${encodeURIComponent(userEmail)}`;
-            console.log('🔗 Full URL:', fullUrl);
-            
+
             // Add cache-busting parameter to force fresh data
             const cacheBustUrl = `${fullUrl}?t=${Date.now()}&force=${Math.random()}`;
-
-            console.log('🌐 POPUP: Fetching count from:', cacheBustUrl);
 
             const response = await fetch(cacheBustUrl, {
                 method: 'GET',
@@ -494,15 +469,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            console.log('📡 POPUP: Response status:', response.status);
-            console.log('📡 Response status:', response.status, response.statusText);
-            
             if (response.ok) {
                 const userData = await response.json();
-                console.log('✅ User data from database:', userData);
+
                 const count = userData.enhanced_prompts || 0;
-                console.log('📈 Enhanced prompts count:', count);
-                
+
                 // Update display and storage
                 updateEnhancedCount(count);
                 chrome.storage.local.set({ last_known_prompt_count: count });
@@ -514,9 +485,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 return count;
             } else {
-                console.warn('⚠️ Failed to fetch user data from database');
+
                 const errorText = await response.text();
-                console.warn('❌ Error response:', errorText);
+
                 // Fall back to last known count from local storage if available
                 try {
                     const last = await new Promise((resolve) => chrome.storage.local.get(['last_known_prompt_count'], r => resolve(r.last_known_prompt_count || 0)));
@@ -528,7 +499,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } catch (error) {
-            console.error('❌ Error fetching enhanced count:', error);
+
             try {
                 const last = await new Promise((resolve) => chrome.storage.local.get(['last_known_prompt_count'], r => resolve(r.last_known_prompt_count || 0)));
                 updateEnhancedCount(last || 0);
@@ -544,8 +515,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isExtensionActive = false;
 
     function toggleExtension() {
-        console.log('🔄 Toggling extension state. Current:', isExtensionActive);
-        
+
         if (isExtensionActive) {
             // Stop the extension
             stopExtension();
@@ -556,8 +526,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function startExtension() {
-        console.log('▶️ Starting AI Magic extension...');
-        
+
         // Disable button temporarily
         toggleBtn.disabled = true;
         toggleText.textContent = 'Starting...';
@@ -566,12 +535,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs[0]) {
                 chrome.tabs.sendMessage(tabs[0].id, { action: 'activate' }, (response) => {
-                    console.log('✅ Extension activated:', response);
-                    
+
                     isExtensionActive = true;
                     updateToggleButton();
-                    console.log('✅ Started! Icons will appear on input boxes.');
-                    
+
                     // Store state
                     chrome.storage.local.set({ 'extension_active': true });
                 });
@@ -580,8 +547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function stopExtension() {
-        console.log('⏹️ Stopping AI Magic extension...');
-        
+
         // Disable button temporarily
         toggleBtn.disabled = true;
         toggleText.textContent = 'Stopping...';
@@ -590,12 +556,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs[0]) {
                 chrome.tabs.sendMessage(tabs[0].id, { action: 'deactivate' }, (response) => {
-                    console.log('✅ Extension deactivated:', response);
-                    
+
                     isExtensionActive = false;
                     updateToggleButton();
-                    console.log('ℹ️ Stopped. Icons removed from input boxes.');
-                    
+
                     // Store state
                     chrome.storage.local.set({ 'extension_active': false });
                 });
@@ -625,7 +589,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         chrome.storage.local.get(['extension_active'], (result) => {
             isExtensionActive = result.extension_active || false;
             updateToggleButton();
-            console.log('🔍 Extension state loaded:', isExtensionActive);
+
         });
     }
 
@@ -639,8 +603,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const originalShowLoggedIn = window.showLoggedIn;
     window.showLoggedIn = showUserDashboard;
 });
-
-    console.log('✅ Popup script ready!');
 
     // ====================================
     // 💰 PAYMENT SYSTEM
@@ -656,37 +618,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Initialize payment system
         async init() {
-            console.log('🚀 PaymentManager init() called');
+
             this.setupEventListeners();
-            console.log('✅ PaymentManager init() completed');
+
         }
 
         // Setup all payment-related event listeners
         setupEventListeners() {
-            console.log('🔧 Setting up payment event listeners...');
-            
+
             // Upgrade button click
             const upgradeBtn = document.getElementById('upgrade-btn');
             if (upgradeBtn) {
-                console.log('✅ Found upgrade button, adding click listener');
+
                 upgradeBtn.addEventListener('click', () => {
-                    console.log('🔘 Upgrade button clicked!');
+
                     this.openPaymentModal();
                 });
             } else {
-                console.error('❌ Upgrade button not found!');
+
             }
 
             // Pay now button click
             const payNowBtn = document.getElementById('pay-now-btn');
             if (payNowBtn) {
-                console.log('✅ Found pay now button, adding click listener');
+
                 payNowBtn.addEventListener('click', () => {
-                    console.log('🔘 Pay now button clicked!');
+
                     this.initiatePayment();
                 });
             } else {
-                console.error('❌ Pay now button not found!');
+
             }
 
             // Close payment modal
@@ -710,7 +671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Set current user email
         setUserEmail(email) {
-            console.log('📧 Setting user email in PaymentManager:', email);
+
             this.currentUserEmail = email;
         }
 
@@ -719,22 +680,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             return new Promise((resolve, reject) => {
                 // Check if already loaded
                 if (typeof Razorpay !== 'undefined') {
-                    console.log('✅ Razorpay already loaded');
+
                     resolve();
                     return;
                 }
 
-                console.log('📥 Loading Razorpay script...');
-                
                 // Create script element
                 const script = document.createElement('script');
                 script.src = 'https://checkout.razorpay.com/v1/checkout.js';
                 script.onload = () => {
-                    console.log('✅ Razorpay script loaded successfully');
+
                     resolve();
                 };
                 script.onerror = () => {
-                    console.error('❌ Failed to load Razorpay script');
+
                     reject(new Error('Failed to load Razorpay script'));
                 };
                 
@@ -748,7 +707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const modal = document.getElementById('payment-modal');
             if (modal) {
                 modal.classList.remove('hidden');
-                console.log('💳 Payment modal opened');
+
             }
         }
 
@@ -757,39 +716,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             const modal = document.getElementById('payment-modal');
             if (modal) {
                 modal.classList.add('hidden');
-                console.log('✖️ Payment modal closed');
+
             }
         }
 
         // Initiate payment process
         async initiatePayment() {
             if (!this.currentUserEmail) {
-                console.error('❌ Please sign in first');
+
                 return;
             }
 
             try {
-                console.log('🚀 Starting payment process...');
+
                 this.setPaymentLoading(true);
-                console.log('🚀 Initiating payment for:', this.currentUserEmail);
 
                 // Create payment order
-                console.log('📝 Creating payment order...');
+
                 const order = await this.createOrder();
                 
                 if (!order) {
                     throw new Error('Failed to create payment order');
                 }
 
-                console.log('✅ Order created successfully:', order);
-
                 // Open Razorpay checkout
-                console.log('💳 Opening Razorpay checkout...');
+
                 await this.openRazorpayCheckout(order);
 
             } catch (error) {
-                console.error('❌ Payment initiation failed:', error);
-                console.error('❌ Payment failed. Please try again.');
+
                 this.setPaymentLoading(false);
             }
         }
@@ -797,7 +752,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Create payment order via API
         async createOrder() {
             try {
-                console.log('📡 Calling create-order API...');
+
                 const response = await fetch(`${this.apiBaseUrl}/api/v1/payment/create-order`, {
                     method: 'POST',
                     headers: {
@@ -808,21 +763,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     })
                 });
 
-                console.log('📡 API Response status:', response.status);
-                console.log('📡 API Response headers:', response.headers);
-
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('❌ API Error:', errorText);
+
                     throw new Error(`API error: ${response.status} - ${errorText}`);
                 }
 
                 const order = await response.json();
-                console.log('✅ Order response:', order);
+
                 return order;
 
             } catch (error) {
-                console.error('❌ Create order failed:', error);
+
                 throw error;
             }
         }
@@ -832,12 +784,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             // To avoid CSP issues inside the extension, open a hosted checkout page
             try {
                 const checkoutUrl = `${this.apiBaseUrl}/api/v1/payment/checkout-page?order_id=${encodeURIComponent(order.order_id)}&user_email=${encodeURIComponent(this.currentUserEmail)}`;
-                console.log('💳 Opening hosted checkout page:', checkoutUrl);
+
                 // Open in a new tab so Razorpay can load freely
                 window.open(checkoutUrl, '_blank');
                 return true;
             } catch (error) {
-                console.error('❌ Failed to open hosted checkout page:', error);
+
                 throw error;
             }
         }
@@ -845,8 +797,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Handle successful payment
         async handlePaymentSuccess(response) {
             try {
-                console.log('✅ Payment successful:', response.razorpay_payment_id);
-                
+
                 // Verify payment with backend
                 const verificationResult = await this.verifyPayment(response);
                 
@@ -861,16 +812,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     this.closePaymentModal();
                     
                     // Show success message
-                    console.log('🎉 Welcome to Pro! You now have unlimited access.');
-                    
-                    console.log('🎉 User upgraded to Pro successfully');
+
                 } else {
                     throw new Error('Payment verification failed');
                 }
 
             } catch (error) {
-                console.error('❌ Payment handling failed:', error);
-                console.error('❌ Payment verification failed. Please contact support.');
+
             } finally {
                 this.setPaymentLoading(false);
             }
@@ -897,12 +845,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const result = await verifyResponse.json();
-                console.log('✅ Payment verified successfully');
-                
+
                 return result;
 
             } catch (error) {
-                console.error('❌ Payment verification error:', error);
+
                 throw error;
             }
         }
@@ -914,7 +861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     subscription_tier: 'pro',
                     subscription_updated: Date.now()
                 }, () => {
-                    console.log('✅ Pro status stored locally');
+
                     resolve();
                 });
             });
@@ -933,7 +880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateSubscriptionUI(tier) {
             // For now, just store the status - UI is simplified
             this.subscriptionStatus = tier;
-            console.log(`🔄 Subscription status updated to: ${tier}`);
+
         }
 
         // Set payment button loading state
@@ -954,8 +901,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         }
-
-
 
         // Load and display user subscription status
         async loadSubscriptionStatus() {
@@ -986,11 +931,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     }
 
-                    console.log('🔄 Subscription status loaded:', status.subscription_tier);
                 }
 
             } catch (error) {
-                console.error('❌ Failed to load subscription status:', error);
+
             }
         }
     }
@@ -1000,34 +944,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Test function for debugging
     window.testPaymentSystem = () => {
-        console.log('🧪 Testing payment system manually...');
-        console.log('🔍 Looking for payment buttons...');
-        
+
         const upgradeBtn = document.getElementById('upgrade-btn');
         const payNowBtn = document.getElementById('pay-now-btn');
         const paymentModal = document.getElementById('payment-modal');
-        
-        console.log('🔘 Upgrade button:', upgradeBtn);
-        console.log('🔘 Pay now button:', payNowBtn);
-        console.log('💳 Payment modal:', paymentModal);
-        
-        console.log('💰 PaymentManager state:', {
-            currentUserEmail: paymentManager.currentUserEmail,
-            hasInit: paymentManager.init
-        });
-        
+
         // Test button clicks
         if (upgradeBtn) {
-            console.log('🔘 Testing upgrade button click...');
+
             upgradeBtn.click();
         }
         
         if (payNowBtn) {
-            console.log('🔘 Testing pay now button click...');
+
             payNowBtn.click();
         }
     };
-
 
 // ====================================
 // 🔄 ENHANCED USER DASHBOARD FUNCTION
