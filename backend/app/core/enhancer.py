@@ -4,17 +4,17 @@ from datetime import datetime
 from typing import Optional, List
 from app.models.response import EnhancementResult, PromptAnalysis
 from app.core.analyzer import PromptAnalyzer
-from app.services.openai import OpenAIService
+from app.services.ai_service import ai_service
 from app.services.cache import CacheService
 from app.models.request import LLMModel
 
 class PromptEnhancer:
     """Fast and efficient prompt enhancer"""
     
-    def __init__(self, openai_key: Optional[str] = None):
+    def __init__(self, openai_key: Optional[str] = None, anthropic_key: Optional[str] = None, google_key: Optional[str] = None):
         
         # Initialize services
-        self.openai_service = OpenAIService(openai_key) if openai_key else None
+        self.ai_service = ai_service
         self.analyzer = PromptAnalyzer()
         self.cache = CacheService()
         
@@ -123,16 +123,15 @@ class PromptEnhancer:
         return text
 
     async def _direct_enhance(self, prompt: str, target_model: LLMModel) -> str:
-        """Direct enhancement using GPT-4o with model-specific system prompts"""
+        """Direct enhancement using AI service with model-specific system prompts"""
         
-        # Always use GPT-4o for enhancement but with model-specific prompts
-        if self.openai_service:
-            try:
-                return await self.openai_service.enhance_with_model_specific_prompt(prompt, target_model.value)
-            except Exception as e:
-                print(f"GPT-4o enhancement failed: {e}")
+        try:
+            enhanced_prompt, provider_used = await self.ai_service.enhance_prompt(prompt, target_model.value)
+            return enhanced_prompt
+        except Exception as e:
+            print(f"AI service enhancement failed: {e}")
         
-        # Fallback to basic improvement if GPT-4o is not available
+        # Fallback to basic improvement if AI service is not available
         return self._basic_enhancement(prompt)
     
     def _basic_enhancement(self, prompt: str) -> str:

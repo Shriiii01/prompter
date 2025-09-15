@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import time
+import uuid
 from typing import Dict, Optional, List
 from datetime import datetime, timedelta
 import aiohttp
@@ -361,11 +362,14 @@ class DatabaseService:
             "Content-Type": "application/json"
         }
         
+        # Remove name field since database doesn't have it
+        db_data = {k: v for k, v in user_data.items() if k != "name"}
+        
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 f"{self.supabase_url}/rest/v1/users",
                 headers=headers,
-                json=user_data
+                json=db_data
             ) as response:
                 if response.status == 201:
                     return await response.json()
@@ -373,7 +377,8 @@ class DatabaseService:
                     # Get existing user
                     return await self.get_user_by_email(user_data["email"])
                 else:
-                    raise Exception(f"Failed to create user: {response.status}")
+                    error_text = await response.text()
+                    raise Exception(f"Failed to create user: {response.status} - {error_text}")
     
     async def get_user_by_email(self, email: str) -> Optional[Dict]:
         """Get user by email address."""
@@ -420,7 +425,7 @@ class DatabaseService:
                 return {
                     "id": user.get("id"),
                     "email": user.get("email"),
-                    "name": user.get("name", "User"),
+                    "name": "User",  # Default name since database doesn't have name field
                     "enhanced_prompts": user.get("enhanced_prompts", 0),
                     "created_at": user.get("created_at")
                 }
@@ -442,8 +447,326 @@ class DatabaseService:
             return new_user
         except Exception as e:
             logger.error(f"Error in get_or_create_user: {str(e)}")
-            # Return user_data as fallback
-            return user_data
+            # Return user_data with required fields as fallback
+            return {
+                "id": str(uuid.uuid4()),
+                "email": email,
+                "name": user_data.get("name", "User"),
+                "enhanced_prompts": user_data.get("enhanced_prompts", 0),
+                "created_at": datetime.utcnow().isoformat()
+            }
+
+    async def record_enhancement_atomic(self, email: str, idempotency_key: str, platform: str = 'chatgpt') -> Dict:
+        """Record enhancement with idempotency using RPC function."""
+        if not self._is_configured():
+            return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
+        
+        try:
+            headers = {
+                "apikey": self.supabase_key,
+                "Authorization": f"Bearer {self.supabase_key}",
+                "Content-Type": "application/json"
+            }
+            
+            data = {
+                "p_event_id": idempotency_key,
+                "p_email": email,
+                "p_platform": platform
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.supabase_url}/rest/v1/rpc/record_enhancement_v3",
+                    headers=headers,
+                    json=data,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        if result and len(result) > 0:
+                            # Map the new column names to the expected format
+                            rpc_result = result[0]
+                            return {
+                                "enhanced_prompts": rpc_result.get("total_prompts", 0),
+                                "daily_prompts_used": rpc_result.get("daily_used", 0),
+                                "subscription_tier": rpc_result.get("user_tier", "free"),
+                                "limit_reached": rpc_result.get("limit_reached", False)
+                            }
+                        else:
+                            return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
+                    else:
+                        logger.error(f"RPC call failed: {response.status}")
+                        return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
+        except Exception as e:
+            logger.error(f"Error in record_enhancement_atomic: {str(e)}")
+            return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
+
+    # Platform usage is now tracked in users table via platform_*_count columns
+    # No need for separate enhancement_usage table
+
+    async def check_user_subscription_status(self, email: str) -> Dict:
+        """Check user's subscription status and handle expiry."""
+        if not self._is_configured():
+                return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 10, "subscription_expires": None}
+        
+        try:
+            user = await self.get_user_by_email(email)
+            if user:
+                subscription_tier = user.get("subscription_tier", "free")
+                subscription_expires = user.get("subscription_expires_at")
+                
+                # Check if pro subscription has expired
+                if subscription_tier == "pro" and subscription_expires:
+                    from datetime import datetime
+                    try:
+                        expiry_date = datetime.fromisoformat(subscription_expires.replace('Z', '+00:00'))
+                        if expiry_date < datetime.utcnow().replace(tzinfo=expiry_date.tzinfo):
+                            # Subscription expired - downgrade to free
+                            logger.info(f"Pro subscription expired for {email}, downgrading to free")
+                            await self._downgrade_to_free(email)
+                            subscription_tier = "free"
+                    except Exception as e:
+                        logger.error(f"Error parsing expiry date for {email}: {e}")
+                
+                return {
+                    "subscription_tier": subscription_tier,
+                    "daily_prompts_used": user.get("daily_prompts_used", 0),
+                    "daily_limit": 10 if subscription_tier == "free" else None,
+                    "subscription_expires": subscription_expires
+                }
+            else:
+                return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 10, "subscription_expires": None}
+        except Exception as e:
+            logger.error(f"Error checking subscription status: {str(e)}")
+            return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 10, "subscription_expires": None}
+
+    async def _downgrade_to_free(self, email: str) -> bool:
+        """Downgrade user from pro to free subscription."""
+        if not self._is_configured():
+            return False
+        
+        try:
+            headers = {
+                "apikey": self.supabase_key,
+                "Authorization": f"Bearer {self.supabase_key}",
+                "Content-Type": "application/json"
+            }
+            
+            # Downgrade to free tier
+            data = {
+                "subscription_tier": "free",
+                "subscription_expires_at": None,
+                "daily_prompts_used": 0,  # Reset daily counter
+                "last_prompt_reset": datetime.utcnow().date().isoformat()
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.patch(
+                    f"{self.supabase_url}/rest/v1/users",
+                    headers=headers,
+                    json=data,
+                    params={"email": f"eq.{email}"},
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status == 200:
+                        logger.info(f"User {email} downgraded to free tier")
+                        return True
+                    else:
+                        logger.error(f"Failed to downgrade user: {response.status}")
+                        return False
+        except Exception as e:
+            logger.error(f"Error downgrading user to free: {str(e)}")
+            return False
+
+    async def upgrade_user_to_pro(self, email: str) -> bool:
+        """Upgrade user to pro subscription."""
+        if not self._is_configured():
+            return False
+        
+        try:
+            headers = {
+                "apikey": self.supabase_key,
+                "Authorization": f"Bearer {self.supabase_key}",
+                "Content-Type": "application/json"
+            }
+            
+            # Set subscription to pro with 30 days expiry
+            data = {
+                "subscription_tier": "pro",
+                "subscription_expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.patch(
+                    f"{self.supabase_url}/rest/v1/users",
+                    headers=headers,
+                    json=data,
+                    params={"email": f"eq.{email}"},
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status == 200:
+                        logger.info(f"User {email} upgraded to pro")
+                        return True
+                    else:
+                        logger.error(f"Failed to upgrade user: {response.status}")
+                        return False
+        except Exception as e:
+            logger.error(f"Error upgrading user to pro: {str(e)}")
+            return False
+
+    async def get_user_count_only(self, email: str) -> int:
+        """Get user's prompt count only."""
+        try:
+            user = await self.get_user_by_email(email)
+            if user:
+                return user.get("enhanced_prompts", 0)
+            return 0
+        except Exception as e:
+            logger.error(f"Error getting user count: {str(e)}")
+            return 0
+
+    async def increment_user_prompts(self, email: str) -> int:
+        """Increment user's prompt count and return new count."""
+        logger.info(f"🔍 DATABASE: increment_user_prompts called with email: {email}")
+        logger.info(f"🔍 DATABASE: email type: {type(email)}, length: {len(email) if email else 0}")
+
+        if not self._is_configured():
+            logger.error("🔍 DATABASE: Database not configured!")
+            return 0
+
+        try:
+            # Try the atomic RPC function first
+            logger.info(f"🔍 DATABASE: About to call record_enhancement_atomic")
+            result = await self.record_enhancement_atomic(email, str(uuid.uuid4()), "chatgpt")
+            new_count = result.get("enhanced_prompts", 0)
+            logger.info(f"🔍 DATABASE: RPC result: {result}")
+            logger.info(f"🔍 DATABASE: New count from RPC: {new_count}")
+
+            # If RPC failed (returns 0), use fallback direct update
+            if new_count == 0:
+                logger.warning("RPC function failed, using direct database update as fallback")
+                return await self._increment_user_prompts_fallback(email)
+
+            return new_count
+        except Exception as e:
+            logger.error(f"Error incrementing user prompts: {str(e)}")
+            # Fallback to direct database update
+            try:
+                return await self._increment_user_prompts_fallback(email)
+            except Exception as fallback_e:
+                logger.error(f"Fallback increment also failed: {fallback_e}")
+                return 0
+
+    async def _increment_user_prompts_fallback(self, email: str) -> int:
+        """Fallback method to increment user prompts using direct database operations."""
+        if not self._is_configured():
+            return 0
+
+        try:
+            headers = {
+                "apikey": self.supabase_key,
+                "Authorization": f"Bearer {self.supabase_key}",
+                "Content-Type": "application/json"
+            }
+
+            # First, get current user data
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self.supabase_url}/rest/v1/users?email=eq.{email}&select=enhanced_prompts,daily_prompts_used,last_prompt_reset,subscription_tier",
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=5)
+                ) as response:
+                    if response.status == 200:
+                        user_data = await response.json()
+                        if not user_data:
+                            # User doesn't exist, create them
+                            user_payload = {
+                                "email": email,
+                                "enhanced_prompts": 1,
+                                "daily_prompts_used": 1,
+                                "subscription_tier": "free",
+                                "last_prompt_reset": datetime.now().date().isoformat()
+                            }
+
+                            async with session.post(
+                                f"{self.supabase_url}/rest/v1/users",
+                                headers=headers,
+                                json=user_payload,
+                                timeout=aiohttp.ClientTimeout(total=5)
+                            ) as create_response:
+                                if create_response.status in [200, 201]:
+                                    logger.info(f"Created new user: {email}")
+                                    return 1
+                                else:
+                                    logger.error(f"Failed to create user: {create_response.status}")
+                                    return 0
+
+                        # User exists, update their counts
+                        current = user_data[0]
+                        current_prompts = current.get("enhanced_prompts", 0) or 0
+                        current_daily = current.get("daily_prompts_used", 0) or 0
+                        last_reset = current.get("last_prompt_reset")
+                        tier = current.get("subscription_tier", "free")
+
+                        # Reset daily counter if needed
+                        today = datetime.now().date()
+                        if not last_reset:
+                            # No last reset, set to today
+                            last_reset = today
+                            current_daily = 0
+                        else:
+                            # Parse the last reset date
+                            try:
+                                if isinstance(last_reset, str):
+                                    last_reset_date = datetime.fromisoformat(last_reset.split('T')[0]).date()
+                                else:
+                                    last_reset_date = last_reset
+                            except:
+                                last_reset_date = today
+                                current_daily = 0
+
+                            if last_reset_date != today:
+                                current_daily = 0
+                                last_reset = today
+
+                        # Check daily limit for free users
+                        if tier == "free" and current_daily >= 10:
+                            logger.warning(f"Free user {email} reached daily limit")
+                            return current_prompts
+
+                        # Increment counters
+                        new_prompts = current_prompts + 1
+                        new_daily = current_daily + 1
+
+                        update_payload = {
+                            "enhanced_prompts": new_prompts,
+                            "daily_prompts_used": new_daily,
+                            "last_prompt_reset": last_reset.isoformat() if hasattr(last_reset, 'isoformat') else str(last_reset)
+                        }
+
+                        async with session.patch(
+                            f"{self.supabase_url}/rest/v1/users?email=eq.{email}",
+                            headers=headers,
+                            json=update_payload,
+                            timeout=aiohttp.ClientTimeout(total=5)
+                        ) as update_response:
+                            if update_response.status == 200:
+                                logger.info(f"Updated user {email}: prompts={new_prompts}, daily={new_daily}")
+                                return new_prompts
+                            else:
+                                error_text = await update_response.text()
+                                logger.error(f"Failed to update user: {update_response.status} - {error_text}")
+                                return 0
+                    else:
+                        logger.error(f"Failed to get user data: {response.status}")
+                        return 0
+
+        except Exception as e:
+            logger.error(f"Fallback increment error: {str(e)}")
+            return 0
 
 # Global database service instance
-database_service = DatabaseService() 
+database_service = DatabaseService()
+
+# Alias for backward compatibility
+db_service = database_service 

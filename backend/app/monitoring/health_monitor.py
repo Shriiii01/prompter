@@ -63,7 +63,7 @@ class HealthMonitor:
     async def check_database_health(self):
         """Check database health status"""
         try:
-            from app.services.database import db_service
+            from app.utils.database import db_service
             self.db_health_status = await db_service.health_check()
             self.last_db_check = time.time()
             logger.info("Database health check completed")

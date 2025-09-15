@@ -164,13 +164,13 @@ class AIService:
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
         data = {
-            "model": "gpt-4",
+            "model": "gpt-4o-mini",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            "max_tokens": 2000,
-            "temperature": 0.7
+            "max_tokens": 500,
+            "temperature": 0.3
         }
         
         async with aiohttp.ClientSession() as session:
@@ -186,6 +186,53 @@ class AIService:
                 result = await response.json()
                 return result["choices"][0]["message"]["content"]
     
+    async def _enhance_with_openai_streaming(self, prompt: str, target_model: str):
+        """Enhance prompt using OpenAI API with REAL streaming."""
+        headers = {
+            "Authorization": f"Bearer {config.settings.openai_api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Use centralized system prompts for consistency across providers
+        system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
+        
+        data = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 500,
+            "temperature": 0.3,
+            "stream": True
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=data,
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as response:
+                if response.status != 200:
+                    raise Exception(f"OpenAI API error: {response.status}")
+                
+                # Stream the response
+                async for line in response.content:
+                    line = line.decode('utf-8').strip()
+                    if line.startswith('data: '):
+                        data_str = line[6:]
+                        if data_str == '[DONE]':
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            if 'choices' in chunk and len(chunk['choices']) > 0:
+                                delta = chunk['choices'][0].get('delta', {})
+                                if 'content' in delta:
+                                    yield delta['content']
+                        except json.JSONDecodeError:
+                            continue
+    
     async def _enhance_with_gemini(self, prompt: str, target_model: str) -> str:
         """Enhance prompt using Gemini API with system prompts from prompts.py."""
         headers = {
@@ -195,10 +242,10 @@ class AIService:
         # Centralized system prompt
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
 
-        # Choose model endpoint from target_model if present; fallback to gemini-pro
-        model_name = (target_model or "").strip() or "gemini-pro"
+        # Choose model endpoint from target_model if present; fallback to gemini-2.0-flash-exp
+        model_name = (target_model or "").strip() or "gemini-2.0-flash-exp"
         if not model_name.lower().startswith("gemini"):
-            model_name = "gemini-pro"
+            model_name = "gemini-2.0-flash-exp"
 
         # Gemini v1beta supports systemInstruction separately
         data = {

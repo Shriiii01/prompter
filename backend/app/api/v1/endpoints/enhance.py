@@ -1,337 +1,238 @@
+from fastapi import APIRouter, HTTPException, Depends, Query, Request, Header, status
+from fastapi.responses import JSONResponse, StreamingResponse
+from app.models.request import EnhanceRequest, AnalyzeRequest, LLMModel
+from app.models.response import EnhancementResult, PromptAnalysis, ErrorResponse
+from app.core.enhancer import PromptEnhancer
+from app.core.analyzer import PromptAnalyzer
+from app.core.model_specific_enhancer import ModelSpecificEnhancer
+from app.services.ai_service import AIService, ai_service
+from app.services.multi_provider import MultiProviderService
+from app.utils.auth import get_email_from_token, get_user_info_from_token
+from app.utils.database import db_service
+from app.core.config import config
 import logging
 import time
-from typing import Dict, Optional
-import uuid
-from fastapi import APIRouter, HTTPException, Request, Depends, Header
-from pydantic import BaseModel, validator
-import re
-
-from ....services.ai_service import ai_service, AIProvider
-from ....services.database import DatabaseService
-
-# Initialize the correct database service
-database_service = DatabaseService()
-from ....core.config import config
+from typing import Optional
+import json
+import asyncio
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["enhancement-v1"])
 
-def _noop():
-    return None
+router = APIRouter(tags=["enhancement"])
 
-def _local_enhance(original_prompt: str, target_model: str) -> str:
-    """Deterministic, offline enhancement to avoid failures propagating to UI.
-    Produces a clean rewritten prompt without answering the question.
-    """
-    original = (original_prompt or "").strip()
-    if not original:
-        return "Rewrite the prompt with a clear objective, must-have details, and a short example. Output the rewritten prompt only."
-    sections = [
-        "Rewrite the following prompt to be precise, testable, and easy for an LLM to execute.",
-        "Rules:",
-        "- Do NOT answer the prompt.",
-        "- Keep the original intent.",
-        "- Specify expected output format and constraints.",
-        "- Include 1 brief example if useful.",
-        "Rewritten prompt target model: {}".format(target_model or "auto"),
-        "Original prompt:",
-        original
-    ]
-    return "\n".join(sections)
-
-class EnhancementRequest(BaseModel):
-    """Request model for prompt enhancement."""
-    prompt: str
-    target_model: str = "auto"
-    user_id: Optional[str] = None
-    
-    @validator('prompt')
-    def validate_prompt(cls, v):
-        if not v or not v.strip():
-            raise ValueError("Prompt cannot be empty")
-        if len(v) > 10000:
-            raise ValueError("Prompt too long (max 10,000 characters)")
-        return v.strip()
-    
-    @validator('target_model')
-    def validate_target_model(cls, v):
-        valid_models = [
-            "auto", "chatgpt", "claude", "gemini", "perplexity", "poe",
-            "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
-            "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
-            "gemini-1.0-pro", "gemini-1.5-pro", "gemini-1.5-flash",
-            "perplexity-pro", "perplexity-sonar",
-            "meta-ai", "meta-llama-2", "meta-llama-3"
-        ]
-        if v.lower() not in valid_models:
-            raise ValueError(f"Invalid target model. Must be one of: {valid_models}")
-        return v.lower()
-
-class EnhancementResponse(BaseModel):
-    """Response model for prompt enhancement."""
-    enhanced_prompt: str
-    provider_used: str
-    target_model: str
-    user_prompt_count: int
-    processing_time: float
-    success: bool = True
-
-def detect_target_model_from_url(request: Request) -> str:
-    """Auto-detect target model from request URL."""
-    url = str(request.url)
-    
-    model_patterns = {
-        "chatgpt": ["chat.openai.com", "chatgpt.com"],
-        "claude": ["claude.ai"],
-        "gemini": ["gemini.google.com"],
-        "perplexity": ["perplexity.ai", "www.perplexity.ai"],
-        "poe": ["poe.com"]
-    }
-    
-    for model, patterns in model_patterns.items():
-        if any(pattern in url for pattern in patterns):
-            return model
-    
-    return "auto"
-
-async def get_user_id_from_headers(request: Request) -> str:
-    """Extract user ID from request headers or generate anonymous ID."""
-    # Try to get from headers
-    user_id = request.headers.get("X-User-ID")
-    if user_id:
-        return user_id
-    
-    # Try to get from query parameters
-    user_id = request.query_params.get("user_id")
-    if user_id:
-        return user_id
-    
-    # Generate anonymous ID based on IP and user agent
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("User-Agent", "unknown")
-    
-    # Simple hash for anonymous user
-    import hashlib
-    anonymous_id = hashlib.md5(f"{client_ip}:{user_agent}".encode()).hexdigest()[:16]
-    return f"anon_{anonymous_id}"
-
-@router.post("/enhance", response_model=EnhancementResponse)
-async def enhance_prompt(
-    request: EnhancementRequest,
-    http_request: Request,
-    user_id: str = Depends(get_user_id_from_headers),
-    idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
-    platform: Optional[str] = Header(None, alias="X-Platform")
-):
-    """
-    Enhance a prompt using the three-tier AI provider system.
-    
-    Args:
-        request: Enhancement request with prompt and target model
-        http_request: FastAPI request object for URL detection
-        user_id: User identifier (extracted from headers or generated)
-    
-    Returns:
-        Enhanced prompt with metadata
-    """
-    start_time = time.time()
-    
+def get_enhancer():
+    """Dependency to get MultiProviderService enhancer instance"""
     try:
-        # Auto-detect target model if not specified
-        if request.target_model == "auto":
-            detected_model = detect_target_model_from_url(http_request)
-            target_model = detected_model if detected_model != "auto" else "chatgpt"
-        else:
-            target_model = request.target_model
-        
-        logger.info(f"Enhancing prompt for user {user_id} with target model: {target_model}")
-        
-        # Pre-check subscription & daily limit to avoid unnecessary AI calls
-        try:
-            sub_status = await database_service.check_user_subscription_status(user_id)
-            if sub_status and sub_status.get('subscription_tier') == 'free':
-                daily_used = sub_status.get('daily_prompts_used', 0)
-                daily_limit = sub_status.get('daily_limit', 5)
-                if daily_limit is not None and daily_used >= daily_limit:
-                    raise HTTPException(status_code=402, detail="Daily limit reached. Please upgrade to Pro.")
-        except Exception:
-            # On error, proceed to AI but still rely on atomic record step later
-            pass
+        logger.info(f"🔧 Initializing MultiProviderService enhancer...")
+        logger.info(f"🔑 OpenAI API key available: {bool(config.settings.openai_api_key)}")
+        logger.info(f"🔑 Gemini API key available: {bool(config.settings.gemini_api_key)}")
+        logger.info(f"🔑 Together API key available: {bool(config.settings.together_api_key)}")
 
-        # Enhance prompt using AI service (with graceful local fallback)
-        enhanced_prompt = None
-        provider = None
-        try:
-            enhanced_prompt, provider = await ai_service.enhance_prompt(
-                request.prompt,
-                target_model
-            )
-        except Exception as ai_error:
-            logger.warning(f"AI enhancement failed, using local fallback: {ai_error}")
-            enhanced_prompt = _local_enhance(request.prompt, target_model)
-            provider = AIProvider.OPENAI  # nominal tag for UI; actual text is local
-
-        # Normalize platform early so it can be used for counting
-        normalized_platform = (platform or '').strip().lower()
-        if normalized_platform not in ['chatgpt','claude','gemini','perplexity','meta']:
-            # Fallback: try detect from request URL
-            detected = detect_target_model_from_url(http_request)
-            mapping = {
-                'chatgpt': 'chatgpt',
-                'claude': 'claude',
-                'gemini': 'gemini',
-                'perplexity': 'perplexity',
-                'poe': 'chatgpt'  # treat poe as chatgpt bucket for now
-            }
-            normalized_platform = mapping.get(detected, 'chatgpt')
-
-        # Atomically record successful enhancement with idempotency key
-        effective_key = idempotency_key or str(uuid.uuid4())
-        counters = await database_service.record_enhancement_atomic(user_id, effective_key, platform=normalized_platform)
-        user_count = counters.get('enhanced_prompts', 0)
-
-        try:
-            await database_service.log_platform_usage(
-                email=user_id,
-                platform=normalized_platform,
-                provider=provider.value if provider else 'local',
-                target_model=target_model
-            )
-        except Exception:
-            pass
-        
-        # Log the enhancement request (if method exists)
-        try:
-            await database_service.log_enhancement_request(
-                user_id=user_id,
-                original_prompt=request.prompt,
-                enhanced_prompt=enhanced_prompt,
-                provider=(provider.value if provider else 'local'),
-                target_model=target_model
-            )
-        except AttributeError:
-            logger.info(f"Enhancement logged for user {user_id}")
-        
-        processing_time = time.time() - start_time
-        
-        logger.info(f"Successfully enhanced prompt in {processing_time:.2f}s using {provider.value}")
-        
-        return EnhancementResponse(
-            enhanced_prompt=enhanced_prompt,
-            provider_used=provider.value,
-            target_model=target_model,
-            user_prompt_count=user_count,
-            processing_time=processing_time
+        # Initialize MultiProviderService with all available API keys
+        multi_provider_service = MultiProviderService(
+            openai_key=config.settings.openai_api_key,
+            gemini_key=config.settings.gemini_api_key,
+            together_key=config.settings.together_api_key
         )
         
-    except ValueError as e:
-        logger.warning(f"Validation error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.info("✅ MultiProviderService initialized successfully")
+        logger.info(f"🔧 MultiProviderService type: {type(multi_provider_service)}")
+        
+        # Create ModelSpecificEnhancer with MultiProviderService
+        logger.info("✅ Creating ModelSpecificEnhancer with MultiProviderService")
+        enhancer = ModelSpecificEnhancer(multi_provider_service=multi_provider_service)
+        logger.info(f"✅ ModelSpecificEnhancer created: {type(enhancer)}")
+        return enhancer
         
     except Exception as e:
-        processing_time = time.time() - start_time
-        logger.error(f"Enhancement failed after {processing_time:.2f}s: {str(e)}")
-        
-        # Check if it's an AI service issue
-        if "No AI providers available" in str(e) or "provider" in str(e).lower():
-            raise HTTPException(status_code=503, detail="Enhancement service temporarily unavailable. Please try again.")
-        
-        # Check if it's an auth issue
-        if "auth" in str(e).lower() or "token" in str(e).lower():
-            raise HTTPException(status_code=401, detail="Authentication failed. Please sign in again.")
-        
-        # Generic error
-        raise HTTPException(status_code=500, detail="Enhancement failed")
+        logger.error(f"❌ Failed to initialize MultiProviderService enhancer: {str(e)}")
+        # Return ModelSpecificEnhancer without MultiProviderService - it has its own fallback logic
+        logger.info("🔄 Creating ModelSpecificEnhancer without MultiProviderService (will use internal fallback)")
+        return ModelSpecificEnhancer()
 
-@router.get("/user/{user_id}/count")
-async def get_user_count(user_id: str):
-    """Get user's prompt enhancement count."""
+@router.post("/enhance", response_model=EnhancementResult)
+async def enhance_prompt(
+    request: EnhanceRequest,
+    enhancer: ModelSpecificEnhancer = Depends(get_enhancer)
+):
+    """
+    Enhance a prompt using AI.
+    
+    Args:
+        request: Enhancement request with prompt and optional model
+        enhancer: ModelSpecificEnhancer instance
+        
+    Returns:
+        Enhanced prompt result
+    """
     try:
-        count = await database_service.get_user_count_only(user_id)
-        return {"user_id": user_id, "prompt_count": count}
+        logger.info(f"📝 Enhancement request received: {request.prompt[:50]}...")
+        logger.info(f"🎯 Target model: {request.model}")
+        
+        # Enhance the prompt
+        result = await enhancer.enhance_prompt(
+            prompt=request.prompt,
+            target_model=request.model
+        )
+        
+        logger.info(f"✅ Enhancement completed successfully")
+        return result
+        
     except Exception as e:
-        logger.error(f"Failed to get user count: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get user count")
+        logger.error(f"❌ Enhancement failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Enhancement failed: {str(e)}"
+        )
 
-@router.get("/stats")
-async def get_system_stats():
-    """Get system-wide statistics."""
-    try:
-        stats = await database_service.get_system_stats()
-        ai_stats = ai_service.get_provider_stats()
+@router.post("/enhance/stream")
+async def enhance_prompt_stream(
+    request: EnhanceRequest,
+    user_email: str = Header(None, alias="X-User-Email"),
+    enhancer: ModelSpecificEnhancer = Depends(get_enhancer)
+):
+    """
+    Stream enhanced prompt word by word.
+    
+    Args:
+        request: Enhancement request with prompt and optional model
+        user_email: User email from header
+        enhancer: ModelSpecificEnhancer instance
         
-        return {
-            "database": stats,
-            "ai_providers": ai_stats,
-            "system": {
-                "version": config.settings.app_version,
-                "environment": config.settings.environment
+    Returns:
+        Server-Sent Events stream of enhanced prompt
+    """
+    try:
+        logger.info(f"🌊 Streaming enhancement request: {request.prompt[:50]}...")
+        logger.info(f"👤 User email: {user_email}")
+        logger.info(f"🎯 Target model: {request.model}")
+        
+        # Check user limits before processing
+        if user_email:
+            try:
+                # Record enhancement attempt and check limits
+                result = await db_service.record_enhancement_atomic(
+                    email=user_email,
+                    idempotency_key=f"stream_{int(time.time() * 1000)}",
+                    platform='chatgpt'  # Default platform
+                )
+                
+                if result.get('limit_reached', False):
+                    logger.warning(f"⚠️ User {user_email} has reached daily limit")
+                    
+                    # Send limit_reached as streaming response
+                    async def limit_reached_stream():
+                        yield f"data: {json.dumps({'type': 'limit_reached', 'data': {'daily_prompts_used': result.get('daily_prompts_used', 0), 'daily_limit': 10, 'subscription_tier': result.get('subscription_tier', 'free')}})}\n\n"
+                        yield f"data: [DONE]\n\n"
+                    
+                    return StreamingResponse(
+                        limit_reached_stream(),
+                        media_type="text/plain",
+                        headers={
+                            "Cache-Control": "no-cache",
+                            "Connection": "keep-alive",
+                            "X-Accel-Buffering": "no"
+                        }
+                    )
+                
+                logger.info(f"✅ User {user_email} has {10 - result.get('daily_prompts_used', 0)} prompts remaining")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to check user limits: {e}")
+                # Continue with enhancement even if limit check fails
+        
+        # Stream the enhancement
+        async def generate_stream():
+            try:
+                # Get the streaming enhancement
+                async for chunk in enhancer.enhance_prompt_stream(
+                    prompt=request.prompt,
+                    target_model=request.model
+                ):
+                    if chunk:
+                        yield f"data: {json.dumps({'type': 'chunk', 'data': chunk})}\n\n"
+                
+                # Send completion signal
+                yield f"data: {json.dumps({'type': 'complete', 'data': ''})}\n\n"
+                
+            except Exception as e:
+                logger.error(f"❌ Streaming error: {str(e)}")
+                yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+        
+        return StreamingResponse(
+            generate_stream(),
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"  # Disable nginx buffering
             }
-        }
+        )
+        
     except Exception as e:
-        logger.error(f"Failed to get system stats: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get system stats")
+        logger.error(f"❌ Stream enhancement failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Stream enhancement failed: {str(e)}"
+        )
+
+@router.post("/analyze", response_model=PromptAnalysis)
+async def analyze_prompt(
+    request: AnalyzeRequest,
+    analyzer: PromptAnalyzer = Depends(lambda: PromptAnalyzer())
+):
+    """
+    Analyze a prompt for quality and suggestions.
+    
+    Args:
+        request: Analysis request with prompt
+        analyzer: PromptAnalyzer instance
+        
+    Returns:
+        Prompt analysis result
+    """
+    try:
+        logger.info(f"🔍 Analysis request received: {request.prompt[:50]}...")
+        
+        # Analyze the prompt
+        result = await analyzer.analyze_prompt(request.prompt)
+        
+        logger.info(f"✅ Analysis completed successfully")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Analysis failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Analysis failed: {str(e)}"
+        )
 
 @router.get("/health")
 async def health_check():
-    """Quick health check for the enhancement service."""
+    """
+    Health check endpoint for the enhancement service.
+    
+    Returns:
+        Service health status
+    """
     try:
-        # Check AI providers
-        ai_health = await ai_service.health_check()
+        # Test database connection
+        db_healthy = await db_service.health_check()
         
-        # Check database
-        db_health = await database_service.health_check()
-        
-        # Determine overall health
-        ai_healthy = any(
-            provider.get("status") == "healthy" 
-            for provider in ai_health.values()
-        )
-        
-        overall_status = "healthy" if ai_healthy else "degraded"
+        # Test AI service
+        ai_healthy = ai_service.is_healthy()
         
         return {
-            "status": overall_status,
-            "ai_providers": ai_health,
-            "database": db_health,
+            "status": "healthy" if db_healthy and ai_healthy else "unhealthy",
+            "database": "healthy" if db_healthy else "unhealthy",
+            "ai_service": "healthy" if ai_healthy else "unhealthy",
             "timestamp": time.time()
         }
         
     except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
+        logger.error(f"❌ Health check failed: {str(e)}")
         return {
             "status": "unhealthy",
             "error": str(e),
             "timestamp": time.time()
         }
-
-@router.post("/test-enhance")
-async def test_enhance_prompt(request: EnhancementRequest):
-    """Test enhancement without authentication (for debugging)."""
-    start_time = time.time()
-    
-    try:
-        logger.info(f"Testing enhancement with target model: {request.target_model}")
-        
-        # Enhance prompt using AI service
-        enhanced_prompt, provider = await ai_service.enhance_prompt(
-            request.prompt, 
-            request.target_model
-        )
-        
-        processing_time = time.time() - start_time
-        
-        logger.info(f"Successfully enhanced prompt in {processing_time:.2f}s using {provider.value}")
-        
-        return {
-            "enhanced_prompt": enhanced_prompt,
-            "provider_used": provider.value,
-            "target_model": request.target_model,
-            "processing_time": processing_time,
-            "success": True
-        }
-        
-    except Exception as e:
-        processing_time = time.time() - start_time
-        logger.error(f"Test enhancement failed after {processing_time:.2f}s: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Enhancement failed: {str(e)}") 

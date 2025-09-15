@@ -7,7 +7,7 @@ from typing import Dict, Any
 import logging
 import json
 from app.services.payment_service import payment_service
-from app.services.database import db_service
+from app.utils.database import db_service
 from app.core.config import config
 
 
@@ -147,7 +147,7 @@ async def get_subscription_status(user_email: str):
         {
             "subscription_tier": "free|pro",
             "daily_prompts_used": 3,
-            "daily_limit": 5,
+            "daily_limit": 10,
             "subscription_expires": "2024-02-15T10:30:00Z"
         }
     """

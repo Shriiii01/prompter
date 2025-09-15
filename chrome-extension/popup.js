@@ -39,6 +39,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Seed count immediately to avoid 0→N blink
     if (enhancedCountSpan) {
         enhancedCountSpan.textContent = '—';
+        
+        // Add click handler to refresh count manually
+        enhancedCountSpan.style.cursor = 'pointer';
+        enhancedCountSpan.title = 'Click to refresh count';
+        enhancedCountSpan.addEventListener('click', () => {
+            console.log('🔄 Manual count refresh requested');
+            
+            let userEmail = '';
+            
+            // Try to get email from popup display first (most reliable)
+            if (userEmailSpan && userEmailSpan.textContent) {
+                userEmail = userEmailSpan.textContent.trim();
+                console.log('🔄 Using email from popup display:', userEmail);
+            }
+            
+            // Fallback: try storage
+            if (!userEmail) {
+                try {
+                    chrome.storage.local.get(['user_info'], (data) => {
+                        userEmail = data.user_info?.email || '';
+                        
+                        if (userEmail) {
+                            enhancedCountSpan.textContent = '...';
+                            fetchEnhancedCount(userEmail);
+                        } else {
+                            console.error('❌ No user email found for refresh!');
+                        }
+                    });
+                } catch (storageError) {
+                    console.warn('⚠️ Chrome storage not available:', storageError);
+                }
+            }
+            
+            if (userEmail) {
+                enhancedCountSpan.textContent = '...';
+                fetchEnhancedCount(userEmail);
+            } else {
+                console.error('❌ No user email found for refresh!');
+            }
+        });
+        
         try {
             chrome.storage.local.get(['last_known_prompt_count'], (res) => {
                 if (typeof res.last_known_prompt_count === 'number') {
@@ -108,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check login status
     function checkLogin() {
         console.log('🔍 Checking login status...');
-        
+
         chrome.runtime.sendMessage({ action: 'check_login' }, (response) => {
             console.log('📬 Check login response:', response);
             
@@ -344,14 +385,86 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         console.log('✅ Successfully signed in!');
         
-        // Initialize extension state
-        checkExtensionState();
-    }
+    // Initialize extension state
+    checkExtensionState();
+    
+    // Listen for count updates from background script
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === 'count_updated') {
+            console.log('📊 Count updated in popup:', request.count);
+            updateEnhancedCount(request.count);
+            // Also update local storage to prevent future mismatches
+            chrome.storage.local.set({ last_known_prompt_count: request.count });
+        } else if (request.action === 'get_displayed_email') {
+            // Get the displayed email from the popup
+            const userEmailSpan = document.getElementById('user-email');
+            const email = userEmailSpan ? userEmailSpan.textContent : '';
+            console.log('📧 Getting displayed email:', email);
+            sendResponse({ email: email });
+        }
+    });
+    
+        // Show cached count first to avoid blink
+        if (enhancedCountSpan) {
+            // Try to get cached count from storage first
+            chrome.storage.local.get(['last_known_prompt_count'], (data) => {
+                if (data.last_known_prompt_count !== undefined) {
+                    enhancedCountSpan.textContent = data.last_known_prompt_count;
+                    enhancedCountSpan.style.color = ''; // Reset to default
+                } else {
+                    enhancedCountSpan.textContent = '0';
+                }
+            });
+        }
+
+        // Refresh count in background (no loading indicator)
+        setTimeout(() => {
+        
+        let userEmail = '';
+        
+        // Try to get email from popup display first (most reliable)999999eirja9 
+        if (userEmailSpan && userEmailSpan.textContent) {
+            userEmail = userEmailSpan.textContent.trim();
+            console.log('🔄 Using email from popup display:', userEmail);
+        }
+        
+        // Fallback: try storage
+        if (!userEmail) {
+            try {
+                chrome.storage.local.get(['user_info'], (data) => {
+                    console.log('🔍 Popup user data:', data.user_info);
+                    userEmail = data.user_info?.email || '';
+                    
+                    if (userEmail) {
+                        console.log('🔄 Force refreshing count for:', userEmail);
+                        fetchEnhancedCount(userEmail);
+                    } else {
+                        console.error('❌ No user email found in popup!');
+                        console.log('🔍 Available storage keys:', Object.keys(data));
+                    }
+                });
+            } catch (storageError) {
+                console.warn('⚠️ Chrome storage not available:', storageError);
+            }
+        }
+        
+        if (userEmail) {
+            console.log('🔄 Force refreshing count for:', userEmail);
+            fetchEnhancedCount(userEmail);
+        } else {
+            console.error('❌ No user email found anywhere!');
+        }
+    }, 100); // Faster refresh
+}
 
     // Update enhanced count
     function updateEnhancedCount(count) {
         if (enhancedCountSpan) {
-            enhancedCountSpan.textContent = count || 0;
+            // Smooth transition - only update if different
+            if (enhancedCountSpan.textContent !== count.toString()) {
+                enhancedCountSpan.textContent = count || 0;
+                enhancedCountSpan.style.color = ''; // Reset to default
+            }
         }
     }
 
@@ -367,7 +480,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             const fullUrl = `${apiUrl}/api/v1/users/${encodeURIComponent(userEmail)}`;
             console.log('🔗 Full URL:', fullUrl);
             
-            const response = await fetch(fullUrl);
+            // Add cache-busting parameter to force fresh data
+            const cacheBustUrl = `${fullUrl}?t=${Date.now()}&force=${Math.random()}`;
+
+            console.log('🌐 POPUP: Fetching count from:', cacheBustUrl);
+
+            const response = await fetch(cacheBustUrl, {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            console.log('📡 POPUP: Response status:', response.status);
             console.log('📡 Response status:', response.status, response.statusText);
             
             if (response.ok) {
@@ -375,7 +502,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log('✅ User data from database:', userData);
                 const count = userData.enhanced_prompts || 0;
                 console.log('📈 Enhanced prompts count:', count);
+                
+                // Update display and storage
                 updateEnhancedCount(count);
+                chrome.storage.local.set({ last_known_prompt_count: count });
+
+                // Reset color to normal
+                if (enhancedCountSpan) {
+                    enhancedCountSpan.style.color = ''; // Reset to default
+                }
+                
                 return count;
             } else {
                 console.warn('⚠️ Failed to fetch user data from database');
@@ -892,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // ====================================
-    // 🔄 ENHANCED USER DASHBOARD FUNCTION
-    // ====================================
+
+// ====================================
+// 🔄 ENHANCED USER DASHBOARD FUNCTION
+// ====================================

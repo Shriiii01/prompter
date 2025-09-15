@@ -5,10 +5,10 @@ from app.models.response import EnhancementResult, PromptAnalysis, ErrorResponse
 from app.core.enhancer import PromptEnhancer
 from app.core.analyzer import PromptAnalyzer
 from app.core.model_specific_enhancer import ModelSpecificEnhancer
-from app.services.openai import OpenAIService
+from app.services.ai_service import AIService, ai_service
 from app.services.multi_provider import MultiProviderService
 from app.utils.auth import get_email_from_token, get_user_info_from_token
-from app.services.database import db_service
+from app.utils.database import db_service
 from app.core.config import config
 import logging
 import time
@@ -18,7 +18,7 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1", tags=["enhancement"])
+router = APIRouter(tags=["enhancement"])  # No prefix here, will be added in main.py
 
 def get_enhancer():
     """Dependency to get MultiProviderService enhancer instance"""
@@ -264,10 +264,6 @@ async def health_check():
             }
         )
 
-
-
-
-
 @router.get("/pipeline-info")
 async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhancer)):
     """Get information about the unified enhancement pipeline"""
@@ -304,7 +300,7 @@ async def quick_test(
 ):
     """Quick test endpoint without authentication - now with user tracking"""
     try:
-        from app.services.database import db_service
+        from app.utils.database import db_service
         
         prompt = request.get('prompt', 'write code')
         url = request.get('url', '')
@@ -581,7 +577,7 @@ async def get_user_stats(
 async def get_user_count_by_email(email: str):
     """Get user's enhanced prompt count by email (no auth required)"""
     try:
-        from app.services.database import db_service
+        from app.utils.database import db_service
         
         # Get user stats directly
         stats = await db_service.get_user_stats(email=email)
@@ -673,52 +669,73 @@ async def update_user_name(
         raise HTTPException(status_code=500, detail="Failed to update name")
 
 @router.post("/stream-enhance")
-async def stream_enhance_prompt(request: EnhanceRequest):
-    """Stream enhanced prompt in chunks for magical animation using unified enhancement"""
+async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header(None, alias="X-User-ID")):
+    """Stream enhanced prompt in chunks for magical animation using ONLY AI service"""
     try:
-        # Use the unified enhancer
-        enhancer = get_enhancer()
-        
-        # Get the target model
-        target_model = request.target_model or LLMModel.GPT_4O_MINI
-        detected_model = target_model.value
-        
-        # Get enhanced text using unified enhancement
-        result = await enhancer.enhance(request.prompt, target_model)
-        enhanced_text = result.enhanced
-        
-        async def generate_stream():
-            """Generate streaming response for magical animation"""
-            # Send initial metadata
-            yield f"data: {json.dumps({'type': 'model', 'data': detected_model})}\n\n"
-            yield f"data: {json.dumps({'type': 'enhancer', 'data': 'gpt-4o-mini'})}\n\n"
-            yield f"data: {json.dumps({'type': 'start', 'data': f'Enhancing with {detected_model}-specific prompts...'})}\n\n"
+        logger.info(f"🚀 SIMPLE AI ENHANCEMENT: Starting for prompt: {request.prompt[:50]}...")
+        logger.info(f"🎯 Target model: {request.target_model or 'gpt-4o-mini'}")
+        logger.info(f"📧 User ID received: {x_user_id}")
+        logger.info(f"🔍 DEBUGGING BACKEND:")
+        logger.info(f"  - User ID received: {x_user_id}")
+        logger.info(f"  - User ID type: {type(x_user_id)}")
+        logger.info(f"  - User ID length: {len(x_user_id) if x_user_id else 0}")
+        logger.info(f"  - User ID is empty?: {not x_user_id}")
+        logger.info(f"  - User ID repr: {repr(x_user_id)}")
+        logger.info(f"  - Headers: X-User-ID={x_user_id}")
+        logger.info(f"🔧 Available providers: OpenAI={'✅' if config.settings.openai_api_key and config.settings.openai_api_key != 'your_openai_api_key_here' else '❌'}, Gemini={'✅' if config.settings.gemini_api_key and config.settings.gemini_api_key != 'your_gemini_api_key_here' else '❌'}")
+
+        # Increment user's prompt count (always track for popup UI)
+        if x_user_id:
+            try:
+                logger.info(f"📊 Incrementing prompt count for user: {x_user_id}")
+                logger.info(f"🔍 ABOUT TO CALL increment_user_prompts with: {x_user_id}")
+                new_count = await db_service.increment_user_prompts(x_user_id)
+                logger.info(f"✅ Prompt count incremented to: {new_count}")
+                logger.info(f"🔍 NEW COUNT RETURNED: {new_count}")
+            except Exception as db_error:
+                logger.warning(f"⚠️ Failed to increment prompt count: {db_error}")
+        else:
+            logger.info("📊 No user email provided - prompt count not incremented")
+
+        # Use REAL streaming from AI service
+        try:
+            detected_model = "gpt-4o-mini"
+            logger.info(f"🚀 Starting REAL streaming with {detected_model}")
             
-            # Stream the enhanced text word by word for animation
-            words = enhanced_text.split()
-            current_text = ""
-            
-            for i, word in enumerate(words):
-                current_text += word + " "
+            async def generate_stream():
+                """Generate REAL streaming response from AI"""
+                # Send initial metadata
+                yield f"data: {json.dumps({'type': 'model', 'data': detected_model})}\n\n"
+                yield f"data: {json.dumps({'type': 'enhancer', 'data': detected_model})}\n\n"
+                # Removed the "Enhancing with..." message as requested
                 
-                # Send chunk with progress
-                chunk_data = {
-                    'type': 'chunk',
-                    'data': current_text.strip(),
-                    'progress': round((i + 1) / len(words) * 100, 1),
-                    'word_count': i + 1,
-                    'total_words': len(words)
-                }
+                # Send updated count after increment
+                if x_user_id:
+                    try:
+                        current_count = await db_service.get_user_stats(x_user_id)
+                        if current_count:
+                            yield f"data: {json.dumps({'type': 'count_update', 'data': current_count.get('enhanced_prompts', 0)})}\n\n"
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to get updated count: {e}")
                 
-                yield f"data: {json.dumps(chunk_data)}\n\n"
+                # Stream the response in real-time as it comes from OpenAI
+                current_text = ""
+                async for chunk in ai_service._enhance_with_openai_streaming(
+                    request.prompt,
+                    request.target_model or "gpt-4o-mini"
+                ):
+                    current_text += chunk
+                    # Send each chunk as it comes
+                    yield f"data: {json.dumps({'type': 'chunk', 'data': current_text})}\n\n"
                 
-                # Add realistic delay for animation (faster for short words)
-                delay = 0.05 if len(word) < 4 else 0.08
-                await asyncio.sleep(delay)
-            
-            # Send completion
-            yield f"data: {json.dumps({'type': 'complete', 'data': enhanced_text})}\n\n"
-            yield "data: [DONE]\n\n"
+                # Send completion
+                yield f"data: {json.dumps({'type': 'complete', 'data': current_text})}\n\n"
+                yield "data: [DONE]\n\n"
+                
+        except Exception as ai_error:
+            logger.error(f"❌ AI service failed: {ai_error}")
+            # If AI service fails, raise the error instead of using fallback
+            raise ai_error
         
         return StreamingResponse(
             generate_stream(),
@@ -734,33 +751,13 @@ async def stream_enhance_prompt(request: EnhanceRequest):
     except Exception as e:
         logger.error(f"Stream enhancement error: {str(e)}")
         
-        # Fallback response
-        async def fallback_stream():
-            # Use the unified fallback based on target model
-            target_model = request.target_model or LLMModel.GPT_4O_MINI
-            model_name = target_model.value
-            
-            # Create fallback enhancement based on target model
-            if model_name.startswith("gpt"):
-                fallback_text = f"You are an expert assistant. Please help with the following request: {request.prompt}. Provide a comprehensive and well-structured response."
-            elif model_name.startswith("claude"):
-                fallback_text = f"<task>Please help me with the following request</task>\n<request>{request.prompt}</request>\n<format>Please provide a thorough and well-organized response</format>\nThank you for your assistance!"
-            elif model_name.startswith("gemini"):
-                fallback_text = f"Help me with the following request: {request.prompt}\n\n• Provide comprehensive information\n• Use clear organization\n• Include practical examples when helpful\n\nPlease explain your approach step-by-step."
-            elif model_name.startswith("perplexity"):
-                fallback_text = f"Research and provide comprehensive information about: {request.prompt}\n\n• **Key findings**: Thorough analysis with current information\n• **Source requirements**: Credible, up-to-date sources with citations\n• **Verification**: Cross-reference multiple authoritative sources\n• **Multiple perspectives**: Include different viewpoints and approaches\n\nPlease prioritize factual accuracy and cite reliable sources."
-            elif model_name.startswith("meta"):
-                fallback_text = f"Hello! I'm Meta AI, and I'm here to help you with: {request.prompt}\n\n🎯 **My approach will be:**\n• **Conversational & Natural**: I'll engage with you like a knowledgeable friend\n• **Helpful & Practical**: Focus on actionable insights and real-world applications\n• **Current & Informed**: Drawing from up-to-date information and diverse perspectives\n• **Clear & Organized**: Present information in an easy-to-understand format\n• **Thoughtful & Thorough**: Consider multiple angles while being concise\n\nI'm designed to be genuinely helpful while maintaining accuracy and providing valuable context. Let me assist you with this thoughtfully and comprehensively."
-            else:
-                fallback_text = f"Please provide a detailed and helpful response to: {request.prompt}"
-                
-            yield f"data: {json.dumps({'type': 'model', 'data': model_name})}\n\n"
-            yield f"data: {json.dumps({'type': 'enhancer', 'data': 'fallback'})}\n\n"
-            yield f"data: {json.dumps({'type': 'complete', 'data': fallback_text})}\n\n"
+        # Error response - no fallbacks
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'data': f'Enhancement failed: {str(e)}'})}\n\n"
             yield "data: [DONE]\n\n"
         
         return StreamingResponse(
-            fallback_stream(),
+            error_stream(),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -769,15 +766,11 @@ async def stream_enhance_prompt(request: EnhanceRequest):
             }
         )
 
-
-
-
-
 @router.post("/user/increment-count")
 async def increment_user_count(request: dict):
     """Simple endpoint to increment user prompt count without enhancement"""
     try:
-        from app.services.database import db_service
+        from app.utils.database import db_service
         
         user_email = request.get('user_email')
         if not user_email:
@@ -800,6 +793,3 @@ async def increment_user_count(request: dict):
             "success": False,
             "error": str(e)
         }
-
-
-

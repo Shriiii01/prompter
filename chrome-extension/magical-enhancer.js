@@ -1,4 +1,5 @@
 // 🪄 AI Magic - Prompt Enhancer Content Script (RESTORED ORIGINAL)
+// ✅ FIXED: Extension context invalidated error with safe storage handling
 console.log('🚀 AI Magic Content Script Loaded');
 
 class MagicalEnhancer {
@@ -13,6 +14,9 @@ class MagicalEnhancer {
         this.lastScanTime = 0; // Debounce scanning
         this.scanTimeout = null; // For debounced scanning
         this.currentChatId = null; // Track current chat to prevent duplicates
+        this.isStreaming = false; // Track streaming state
+        this.currentStreamAbortController = null; // Stream abort controller
+        this.streamMessageListener = null; // Stream message listener
         this.init();
     }
 
@@ -32,6 +36,58 @@ class MagicalEnhancer {
         console.log('✨ AI Magic ready - checking previous state');
         
         console.log('✨ AI Magic initialized');
+    }
+
+    // Safe storage utility methods
+    safeStorageGet(keys, callback) {
+        try {
+            if (this.isStorageAvailable()) {
+                chrome.storage.local.get(keys, (result) => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('⚠️ Storage get error:', chrome.runtime.lastError.message);
+                        callback(null);
+                        return;
+                    }
+                    callback(result);
+                });
+            } else {
+                console.warn('⚠️ Chrome storage not available');
+                callback(null);
+            }
+        } catch (error) {
+            console.warn('⚠️ Storage operation failed:', error.message);
+            callback(null);
+        }
+    }
+
+    // Enhanced error handling for storage operations
+    isStorageAvailable() {
+        return typeof chrome !== 'undefined' && 
+               chrome.storage && 
+               chrome.storage.local && 
+               chrome.runtime && 
+               chrome.runtime.id;
+    }
+
+    safeStorageSet(data, callback = () => {}) {
+        try {
+            if (this.isStorageAvailable()) {
+                chrome.storage.local.set(data, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('⚠️ Storage set error:', chrome.runtime.lastError.message);
+                    } else {
+                        console.log('✅ Storage operation successful');
+                    }
+                    callback();
+                });
+            } else {
+                console.warn('⚠️ Chrome storage not available');
+                callback();
+            }
+        } catch (error) {
+            console.warn('⚠️ Storage operation failed:', error.message);
+            callback();
+        }
     }
 
     cleanupExistingIcons() {
@@ -74,7 +130,9 @@ class MagicalEnhancer {
 
     checkAndRestoreActiveState() {
         // Check if the extension was active before page reload
-        chrome.storage.local.get(['extension_active'], (result) => {
+        this.safeStorageGet(['extension_active'], (result) => {
+            if (!result) return;
+            
             console.log('🔍 Checking previous extension state:', result);
             
             if (result.extension_active) {
@@ -263,24 +321,9 @@ class MagicalEnhancer {
                 overflow: hidden !important;
                 display: flex !important;
                 flex-direction: column !important;
+                padding-bottom: 60px !important; /* Space for the insert button */
             }
 
-            .ce-header {
-                padding: 12px 16px !important;
-                background: #2a2a2a !important;
-                border-bottom: 1px solid #333 !important;
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                user-select: none !important;
-            }
-
-            .ce-title {
-                font-weight: 600 !important;
-                font-size: 14px !important;
-                color: #667eea !important;
-                margin: 0 !important;
-            }
 
             .ce-close-btn {
                 background: none !important;
@@ -309,6 +352,8 @@ class MagicalEnhancer {
                 overflow-y: auto !important;
                 font-size: 15px !important;
                 line-height: 1.6 !important;
+                position: relative !important;
+                padding-bottom: 16px !important;
             }
 
             .ce-loading {
@@ -321,28 +366,24 @@ class MagicalEnhancer {
                 text-align: center !important;
             }
 
-            .ce-footer {
-                padding: 12px 16px !important;
-                background: #2a2a2a !important;
-                border-top: 1px solid #333 !important;
-                display: flex !important;
-                justify-content: flex-end !important;
-            }
 
             .ce-insert-btn {
-                background: #667eea !important;
+                background: #2D9CDB !important;
                 color: white !important;
-                border: none !important;
+                border: 2px solid #c0c0c0 !important;
                 padding: 8px 16px !important;
                 border-radius: 6px !important;
                 cursor: pointer !important;
                 font-weight: 500 !important;
                 font-size: 14px !important;
                 transition: all 0.2s ease !important;
+                z-index: 1000001 !important;
+                position: absolute !important;
             }
 
             .ce-insert-btn:hover {
-                background: #5a6fd8 !important;
+                background: #1E7BB8 !important;
+                border-color: #e0e0e0 !important;
             }
 
             .ce-insert-btn:disabled {
@@ -375,7 +416,7 @@ class MagicalEnhancer {
         console.log('✨ AI Magic activated - scanning for inputs');
         
         // Save active state for page reloads
-        chrome.storage.local.set({ extension_active: true });
+        this.safeStorageSet({ extension_active: true });
         
         // Immediate scan for instant results
         this.scanForInputs(true);
@@ -433,7 +474,7 @@ class MagicalEnhancer {
         this.isActive = false;
         
         // Save inactive state
-        chrome.storage.local.set({ extension_active: false });
+        this.safeStorageSet({ extension_active: false });
         
         this.removeAllIcons();
         if (this.observer) {
@@ -722,8 +763,7 @@ class MagicalEnhancer {
             
             // Check if the input element is still visible and valid
             const rect = inputElement.getBoundingClientRect();
-            if (rect.width === 0 || rect.height === 0 || 
-                inputElement.closest('.ce-popup') ||
+            if (rect.width === 0 || rect.height === 0 ||
                 inputElement.hasAttribute('readonly') ||
                 inputElement.disabled) {
                 console.log('🧹 Removing icon for invalid/disabled input');
@@ -868,30 +908,47 @@ class MagicalEnhancer {
     }
 
     saveIconPosition(inputElement, left, top) {
-        const key = this.getInputKey(inputElement);
-        const position = { left, top, timestamp: Date.now() };
-        
-        chrome.storage.local.get(['iconPositions'], (result) => {
-            const positions = result.iconPositions || {};
-            positions[key] = position;
-            chrome.storage.local.set({ iconPositions: positions });
-        });
+        try {
+            const key = this.getInputKey(inputElement);
+            const position = { left, top, timestamp: Date.now() };
+            
+            this.safeStorageGet(['iconPositions'], (result) => {
+                if (!result) return;
+                
+                const positions = result.iconPositions || {};
+                positions[key] = position;
+                
+                this.safeStorageSet({ iconPositions: positions });
+            });
+        } catch (error) {
+            console.warn('⚠️ Error saving icon position:', error.message);
+        }
     }
 
     loadIconPosition(inputElement, callback) {
-        const key = this.getInputKey(inputElement);
-        
-        chrome.storage.local.get(['iconPositions'], (result) => {
-            const positions = result.iconPositions || {};
-            const position = positions[key];
+        try {
+            const key = this.getInputKey(inputElement);
             
-            // Use saved position if it's recent (within 1 hour)
-            if (position && (Date.now() - position.timestamp) < 3600000) {
-                callback(position.left, position.top);
-            } else {
-                callback(null, null);
-            }
-        });
+            this.safeStorageGet(['iconPositions'], (result) => {
+                if (!result) {
+                    callback(null, null);
+                    return;
+                }
+                
+                const positions = result.iconPositions || {};
+                const position = positions[key];
+                
+                // Use saved position if it's recent (within 1 hour)
+                if (position && (Date.now() - position.timestamp) < 3600000) {
+                    callback(position.left, position.top);
+                } else {
+                    callback(null, null);
+                }
+            });
+        } catch (error) {
+            console.warn('⚠️ Error loading icon position:', error.message);
+            callback(null, null);
+        }
     }
 
     getInputId(inputElement) {
@@ -979,42 +1036,226 @@ class MagicalEnhancer {
         const popup = document.createElement('div');
         popup.className = 'ce-popup';
         popup.innerHTML = `
-            <div class="ce-header ce-draggable">
-                <span class="ce-title">Enhanced Prompt</span>
-                <button class="ce-close-btn" title="Close">×</button>
-            </div>
             <div class="ce-content">
-                <div class="ce-loading">
-                    <div id="ce-popup-loading" style="margin: 0;"></div>
-                    <div style="margin: 0; color: #6b7280;">Great prompts take time</div>
+                <div class="ce-stream-container" id="stream-container">
+                    <div class="ce-stream-text" id="stream-text" style="font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;"></div>
                 </div>
+                <button class="ce-close-btn" title="Close" style="position: absolute; top: 12px; right: 12px;">×</button>
             </div>
-            <div class="ce-footer" style="display: none;">
-                <button class="ce-insert-btn" id="insert-btn">Insert</button>
-            </div>
+            <button class="ce-insert-btn" id="insert-btn" style="display: none; position: absolute; bottom: 16px; left: 16px; z-index: 1000001;">Insert</button>
         `;
-        
+
         document.body.appendChild(popup);
         this.activePopup = popup;
         this.positionPopup(popup, iconElement);
         this.makePopupDraggable(popup);
-        
+
         popup.querySelector('.ce-close-btn').onclick = () => {
             this.closePopup();
             iconElement.classList.remove('processing');
         };
 
-        // Add loading animation
-        const loadingElement = popup.querySelector('#ce-popup-loading');
-        loadingElement.innerHTML = '⏳';
-        loadingElement.style.animation = 'spin 1s linear infinite';
+        // Use REAL streaming for immediate response
+        this.startStreaming(inputElement, iconElement, inputText, popup);
+    }
 
-        // Start enhancement
+
+    showInsertButton(popup, finalText, inputElement) {
+        const insertBtn = popup.querySelector('#insert-btn');
+        if (insertBtn) {
+            insertBtn.style.display = 'block';
+            insertBtn.disabled = false;
+            insertBtn.textContent = 'Insert';
+
+            // Simple click handler - increment count when inserting
+            insertBtn.onclick = async () => {
+                // Insert the text
+                this.insertText(finalText, inputElement);
+                this.closePopup();
+                
+                // Increment count by making a simple API call
+                try {
+                    console.log('📊 Incrementing count after insert...');
+                    
+                    // Get user email
+                    const userData = await new Promise((resolve) => {
+                        chrome.storage.local.get(['user_info'], resolve);
+                    });
+                    const userEmail = userData.user_info?.email || '';
+                    
+                    if (userEmail) {
+                        // Send message to background to increment count
+                        chrome.runtime.sendMessage({
+                            action: 'increment_count',
+                            userEmail: userEmail
+                        });
+                    }
+                } catch (e) {
+                    console.error('❌ Failed to increment count:', e);
+                }
+            };
+
+            console.log('✅ Insert button ready');
+        }
+    }
+
+    async startStreaming(inputElement, iconElement, inputText, popup) {
+        console.log('🚀 SIMPLE: Starting API call for:', inputText.substring(0, 50) + '...');
+
+        const streamText = popup.querySelector('#stream-text');
+        if (!streamText) {
+            console.error('❌ Stream text container not found!');
+            return;
+        }
+
+        // Show loading
+        streamText.textContent = 'Enhancing your prompt...';
+
+        // Set up simple message listener
+        this.streamMessageListener = (message) => {
+            if (message.action === 'stream_chunk') {
+                const aiText = message.chunk?.data || '';
+                if (aiText) {
+                    streamText.textContent = aiText;
+                }
+            } else if (message.action === 'stream_complete') {
+                this.showInsertButton(popup, streamText.textContent, inputElement);
+            } else if (message.action === 'limit_reached') {
+                // User has reached daily limit - show upgrade modal
+                this.showUpgradeModal(popup, message.details);
+            } else if (message.action === 'stream_error') {
+                streamText.textContent = `Error: ${message.error}`;
+            }
+        };
+
+        // Add listener and make API call
+        chrome.runtime.onMessage.addListener(this.streamMessageListener);
+
         try {
-            const enhanced = await this.enhancePrompt(inputText);
-            this.showEnhancedResultWithAnimation(popup, enhanced, inputElement);
+            const targetModel = this.detectTargetModel();
+            const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+            
+            // Get user email from popup display (most reliable method)
+            let userEmail = '';
+            
+            try {
+                // Get email from popup display by reading the user email span
+                const popupEmail = await new Promise((resolve) => {
+                    chrome.runtime.sendMessage({action: 'get_user_email'}, (response) => {
+                        resolve(response?.email || '');
+                    });
+                });
+                userEmail = popupEmail;
+                console.log('📧 User email from popup:', userEmail);
+                console.log('🔍 DEBUGGING EMAIL FLOW:');
+                console.log('  - Email received:', userEmail);
+                console.log('  - Email length:', userEmail?.length);
+                console.log('  - Email type:', typeof userEmail);
+                console.log('  - Email is empty?', !userEmail);
+            } catch (popupError) {
+                console.warn('⚠️ Could not get email from popup:', popupError);
+                console.error('❌ EMAIL RETRIEVAL FAILED FROM POPUP!');
+            }
+            
+            // Fallback: try storage
+            if (!userEmail) {
+                try {
+                    const userData = await new Promise((resolve) => {
+                        chrome.storage.local.get(['user_info'], resolve);
+                    });
+                    userEmail = userData.user_info?.email || '';
+                    console.log('📧 User email from storage:', userEmail);
+                } catch (storageError) {
+                    console.warn('⚠️ Chrome storage not available:', storageError);
+                }
+            }
+            
+            if (!userEmail) {
+                console.error('❌ NO USER EMAIL FOUND! Enhancement will not be counted!');
+                console.error('🔍 DEBUGGING: Failed to get user email from any source');
+                console.error('🔍 DEBUGGING: This is the ROOT CAUSE of count not incrementing!');
+                // Don't proceed without user email
+                streamText.textContent = 'Error: User not logged in. Please refresh and try again.';
+                return;
+            }
+
+            console.log('✅ USER EMAIL FOUND! Proceeding with enhancement...');
+            console.log('🚀 CONTENT SCRIPT: About to send message to background');
+
+            // Check if background script is available
+            if (!chrome.runtime) {
+                console.error('❌ Chrome runtime not available');
+                streamText.textContent = 'Error: Extension not properly loaded. Please refresh the page.';
+                return;
+            }
+
+            // Test background script connectivity first
+            console.log('🏓 Testing background script connectivity...');
+            chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error('❌ Background script not responding to ping:', chrome.runtime.lastError);
+                    streamText.textContent = 'Error: Background script not running. Please refresh the page.';
+                    return;
+                }
+                console.log('✅ Background script is responsive:', response);
+            });
+
+            const messageData = {
+                action: 'stream_enhance',
+                apiUrl,
+                prompt: inputText,
+                targetModel,
+                userEmail: userEmail,
+                platform: targetModel,
+                idempotencyKey: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
+            };
+
+            console.log('📤 CONTENT SCRIPT: SENDING message:', {
+                action: messageData.action,
+                prompt: inputText.substring(0, 50) + '...',
+                userEmail: userEmail,
+                apiUrl: apiUrl
+            });
+            
+            // Add timeout for message sending
+            const messageTimeout = setTimeout(() => {
+                console.error('❌ CONTENT SCRIPT: Message timeout - background script not responding');
+                streamText.textContent = 'Error: Background script not responding. Please refresh the page.';
+            }, 5000);
+
+            chrome.runtime.sendMessage(messageData, (response) => {
+                clearTimeout(messageTimeout);
+                
+                if (chrome.runtime.lastError) {
+                    console.error('❌ CONTENT SCRIPT: Failed to send message:', chrome.runtime.lastError);
+                    console.error('❌ Error details:', chrome.runtime.lastError.message);
+                    streamText.textContent = 'Error: Failed to send request. Please try again.';
+                    return;
+                }
+
+                console.log('✅ CONTENT SCRIPT: Message sent successfully to background');
+                console.log('📨 CONTENT SCRIPT: Background response:', response);
+            });
+
         } catch (error) {
-            this.showEnhancedResultWithAnimation(popup, this.getFallbackEnhancement(inputText), inputElement);
+            console.error('❌ API call failed:', error);
+            streamText.textContent = 'Enhancement failed. Please try again.';
+        }
+    }
+
+
+
+    abortStreaming() {
+        if (this.isStreaming && this.currentStreamAbortController) {
+            console.log('🛑 Aborting stream...');
+            this.currentStreamAbortController.abort();
+            this.isStreaming = false;
+        }
+
+        // Remove stream listener
+        if (this.streamMessageListener) {
+            chrome.runtime.onMessage.removeListener(this.streamMessageListener);
+            this.streamMessageListener = null;
         }
     }
 
@@ -1074,17 +1315,129 @@ class MagicalEnhancer {
         console.log(`📍 Popup positioned CLOSE to icon - Icon center: ${(iconRect.left + iconRect.right)/2}, ${(iconRect.top + iconRect.bottom)/2} | Popup: ${left}, ${top}`);
     }
 
+    // This method is now deprecated - we use showFinalResult instead
+    showUpgradeModal(popup, details) {
+        console.log('🚫 Daily limit reached - showing upgrade modal');
+        
+        const content = popup.querySelector('.ce-content');
+        content.innerHTML = `
+            <div class="ce-upgrade-modal">
+                <div class="ce-upgrade-header">
+                    <h3>🎯 Daily Limit Reached!</h3>
+                </div>
+                <div class="ce-upgrade-body">
+                    <p>You've used all <strong>10 free prompts</strong> today.</p>
+                    <p>Upgrade to Pro for <strong>unlimited prompts</strong>!</p>
+                    <div class="ce-upgrade-features">
+                        <div class="ce-feature">✅ Unlimited daily prompts</div>
+                        <div class="ce-feature">✅ Priority processing</div>
+                        <div class="ce-feature">✅ Advanced AI models</div>
+                    </div>
+                    <div class="ce-upgrade-price">
+                        <span class="ce-price">$5<span class="ce-period">/month</span></span>
+                        <span class="ce-cancel">Cancel anytime</span>
+                    </div>
+                </div>
+                <div class="ce-upgrade-actions">
+                    <button class="ce-upgrade-btn" onclick="window.open('${window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000'}/api/v1/payment/checkout-page?order_id=temp&user_email=${details?.user_email || ''}', '_blank')">
+                        Upgrade to Pro
+                    </button>
+                    <button class="ce-cancel-btn" onclick="this.closest('.ce-popup').remove()">
+                        Maybe Later
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add styles for upgrade modal
+        const style = document.createElement('style');
+        style.textContent = `
+            .ce-upgrade-modal {
+                text-align: center;
+                padding: 20px;
+                max-width: 350px;
+            }
+            .ce-upgrade-header h3 {
+                color: #ff6b35;
+                margin: 0 0 15px 0;
+                font-size: 18px;
+            }
+            .ce-upgrade-body p {
+                margin: 10px 0;
+                color: #333;
+            }
+            .ce-upgrade-features {
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 15px 0;
+            }
+            .ce-feature {
+                color: #28a745;
+                margin: 5px 0;
+                font-size: 14px;
+            }
+            .ce-upgrade-price {
+                margin: 15px 0;
+            }
+            .ce-price {
+                font-size: 24px;
+                font-weight: bold;
+                color: #007bff;
+            }
+            .ce-period {
+                font-size: 14px;
+                color: #666;
+            }
+            .ce-cancel {
+                display: block;
+                color: #666;
+                font-size: 12px;
+                margin-top: 5px;
+            }
+            .ce-upgrade-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 20px;
+            }
+            .ce-upgrade-btn {
+                flex: 1;
+                background: #007bff;
+                color: white;
+                border: none;
+                padding: 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: bold;
+            }
+            .ce-upgrade-btn:hover {
+                background: #0056b3;
+            }
+            .ce-cancel-btn {
+                flex: 1;
+                background: #6c757d;
+                color: white;
+                border: none;
+                padding: 12px;
+                border-radius: 6px;
+                cursor: pointer;
+            }
+            .ce-cancel-btn:hover {
+                background: #545b62;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     async showEnhancedResultWithAnimation(popup, enhancedText, inputElement) {
         const content = popup.querySelector('.ce-content');
-        const footer = popup.querySelector('.ce-footer');
-        const insertBtn = popup.querySelector('#insert-btn');
-        
+
         // Stop processing animation
         const icon = this.icons.get(inputElement);
         if (icon) {
-                    icon.classList.remove('processing');
+            icon.classList.remove('processing');
         }
-        
+
         // Handle authentication error
         if (!enhancedText) {
             content.innerHTML = `
@@ -1096,25 +1449,96 @@ class MagicalEnhancer {
                     </div>
                 </div>
             `;
-            footer.style.display = 'none';
             return;
         }
-        
-        // Show enhanced result
-        footer.style.display = 'flex';
-        insertBtn.disabled = false;
-        
-        insertBtn.onclick = () => {
-            this.insertText(enhancedText, inputElement);
-            this.closePopup();
-            
-            // Stop processing after insertion
-            if (icon) {
-                icon.classList.remove('processing');
+
+        // Use the new optimized method
+        this.showFinalResult(content, enhancedText, inputElement, popup);
+    }
+    
+    animateTextWordByWord(container, text, onComplete = () => {}) {
+        console.log('🎬 Starting ultra-fast word-by-word animation for text:', text.substring(0, 50) + '...');
+
+        const words = text.split(' ');
+        let currentIndex = 0;
+
+        // Clear container content
+        container.innerHTML = '';
+
+        // Create the container for animated text
+        const textContainer = document.createElement('div');
+        textContainer.id = 'animated-text';
+        textContainer.style.cssText = 'font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;';
+        container.appendChild(textContainer);
+
+        const animateNextWord = () => {
+            if (currentIndex < words.length) {
+                const word = words[currentIndex];
+                const space = currentIndex < words.length - 1 ? ' ' : '';
+
+                // Add word with instant effect (no fade delay)
+                const wordSpan = document.createElement('span');
+                wordSpan.textContent = word + space;
+                wordSpan.style.opacity = '1'; // Start visible immediately
+                wordSpan.style.transition = 'none'; // Remove transition for instant effect
+
+                textContainer.appendChild(wordSpan);
+
+                currentIndex++;
+
+                // ULTRA FAST animation - 5ms between words (lightning fast!)
+                setTimeout(animateNextWord, 5);
+            } else {
+                console.log('✅ Word-by-word animation completed');
+                onComplete();
             }
         };
-        
-        content.innerHTML = `<div style="font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;">${enhancedText}</div>`;
+
+        // Start animation immediately
+        console.log(`🎬 Animating ${words.length} words at lightning speed`);
+        animateNextWord();
+
+        // Return promise that resolves when animation completes
+        return new Promise(resolve => {
+            const checkComplete = () => {
+                if (currentIndex >= words.length) {
+                    resolve();
+                } else {
+                    setTimeout(checkComplete, 10);
+                }
+            };
+            checkComplete();
+        });
+    }
+
+    showFinalResult(container, finalText, inputElement, popup) {
+        console.log('🎯 Showing final result with insert button');
+
+        // Create text container for final result
+        const textContainer = document.createElement('div');
+        textContainer.id = 'final-text';
+        textContainer.style.cssText = 'font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;';
+        textContainer.textContent = finalText;
+        container.appendChild(textContainer);
+
+        // Show insert button
+        const insertBtn = popup.querySelector('#insert-btn');
+        if (insertBtn) {
+            insertBtn.style.display = 'block';
+            insertBtn.disabled = false;
+            insertBtn.textContent = 'Insert';
+
+            // Remove any existing click handler
+            const newInsertBtn = insertBtn.cloneNode(true);
+            insertBtn.parentNode.replaceChild(newInsertBtn, insertBtn);
+
+            newInsertBtn.onclick = () => {
+                // Start API generation immediately when insert is clicked
+                this.startApiGenerationOnInsert();
+            };
+
+            console.log('✅ Insert button ready for final text - will start API generation on click');
+        }
     }
 
     async enhancePrompt(text) {
@@ -1140,17 +1564,41 @@ class MagicalEnhancer {
             const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
             const platform = this.detectTargetModel();
 
+            // Get user email directly from storage to ensure it's current
+            const userData = await new Promise((resolve) => {
+                chrome.storage.local.get(['user_info'], resolve);
+            });
+            const userEmail = userData.user_info?.email || '';
+            console.log('📧 User email for enhance_prompt:', userEmail);
+            console.log('📧 Full user data:', userData.user_info);
+            
+            if (!userEmail) {
+                console.error('❌ NO USER EMAIL FOUND! This will cause count issues!');
+                console.log('🔍 Available storage keys:', Object.keys(userData));
+            }
+            
+            console.log('🚀 CONTENT SCRIPT: Sending enhance_prompt message to background');
+            
             // Use background to perform the network call so content-script context invalidation cannot break it
             const data = await new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage({
+                const messageData = {
                     action: 'enhance_prompt',
                     apiUrl,
                     prompt: text,
                     targetModel,
-                    userEmail: (this.userInfo && this.userInfo.email) ? this.userInfo.email : '',
+                    userEmail: userEmail,
                     platform,
                     idempotencyKey
-                }, (resp) => {
+                };
+                
+                console.log('📤 CONTENT SCRIPT: Message data:', {
+                    action: messageData.action,
+                    userEmail: messageData.userEmail,
+                    promptLength: messageData.prompt?.length,
+                    apiUrl: messageData.apiUrl
+                });
+                
+                chrome.runtime.sendMessage(messageData, (resp) => {
                     if (chrome.runtime.lastError) {
                         reject(new Error(chrome.runtime.lastError.message));
                         return;
@@ -1478,32 +1926,37 @@ Additional context: Please structure your response in a clear, organized manner 
     }
 
     makePopupDraggable(popup) {
-        const header = popup.querySelector('.ce-header');
+        const content = popup.querySelector('.ce-content');
         let isDragging = false, startX, startY, startLeft, startTop;
-        header.style.cursor = 'move';
-        
-        header.onmousedown = (e) => {
+        content.style.cursor = 'move';
+
+        content.onmousedown = (e) => {
+            // Don't drag if clicking on buttons
+            if (e.target.closest('.ce-close-btn') || e.target.closest('.ce-insert-btn')) {
+                return;
+            }
+
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
             const rect = popup.getBoundingClientRect();
             startLeft = rect.left;
             startTop = rect.top;
-            
+
             document.onmousemove = (e2) => {
                 if (!isDragging) return;
                 let newLeft = startLeft + (e2.clientX - startX);
                 let newTop = startTop + (e2.clientY - startY);
-                
+
                 const popupWidth = popup.offsetWidth;
                 const popupHeight = popup.offsetHeight;
                 newLeft = Math.max(8, Math.min(window.innerWidth - popupWidth - 8, newLeft));
                 newTop = Math.max(8, Math.min(window.innerHeight - popupHeight - 8, newTop));
-                
+
                 popup.style.left = `${newLeft}px`;
                 popup.style.top = `${newTop}px`;
             };
-            
+
             document.onmouseup = () => {
                 isDragging = false;
                 document.onmousemove = null;

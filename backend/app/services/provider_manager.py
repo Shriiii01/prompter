@@ -2,8 +2,8 @@ import logging
 from typing import Dict, Optional
 from enum import Enum
 
-from app.services.openai import OpenAIService
-from app.services.gemini import GeminiService
+from app.services.openai_service import OpenAIService
+from app.services.gemini_service import GeminiService
 from app.core.config import config
 
 logger = logging.getLogger(__name__)

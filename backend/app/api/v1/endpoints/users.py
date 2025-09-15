@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
-from ....services.database import DatabaseService
+from ....utils.database import DatabaseService
 db_service = DatabaseService()
 
 logger = logging.getLogger(__name__)
@@ -73,29 +73,75 @@ async def create_user(request: UserCreateRequest):
 @router.get("/users/{email}")
 async def get_user_by_email(email: str):
     """
-    Get user by email address.
+    Get user by email address. Creates user if they don't exist.
     
     Args:
         email: User's email address
     
     Returns:
-        User data if found
+        User data (created if not found)
     """
     try:
         user = await db_service.get_user_stats(email)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            # User doesn't exist, create them
+            logger.info(f"User {email} not found, creating new user")
+            user_data = {
+                "email": email,
+                "name": "User",
+                "enhanced_prompts": 0
+            }
+            user = await db_service.get_or_create_user(email, user_data)
         
         return UserResponse(
             id=user["id"],
             email=user["email"],
-            name=user["name"],
-            enhanced_prompts=user["enhanced_prompts"],
-            created_at=user["created_at"]
+            name=user.get("name", "User"),
+            enhanced_prompts=user.get("enhanced_prompts", 0),
+            created_at=user.get("created_at", "")
         )
         
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Error getting user: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get user")
+        logger.error(f"Error getting/creating user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get/create user")
+
+@router.post("/users/{email}/increment", response_model=UserResponse)
+async def increment_user_count(email: str):
+    """
+    Increment user's enhanced prompts count.
+    
+    Args:
+        email: User's email address
+        
+    Returns:
+        Updated user data with new count
+    """
+    try:
+        logger.info(f"📊 Incrementing count for user: {email}")
+        
+        # Increment the count
+        new_count = await db_service.increment_user_prompts(email)
+        logger.info(f"✅ Count incremented to: {new_count}")
+        
+        # Get updated user data
+        user_data = await db_service.get_user_stats(email)
+        if not user_data:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User with email '{email}' not found"
+            )
+        
+        return UserResponse(
+            id=user_data.get('id', ''),
+            email=email,
+            name=user_data.get('name', 'User'),
+            enhanced_prompts=user_data.get('enhanced_prompts', 0),
+            created_at=user_data.get('created_at', '')
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to increment count for {email}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to increment count: {str(e)}"
+        )

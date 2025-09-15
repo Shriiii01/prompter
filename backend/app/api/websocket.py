@@ -64,9 +64,9 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     
     enhancer = PromptEnhancer(
-                    openai_key=config.settings.openai_api_key,
-            anthropic_key=config.settings.anthropic_api_key,
-            google_key=config.settings.google_api_key
+        openai_key=config.settings.openai_api_key,
+        anthropic_key=config.settings.anthropic_api_key,
+        google_key=config.settings.google_api_key
     )
     
     try:
