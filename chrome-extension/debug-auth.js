@@ -326,7 +326,7 @@ class AuthDebugger {
         this.log('Testing OAuth Flow...', 'info');
         
         try {
-            const clientId = null; // OAuth2 disabled - using simple auth
+            const clientId = '20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com';
             const scopes = ['openid', 'email', 'profile'];
             
             const authUrl = `https://accounts.google.com/o/oauth2/auth?` +

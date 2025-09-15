@@ -8,8 +8,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Google OAuth configuration (disabled - using simple auth)
-GOOGLE_CLIENT_ID = None
+# Google OAuth configuration
+GOOGLE_CLIENT_ID = "20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com"
 
 def get_email_from_token(authorization: str) -> str:
     """
