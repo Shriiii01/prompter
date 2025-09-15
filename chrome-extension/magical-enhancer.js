@@ -493,6 +493,10 @@ class MagicalEnhancer {
             console.log('🔍 Scanning Perplexity AI for input fields...');
             console.log('🔍 Current URL:', window.location.href);
         }
+        if (window.location.hostname.includes('meta.ai')) {
+            console.log('🔍 Scanning Meta AI for input fields...');
+            console.log('🔍 Current URL:', window.location.href);
+        }
 
         // Optimized selectors for faster detection - focus on main chat inputs only
         const selectors = [
@@ -504,11 +508,19 @@ class MagicalEnhancer {
             'div[contenteditable="true"][data-placeholder*="Talk with Claude"]',
             // Gemini main input  
             'textarea[placeholder*="Enter a prompt here"]',
-            // Perplexity main input - enhanced selectors
+            // Perplexity main input - comprehensive selectors
             'textarea[placeholder*="Ask anything"]',
             'textarea[placeholder*="Ask anything or @mention"]',
+            'textarea[placeholder*="Ask anything or @mention a Space"]',
             'textarea[data-testid*="composer"]',
             'div[contenteditable="true"][role="textbox"]',
+            'div[contenteditable="true"][aria-label*="Ask anything"]',
+            // Meta AI main input - comprehensive selectors
+            'textarea[placeholder*="Ask Meta AI"]',
+            'textarea[placeholder*="Ask anything"]',
+            'div[contenteditable="true"][role="textbox"]',
+            'div[contenteditable="true"][aria-label*="Ask Meta AI"]',
+            'textarea[data-testid*="composer"]',
             // Generic main chat inputs (as fallback)
             'textarea[data-testid*="composer"]',
             'div[contenteditable="true"]:not([role="textbox"]):not([aria-label*="search"])'

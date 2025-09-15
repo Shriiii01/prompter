@@ -16,6 +16,7 @@
         "https://claude.ai/*",
         "https://gemini.google.com/*",
         "https://perplexity.ai/*",
+        "https://meta.ai/*",
         "https://poe.com/*"
     ],
     "content_scripts": [
@@ -26,6 +27,7 @@
                 "https://claude.ai/*",
                 "https://gemini.google.com/*",
                 "https://perplexity.ai/*",
+                "https://meta.ai/*",
                 "https://poe.com/*"
             ],
             "js": ["magical-enhancer.js"],
@@ -33,7 +35,7 @@
         }
     ],
     "background": {
-        "service_worker": "background-simple.js"
+        "service_worker": "background.js"
     },
     "action": {
         "default_popup": "popup.html",
@@ -50,4 +52,12 @@
         "48": "icons/icon48.png",
         "128": "icons/icon128.png"
     },
+    "oauth2": {
+        "client_id": "20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com",
+        "scopes": [
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "openid"
+        ]
+    }
 }
