@@ -3,9 +3,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
     // Wait for config to be available
-
     let configLoadAttempts = 0;
-    const maxAttempts = 20; // Wait up to 2 seconds
+    const maxAttempts = 50; // Wait up to 5 seconds
     
     while (!window.CONFIG && configLoadAttempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -13,9 +12,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (window.CONFIG) {
-
+        console.log('✅ CONFIG loaded successfully');
     } else {
-
+        console.warn('⚠️ CONFIG not loaded, using fallback');
+        // Create fallback config
+        window.CONFIG = {
+            getApiUrl: () => 'http://localhost:8000'
+        };
     }
     
     // Get elements
@@ -611,7 +614,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Payment Manager Class
     class PaymentManager {
         constructor() {
-            this.apiBaseUrl = CONFIG.getApiUrl();
+            this.apiBaseUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
             this.currentUserEmail = null;
             this.subscriptionStatus = 'free';
         }

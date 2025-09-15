@@ -46,10 +46,16 @@ class PaymentService:
             raise Exception("Razorpay client not initialized")
         
         try:
+            # Create a short receipt ID (max 40 chars for Razorpay)
+            # Use first 8 chars of email + timestamp for uniqueness
+            email_prefix = user_email.split('@')[0][:8]  # First 8 chars before @
+            timestamp = int(datetime.now().timestamp())
+            receipt_id = f'sub_{email_prefix}_{timestamp}'[:40]  # Ensure max 40 chars
+            
             order_data = {
                 'amount': amount,  # Amount in cents
                 'currency': 'USD',
-                'receipt': f'sub_{user_email}_{int(datetime.now().timestamp())}',
+                'receipt': receipt_id,
                 'notes': {
                     'user_email': user_email,
                     'subscription_type': 'monthly_pro',
