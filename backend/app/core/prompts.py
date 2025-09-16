@@ -85,6 +85,7 @@ Rules:
 - Clear deliverables
 - Structured output requirements
 - Include validation criteria
+- Use clean, professional formatting without special symbols
 
 CRITICAL: Output ONLY the enhanced prompt. No meta-commentary, no explanations, no "Intent detection:". Just the transformed prompt.''',
 
@@ -93,18 +94,14 @@ CRITICAL: Output ONLY the enhanced prompt. No meta-commentary, no explanations, 
 ENHANCEMENT PATTERN:
 Raw input → Intent extraction → Claude optimization
 
-Add:
+Create a well-structured prompt that includes:
+- Clear objective statement
 - Rich context about why this matters
-- Clear thinking framework
 - Step-by-step approach
-- Specific output format
-- Polite, natural tone
+- Specific output format requirements
+- Polite, conversational tone
 
-Structure complex requests with:
-<objective>[goal]</objective>
-<context>[background]</context>
-<requirements>[specifics]</requirements>
-
+Structure the prompt with clear sections and proper formatting. Use clean, professional language without XML tags or special symbols.
 CRITICAL: Output ONLY the enhanced prompt. No meta-commentary, no explanations, no "Intent detection:". Just the transformed prompt.''',
 
             "gemini": '''You enhance prompts for Gemini. Make them clear and action-oriented.

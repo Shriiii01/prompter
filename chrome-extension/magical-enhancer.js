@@ -27,12 +27,44 @@ class MagicalEnhancer {
         this.listenForMessages();
         this.setupGlobalListeners();
         this.checkLoginStatus();
+
+        // CRITICAL FIX: Ensure authentication works across tabs
+        this.initializeCrossTabAuth();
         
         // Check if extension was already active before page reload
         this.checkAndRestoreActiveState();
         
         // Don't auto-activate - wait for toggle button (unless already active)
 
+    }
+
+    // CRITICAL FIX: Ensure authentication works seamlessly across tabs
+    async initializeCrossTabAuth() {
+        try {
+            // Check if user is globally authenticated
+            const userData = await new Promise((resolve) => {
+                chrome.storage.local.get(['user_info'], resolve);
+            });
+
+            if (userData.user_info?.email) {
+                console.log('✅ User authenticated globally:', userData.user_info.email);
+                // User is authenticated, extension should work on any supported platform
+            } else {
+                console.log('⚠️ User not authenticated globally - will prompt for login when needed');
+            }
+
+            // Listen for authentication changes across tabs
+            chrome.storage.onChanged.addListener((changes, namespace) => {
+                if (namespace === 'local' && changes.user_info) {
+                    console.log('🔄 Authentication state changed across tabs');
+                    // Refresh extension state when authentication changes
+                    this.checkLoginStatus();
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Cross-tab auth initialization failed:', error);
+        }
     }
 
     // Safe storage utility methods
@@ -763,7 +795,7 @@ class MagicalEnhancer {
             const icon = document.createElement('button');
             icon.className = 'ce-icon';
             icon.innerHTML = this.createPLogo();
-            icon.title = 'Enhance with PromptGrammerly';
+            icon.title = 'Improve with PromptGrammerly';
             icon.setAttribute('data-input-id', inputId);
             
             // Fast positioning - immediate placement without complex calculations
@@ -1040,7 +1072,8 @@ class MagicalEnhancer {
             return;
         }
 
-        // Check if user has reached daily limit BEFORE starting enhancement
+        // CRITICAL SAFETY CHECK: Prevent API calls if user has exceeded limit
+        // This is a MONEY-SAVING measure - NEVER make API calls for exceeded users
         try {
             const userData = await new Promise((resolve) => {
                 chrome.storage.local.get(['user_info', 'last_known_prompt_count'], resolve);
@@ -1049,16 +1082,20 @@ class MagicalEnhancer {
             const promptCount = userData.last_known_prompt_count || 0;
             const userTier = userData.user_info?.subscription_tier || 'free';
 
-            // If free user and has used 10+ prompts, show notification and return
-            if (userTier === 'free' && promptCount >= 10) {
-
+            // 🚨 CRITICAL MONEY PROTECTION: Block at 7+ prompts for free users (3 buffer for sync issues)
+            // This prevents ANY API calls that could waste money due to local storage being stale
+            if (userTier === 'free' && promptCount >= 7) {
+                console.log(`🚨 MONEY PROTECTION ACTIVATED: Free user at ${promptCount}/10 prompts - BLOCKING API call to prevent waste`);
                 this.showLimitNotification(inputElement);
                 icon.classList.remove('processing');
                 return;
             }
         } catch (error) {
-
-            // Continue with enhancement if we can't check limit
+            console.error('❌ Limit check failed:', error);
+            // If we can't check limits, BLOCK the request to be safe (money protection)
+            this.showLimitNotification(inputElement);
+            icon.classList.remove('processing');
+            return;
         }
 
         if (this.activePopup) {
@@ -1190,39 +1227,49 @@ class MagicalEnhancer {
             const targetModel = this.detectTargetModel();
             const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
             
-            // Get user email from popup display (most reliable method)
+            // Get user email from storage (most reliable method)
             let userEmail = '';
             
             try {
-                // Get email from popup display by reading the user email span
-                const popupEmail = await new Promise((resolve) => {
-                    chrome.runtime.sendMessage({action: 'get_user_email'}, (response) => {
-                        resolve(response?.email || '');
-                    });
+                // Always try storage first - it's the most reliable
+                const userData = await new Promise((resolve) => {
+                    chrome.storage.local.get(['user_info'], resolve);
                 });
-                userEmail = popupEmail;
+                userEmail = userData.user_info?.email || '';
 
-            } catch (popupError) {
-
+            } catch (storageError) {
+                console.error('Storage error:', storageError);
             }
             
-            // Fallback: try storage
+            // Fallback: try popup display (only if storage failed)
             if (!userEmail) {
                 try {
-                    const userData = await new Promise((resolve) => {
-                        chrome.storage.local.get(['user_info'], resolve);
+                    const popupEmail = await new Promise((resolve) => {
+                        chrome.runtime.sendMessage({action: 'get_user_email'}, (response) => {
+                            resolve(response?.email || '');
+                        });
                     });
-                    userEmail = userData.user_info?.email || '';
+                    userEmail = popupEmail;
 
-                } catch (storageError) {
-
+                } catch (popupError) {
+                    console.error('Popup email error:', popupError);
                 }
             }
             
             if (!userEmail) {
+                console.error('No user email found in storage or popup');
+                // CRITICAL FIX: Instead of showing error, redirect to login flow
+                // This fixes the cross-tab switching issue by ensuring user is always logged in
+                streamText.textContent = '🔐 Please sign in first. Opening login...';
 
-                // Don't proceed without user email
-                streamText.textContent = 'Error: User not logged in. Please refresh and try again.';
+                // Open popup to trigger login
+                setTimeout(() => {
+                    chrome.runtime.sendMessage({ action: 'open_popup_for_login' }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            streamText.textContent = '❌ Login failed. Please click the extension icon to sign in manually.';
+                        }
+                    });
+                }, 1000);
                 return;
             }
 
@@ -1233,7 +1280,8 @@ class MagicalEnhancer {
                 return;
             }
 
-            // FINAL CHECK: Verify limit before making API call
+            // DOUBLE SAFETY CHECK: FINAL VERIFICATION before API call
+            // This is the LAST LINE OF DEFENSE against money-wasting API calls
             const finalCheckData = await new Promise((resolve) => {
                 chrome.storage.local.get(['user_info', 'last_known_prompt_count'], resolve);
             });
@@ -1241,7 +1289,9 @@ class MagicalEnhancer {
             const finalPromptCount = finalCheckData.last_known_prompt_count || 0;
             const finalUserTier = finalCheckData.user_info?.subscription_tier || 'free';
 
-            if (finalUserTier === 'free' && finalPromptCount >= 10) {
+            // 🚨 MAXIMUM MONEY PROTECTION: Block at 6+ prompts for free users (4 buffer for any sync issues)
+            if (finalUserTier === 'free' && finalPromptCount >= 6) {
+                console.log(`🚨 MAXIMUM PROTECTION: Free user at ${finalPromptCount}/10 prompts - EMERGENCY API BLOCK!`);
 
                 this.showLimitNotification(inputElement);
                 streamText.textContent = 'Daily limit reached! Upgrade to Pro for unlimited prompts.';
@@ -1249,14 +1299,13 @@ class MagicalEnhancer {
             }
 
             // Test background script connectivity first
-
             chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
                 if (chrome.runtime.lastError) {
-
-                    streamText.textContent = 'Error: Background script not running. Please refresh the page.';
+                    console.error('Background script not available:', chrome.runtime.lastError);
+                    streamText.textContent = 'Error: Extension not responding. Please reload the extension and refresh the page.';
                     return;
                 }
-
+                console.log('Background script is running');
             });
 
             const messageData = {
@@ -1279,8 +1328,8 @@ class MagicalEnhancer {
                 clearTimeout(messageTimeout);
                 
                 if (chrome.runtime.lastError) {
-
-                    streamText.textContent = 'Error: Failed to send request. Please try again.';
+                    console.error('Runtime error:', chrome.runtime.lastError);
+                    streamText.textContent = 'Error: Extension not responding. Please refresh the page and try again.';
                     return;
                 }
 
@@ -1740,33 +1789,27 @@ Additional context: Please structure your response in a clear, organized manner 
     }
 
     formatText(text) {
-        // Clean and format the enhanced prompt for better readability
+        // 🚨 CRITICAL FIX: Preserve AI-generated structure instead of flattening it
+        // The AI generates structured prompts with sections - we must keep this structure!
+
         let formatted = text.trim();
-        
-        // Remove excessive whitespace and normalize line breaks
-        formatted = formatted.replace(/\s+/g, ' ');
-        formatted = formatted.replace(/\n\s*\n/g, '\n\n');
-        
-        // Add proper spacing around common formatting elements
-        formatted = formatted.replace(/([.!?])\s*([A-Z])/g, '$1 $2');
-        formatted = formatted.replace(/:\s*/g, ': ');
-        formatted = formatted.replace(/,\s*/g, ', ');
-        
-        // Handle numbered lists
-        formatted = formatted.replace(/(\d+\.)\s*/g, '\n$1 ');
-        
-        // Handle bullet points
-        formatted = formatted.replace(/(\*|-|\•)\s*/g, '\n• ');
-        
-        // Handle section headers (words ending with colon)
-        formatted = formatted.replace(/\n([A-Z][^:\n]*:)/g, '\n\n$1');
-        
-        // Clean up multiple consecutive newlines
+
+        // ONLY do minimal cleanup - preserve the AI's intentional structure
+        // Remove ONLY excessive consecutive newlines (3+ becomes 2)
         formatted = formatted.replace(/\n{3,}/g, '\n\n');
-        
-        // Ensure the text starts cleanly
+
+        // Clean up trailing/leading whitespace on lines but keep structure
+        formatted = formatted.replace(/^\s+|\s+$/gm, '');
+
+        // Remove completely empty lines but keep single newlines between sections
+        formatted = formatted.replace(/\n\s*\n\s*\n/g, '\n\n');
+
+        // Ensure it doesn't start with newlines
         formatted = formatted.replace(/^\n+/, '');
-        
+
+        // 🚨 KEY FIX: Return the text AS-IS from AI
+        // The AI already generates perfectly structured prompts with sections
+        // We should NOT reformat or flatten them!
         return formatted;
     }
 
@@ -1779,24 +1822,20 @@ Additional context: Please structure your response in a clear, organized manner 
             inputElement.dispatchEvent(new Event('input', { bubbles: true }));
             inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (inputElement.contentEditable === 'true') {
-            // For contentEditable elements, preserve formatting better
-            const lines = formattedText.split('\n');
-            const formattedHTML = lines.map(line => {
-                if (line.trim() === '') return '<br>';
-                if (line.startsWith('• ')) {
-                    return `<div style="margin: 4px 0;">• ${line.substring(2)}</div>`;
-                }
-                if (/^\d+\.\s/.test(line)) {
-                    return `<div style="margin: 4px 0;">${line}</div>`;
-                }
-                if (line.includes(':') && line.split(':')[0].length < 50) {
-                    return `<div style="margin: 8px 0; font-weight: 500;">${line}</div>`;
-                }
-                return `<div style="margin: 4px 0;">${line}</div>`;
-            }).join('');
-            
-            inputElement.innerHTML = formattedHTML;
+            // 🚨 CRITICAL FIX: For contentEditable elements, preserve EXACT AI structure
+            // Do NOT flatten or reformat - the AI generates perfect structure
+
+            // Only minimal cleanup: remove excessive consecutive newlines
+            const cleanedText = formattedText
+                .replace(/\n{4,}/g, '\n\n\n') // Keep max 3 newlines between sections
+                .replace(/^\s+|\s+$/g, ''); // Trim start/end only
+
+            // Insert as plain text to preserve ALL formatting and structure
+            inputElement.textContent = cleanedText;
             inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+
+            // Force the element to recognize the structure change
+            inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         }
         
         inputElement.focus();

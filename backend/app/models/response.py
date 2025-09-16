@@ -1,5 +1,5 @@
 """
-Response models for the PromptGrammerly Prompt Enhancer API
+Response models for the PromptGrammerly API
 """
 
 from datetime import datetime
