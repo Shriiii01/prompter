@@ -146,6 +146,54 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const { apiUrl, prompt, targetModel, userEmail, platform, idempotencyKey } = request;
                 const tabId = sender?.tab?.id || 0;
 
+                // Store the requesting tab ID globally so we can respond to it later
+                // This fixes cross-tab switching issues
+                globalThis.activeEnhancementTabId = tabId;
+
+                // 🚨 CRITICAL MONEY PROTECTION: Backend double-check before making expensive API calls
+                if (userEmail) {
+                    try {
+                        // Quick check of user status before proceeding
+                        const statusCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (statusCheck.ok) {
+                            const userStatus = await statusCheck.json();
+                            const dailyUsed = userStatus.daily_prompts_used || 0;
+                            const dailyLimit = userStatus.daily_limit || 10;
+                            const userTier = userStatus.subscription_tier || 'free';
+
+                            // 🚨 EMERGENCY BACKEND BLOCK: If user has used 9+ of 10 prompts, block API call
+                            if (userTier === 'free' && dailyUsed >= 9) {
+                                console.error(`🚨 BACKEND BLOCK: Free user ${userEmail} at ${dailyUsed}/${dailyLimit} prompts - BLOCKING API CALL!`);
+
+                                const targetTabId = globalThis.activeEnhancementTabId || tabId;
+                                chrome.tabs.sendMessage(targetTabId, {
+                                    action: 'limit_reached',
+                                    details: {
+                                        user_email: userEmail,
+                                        daily_prompts_used: dailyUsed,
+                                        daily_limit: dailyLimit,
+                                        subscription_tier: userTier
+                                    }
+                                });
+                                return;
+                            }
+
+                            console.log(`✅ Backend check passed: ${userEmail} at ${dailyUsed}/${dailyLimit} prompts`);
+                        } else {
+                            console.warn(`⚠️ Could not verify user status: ${statusCheck.status}`);
+                        }
+                    } catch (statusError) {
+                        console.error('❌ Backend status check failed:', statusError);
+                        // Continue with request even if check fails (don't block due to network issues)
+                    }
+                }
+
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 45000); // Longer timeout for streaming
 
@@ -200,8 +248,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 if (dataStr === '[DONE]') {
 
                                     // Send completion signal to content script
-
-                                    chrome.tabs.sendMessage(tabId, {
+                                    // Use stored tab ID to handle cross-tab switching
+                                    const targetTabId = globalThis.activeEnhancementTabId || tabId;
+                                    chrome.tabs.sendMessage(targetTabId, {
                                         action: 'stream_complete'
                                     });
                                     break;
@@ -224,8 +273,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                     
                                     // Handle limit reached
                                     if (chunk.type === 'limit_reached') {
-
-                                        chrome.tabs.sendMessage(tabId, {
+                                        // Use stored tab ID to handle cross-tab switching
+                                        const targetTabId = globalThis.activeEnhancementTabId || tabId;
+                                        chrome.tabs.sendMessage(targetTabId, {
                                             action: 'limit_reached',
                                             details: {
                                                 user_email: userEmail,
@@ -236,10 +286,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         });
                                         return; // Stop processing stream
                                     }
-                                    
-                                    // Forward chunk to content script immediately
 
-                                    chrome.tabs.sendMessage(tabId, {
+                                    // Forward chunk to content script immediately
+                                    // Use stored tab ID to handle cross-tab switching
+                                    const targetTabId = globalThis.activeEnhancementTabId || tabId;
+                                    chrome.tabs.sendMessage(targetTabId, {
                                         action: 'stream_chunk',
                                         chunk: chunk
                                     });
@@ -263,6 +314,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }
         })();
         return true; // Keep channel open for async response
+    }
+
+    // Open popup for login when user needs to authenticate
+    if (request.action === 'open_popup_for_login') {
+        chrome.action.openPopup().catch((error) => {
+            console.error('Failed to open popup:', error);
+        });
+        sendResponse({ success: true });
+        return true;
     }
 
     // Get user email from popup

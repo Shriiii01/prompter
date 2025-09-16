@@ -107,22 +107,22 @@ async def enhance_prompt_stream(
         logger.info(f"👤 User email: {user_email}")
         logger.info(f"🎯 Target model: {request.model}")
         
-        # Check user limits before processing
+        # Check user limits BEFORE processing (CRITICAL FIX)
         if user_email:
             try:
-                # Record enhancement attempt and check limits
-                result = await db_service.record_enhancement_atomic(
-                    email=user_email,
-                    idempotency_key=f"stream_{int(time.time() * 1000)}",
-                    platform='chatgpt'  # Default platform
-                )
+                # Check current user status WITHOUT incrementing count
+                user_status = await db_service.check_user_subscription_status(user_email)
+                daily_used = user_status.get('daily_prompts_used', 0)
+                daily_limit = user_status.get('daily_limit', 10)
+                user_tier = user_status.get('subscription_tier', 'free')
                 
-                if result.get('limit_reached', False):
-                    logger.warning(f"⚠️ User {user_email} has reached daily limit")
+                # Check if user has reached daily limit
+                if user_tier == 'free' and daily_used >= daily_limit:
+                    logger.warning(f"⚠️ User {user_email} has reached daily limit: {daily_used}/{daily_limit}")
                     
-                    # Send limit_reached as streaming response
+                    # Send limit_reached as streaming response WITHOUT making API calls
                     async def limit_reached_stream():
-                        yield f"data: {json.dumps({'type': 'limit_reached', 'data': {'daily_prompts_used': result.get('daily_prompts_used', 0), 'daily_limit': 10, 'subscription_tier': result.get('subscription_tier', 'free')}})}\n\n"
+                        yield f"data: {json.dumps({'type': 'limit_reached', 'data': {'daily_prompts_used': daily_used, 'daily_limit': daily_limit, 'subscription_tier': user_tier}})}\n\n"
                         yield f"data: [DONE]\n\n"
                     
                     return StreamingResponse(
@@ -135,7 +135,7 @@ async def enhance_prompt_stream(
                         }
                     )
                 
-                logger.info(f"✅ User {user_email} has {10 - result.get('daily_prompts_used', 0)} prompts remaining")
+                logger.info(f"✅ User {user_email} has {daily_limit - daily_used} prompts remaining")
                 
             except Exception as e:
                 logger.warning(f"⚠️ Failed to check user limits: {e}")
@@ -154,6 +154,19 @@ async def enhance_prompt_stream(
                 
                 # Send completion signal
                 yield f"data: {json.dumps({'type': 'complete', 'data': ''})}\n\n"
+                
+                # ONLY NOW increment the count after successful enhancement
+                if user_email:
+                    try:
+                        result = await db_service.record_enhancement_atomic(
+                            email=user_email,
+                            idempotency_key=f"stream_{int(time.time() * 1000)}",
+                            platform='chatgpt'
+                        )
+                        # Send updated count
+                        yield f"data: {json.dumps({'type': 'count_update', 'data': result.get('enhanced_prompts', 0)})}\n\n"
+                    except Exception as e:
+                        logger.error(f"❌ Failed to increment count: {e}")
                 
             except Exception as e:
                 logger.error(f"❌ Streaming error: {str(e)}")

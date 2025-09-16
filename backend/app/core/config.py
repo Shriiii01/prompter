@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     
     # Application
-    app_name: str = "PromptGrammerly Prompt Enhancer"
+    app_name: str = "PromptGrammerly"
     app_version: str = "2.0.4"
     
     # Server

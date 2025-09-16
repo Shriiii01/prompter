@@ -184,10 +184,10 @@ class AdvancedRateLimiter:
         """Main rate limiting middleware"""
         start_time = time.time()
         
-        # Skip rate limiting for authentication, sign-in, and user endpoints
+        # Skip rate limiting for authentication, sign-in, user, and payment endpoints
         auth_endpoints = [
             "/api/v1/auth",
-            "/api/v1/signin", 
+            "/api/v1/signin",
             "/api/v1/sign-in",
             "/api/v1/login",
             "/api/v1/oauth",
@@ -195,6 +195,12 @@ class AdvancedRateLimiter:
             "/api/v1/users",  # ADD THIS - NO RATE LIMITING FOR USER ENDPOINTS!
             "/api/v1/user/stats",
             "/api/v1/user/count",
+            "/api/v1/payment",  # CRITICAL: NO RATE LIMITING FOR PAYMENT ENDPOINTS!
+            "/api/v1/payment/create-order",
+            "/api/v1/payment/verify",
+            "/api/v1/payment/webhook",
+            "/api/v1/payment/checkout-page",
+            "/api/v1/payment/subscription-status",
             "/health",
             "/api/v1/health"
         ]

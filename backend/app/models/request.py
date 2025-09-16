@@ -1,5 +1,5 @@
 """
-Request models for the PromptGrammerly Prompt Enhancer API
+Request models for the PromptGrammerly API
 """
 
 from enum import Enum
