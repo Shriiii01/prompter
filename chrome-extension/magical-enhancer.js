@@ -1072,30 +1072,52 @@ class MagicalEnhancer {
             return;
         }
 
-        // CRITICAL SAFETY CHECK: Prevent API calls if user has exceeded limit
-        // This is a MONEY-SAVING measure - NEVER make API calls for exceeded users
+        // 🚨 SMART LIMIT CHECK: Get real daily usage from backend before blocking
         try {
             const userData = await new Promise((resolve) => {
-                chrome.storage.local.get(['user_info', 'last_known_prompt_count'], resolve);
+                chrome.storage.local.get(['user_info'], resolve);
             });
 
-            const promptCount = userData.last_known_prompt_count || 0;
             const userTier = userData.user_info?.subscription_tier || 'free';
 
-            // 🚨 CRITICAL MONEY PROTECTION: Block at 7+ prompts for free users (3 buffer for sync issues)
-            // This prevents ANY API calls that could waste money due to local storage being stale
-            if (userTier === 'free' && promptCount >= 7) {
-                console.log(`🚨 MONEY PROTECTION ACTIVATED: Free user at ${promptCount}/10 prompts - BLOCKING API call to prevent waste`);
-                this.showLimitNotification(inputElement);
-                icon.classList.remove('processing');
-                return;
+            // For FREE users, ALWAYS check real daily usage from backend
+            if (userTier === 'free' && userEmail) {
+                try {
+                    const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+                    const statusCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: AbortSignal.timeout(3000) // 3 second timeout
+                    });
+
+                    if (statusCheck.ok) {
+                        const userStatus = await statusCheck.json();
+                        const dailyUsed = userStatus.daily_prompts_used || 0;
+                        const dailyLimit = userStatus.daily_limit || 10;
+
+                        console.log(`📊 Real daily check: ${dailyUsed}/${dailyLimit} prompts used by ${userEmail}`);
+
+                        // Only block if actually at limit (9+ used = would exceed on 10th)
+                        if (dailyUsed >= 9) {
+                            console.log(`🚨 LIMIT REACHED: Blocking at ${dailyUsed}/${dailyLimit} prompts`);
+                            this.showLimitNotification(inputElement);
+                            icon.classList.remove('processing');
+                            return;
+                        }
+
+                        // User has prompts remaining - allow
+                        console.log(`✅ ALLOWED: ${dailyLimit - dailyUsed} prompts remaining`);
+                    } else {
+                        console.warn('⚠️ Backend status check failed, allowing request (backend will enforce)');
+                    }
+                } catch (backendError) {
+                    console.warn('⚠️ Backend check failed:', backendError.message);
+                    // Allow request if backend check fails - backend will still enforce limits
+                }
             }
         } catch (error) {
-            console.error('❌ Limit check failed:', error);
-            // If we can't check limits, BLOCK the request to be safe (money protection)
-            this.showLimitNotification(inputElement);
-            icon.classList.remove('processing');
-            return;
+            console.error('❌ Frontend limit check error:', error);
+            // Allow request on error - backend safety net will catch it
         }
 
         if (this.activePopup) {
@@ -1289,13 +1311,32 @@ class MagicalEnhancer {
             const finalPromptCount = finalCheckData.last_known_prompt_count || 0;
             const finalUserTier = finalCheckData.user_info?.subscription_tier || 'free';
 
-            // 🚨 MAXIMUM MONEY PROTECTION: Block at 6+ prompts for free users (4 buffer for any sync issues)
-            if (finalUserTier === 'free' && finalPromptCount >= 6) {
-                console.log(`🚨 MAXIMUM PROTECTION: Free user at ${finalPromptCount}/10 prompts - EMERGENCY API BLOCK!`);
+            // 🚨 FINAL SAFETY CHECK: Only block if actually at limit
+            if (finalUserTier === 'free' && userEmail) {
+                try {
+                    const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+                    const finalCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: AbortSignal.timeout(2000)
+                    });
 
-                this.showLimitNotification(inputElement);
-                streamText.textContent = 'Daily limit reached! Upgrade to Pro for unlimited prompts.';
-                return;
+                    if (finalCheck.ok) {
+                        const finalStatus = await finalCheck.json();
+                        const finalDailyUsed = finalStatus.daily_prompts_used || 0;
+
+                        // Only block if actually at 9+ prompts (would exceed limit)
+                        if (finalDailyUsed >= 9) {
+                            console.log(`🚨 FINAL BLOCK: User at ${finalDailyUsed}/10 prompts - stopping`);
+                            this.showLimitNotification(inputElement);
+                            streamText.textContent = 'Daily limit reached! Upgrade to Pro for unlimited prompts.';
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Final limit check failed:', e.message);
+                    // Allow if check fails - backend will enforce
+                }
             }
 
             // Test background script connectivity first
