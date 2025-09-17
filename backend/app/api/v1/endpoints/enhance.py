@@ -138,8 +138,21 @@ async def enhance_prompt_stream(
                 logger.info(f"✅ User {user_email} has {daily_limit - daily_used} prompts remaining")
                 
             except Exception as e:
-                logger.warning(f"⚠️ Failed to check user limits: {e}")
-                # Continue with enhancement even if limit check fails
+                logger.error(f"❌ Failed to check user limits: {e} - BLOCKING for safety")
+                # BLOCK the request when limit check fails - better safe than sorry
+                async def error_limit_stream():
+                    yield f"data: {json.dumps({'type': 'limit_reached', 'data': {'daily_prompts_used': 10, 'daily_limit': 10, 'subscription_tier': 'free'}})}\n\n"
+                    yield f"data: [DONE]\n\n"
+                
+                return StreamingResponse(
+                    error_limit_stream(),
+                    media_type="text/plain",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "Connection": "keep-alive",
+                        "X-Accel-Buffering": "no"
+                    }
+                )
         
         # Stream the enhancement
         async def generate_stream():

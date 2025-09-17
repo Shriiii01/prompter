@@ -1,4 +1,4 @@
-// 🪄 PromptGrammerly - Prompt Enhancer Content Script (RESTORED ORIGINAL)
+// 🪄 PromptGrammerly - Prompt Enhancer Content Script
 // ✅ FIXED: Extension context invalidated error with safe storage handling
 
 class MagicalEnhancer {
@@ -35,7 +35,6 @@ class MagicalEnhancer {
         this.checkAndRestoreActiveState();
         
         // Don't auto-activate - wait for toggle button (unless already active)
-
     }
 
     // CRITICAL FIX: Ensure authentication works seamlessly across tabs
@@ -431,7 +430,6 @@ class MagicalEnhancer {
 
     activate() {
         if (this.isActive) {
-
             return;
         }
         
@@ -512,7 +510,6 @@ class MagicalEnhancer {
         // Reduced debouncing for faster response
         const now = Date.now();
         if (!bypassDebounce && now - this.lastScanTime < 100) { // Reduced from 500ms to 100ms
-
             return;
         }
         this.lastScanTime = now;
@@ -520,38 +517,6 @@ class MagicalEnhancer {
         // Clean up any orphaned icons before scanning
         this.cleanupOrphanedIcons();
         
-        // Debug: Log current page info
-        if (window.location.hostname.includes('perplexity.ai')) {
-            console.log('🔍 Scanning Perplexity AI for input fields...');
-            console.log('🔍 Current URL:', window.location.href);
-            console.log('🔍 Document ready state:', document.readyState);
-            console.log('🔍 All textareas found:', document.querySelectorAll('textarea').length);
-            console.log('🔍 All contenteditable divs found:', document.querySelectorAll('div[contenteditable="true"]').length);
-            
-            // Log all textareas with their attributes
-            const allTextareas = document.querySelectorAll('textarea');
-            allTextareas.forEach((textarea, index) => {
-                console.log(`🔍 Textarea ${index}:`, {
-                    placeholder: textarea.placeholder,
-                    id: textarea.id,
-                    className: textarea.className,
-                    visible: textarea.offsetWidth > 0 && textarea.offsetHeight > 0,
-                    rect: textarea.getBoundingClientRect()
-                });
-            });
-            
-            // Log all contenteditable divs
-            const allContentEditable = document.querySelectorAll('div[contenteditable="true"]');
-            allContentEditable.forEach((div, index) => {
-                console.log(`🔍 ContentEditable ${index}:`, {
-                    role: div.getAttribute('role'),
-                    ariaLabel: div.getAttribute('aria-label'),
-                    className: div.className,
-                    visible: div.offsetWidth > 0 && div.offsetHeight > 0,
-                    rect: div.getBoundingClientRect()
-                });
-            });
-        }
         if (window.location.hostname.includes('meta.ai')) {
             console.log('🔍 Scanning Meta AI for input fields...');
             console.log('🔍 Current URL:', window.location.href);
@@ -594,10 +559,6 @@ class MagicalEnhancer {
             const elements = document.querySelectorAll(selector);
             totalFound += elements.length;
             
-            // Debug for Perplexity
-            if (window.location.hostname.includes('perplexity.ai') && elements.length > 0) {
-                console.log(`🔍 Selector "${selector}" found ${elements.length} elements`);
-            }
             
             for (const element of elements) {
                 const inputId = this.getInputId(element);
@@ -1078,7 +1039,19 @@ class MagicalEnhancer {
                 chrome.storage.local.get(['user_info'], resolve);
             });
 
+            const userEmail = userData.user_info?.email || '';
             const userTier = userData.user_info?.subscription_tier || 'free';
+
+            // If no user email found, open popup for login
+            if (!userEmail) {
+                chrome.runtime.sendMessage({action: 'open_popup_for_login'}, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Failed to open popup:', chrome.runtime.lastError);
+                    }
+                });
+                icon.classList.remove('processing');
+                return;
+            }
 
             // For FREE users, ALWAYS check real daily usage from backend
             if (userTier === 'free' && userEmail) {
@@ -1752,14 +1725,37 @@ class MagicalEnhancer {
             const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
             const platform = this.detectTargetModel();
 
-            // Get user email directly from storage to ensure it's current
+            // Get user email with multiple fallbacks
+            let userEmail = '';
+            
+            // Try storage first
             const userData = await new Promise((resolve) => {
                 chrome.storage.local.get(['user_info'], resolve);
             });
-            const userEmail = userData.user_info?.email || '';
+            userEmail = userData.user_info?.email || '';
+            
+            // Fallback: try popup display if storage failed
+            if (!userEmail) {
+                try {
+                    const popupEmail = await new Promise((resolve) => {
+                        chrome.runtime.sendMessage({action: 'get_user_email'}, (response) => {
+                            resolve(response?.email || '');
+                        });
+                    });
+                    userEmail = popupEmail;
+                } catch (popupError) {
+                    console.error('Popup email error:', popupError);
+                }
+            }
 
             if (!userEmail) {
-
+                // User not logged in - open popup for login
+                chrome.runtime.sendMessage({action: 'open_popup_for_login'}, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Failed to open popup:', chrome.runtime.lastError);
+                    }
+                });
+                return null;
             }
 
             // Use background to perform the network call so content-script context invalidation cannot break it
