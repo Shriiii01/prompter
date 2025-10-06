@@ -23,7 +23,7 @@ router = APIRouter(tags=["enhancement"])
 def get_enhancer():
     """Dependency to get MultiProviderService enhancer instance"""
     try:
-        logger.info(f"🔧 Initializing MultiProviderService enhancer...")
+        logger.info(f" Initializing MultiProviderService enhancer...")
         logger.info(f"🔑 OpenAI API key available: {bool(config.settings.openai_api_key)}")
         logger.info(f"🔑 Gemini API key available: {bool(config.settings.gemini_api_key)}")
         logger.info(f"🔑 Together API key available: {bool(config.settings.together_api_key)}")
@@ -35,17 +35,17 @@ def get_enhancer():
             together_key=config.settings.together_api_key
         )
         
-        logger.info("✅ MultiProviderService initialized successfully")
-        logger.info(f"🔧 MultiProviderService type: {type(multi_provider_service)}")
+        logger.info(" MultiProviderService initialized successfully")
+        logger.info(f" MultiProviderService type: {type(multi_provider_service)}")
         
         # Create ModelSpecificEnhancer with MultiProviderService
-        logger.info("✅ Creating ModelSpecificEnhancer with MultiProviderService")
+        logger.info(" Creating ModelSpecificEnhancer with MultiProviderService")
         enhancer = ModelSpecificEnhancer(multi_provider_service=multi_provider_service)
-        logger.info(f"✅ ModelSpecificEnhancer created: {type(enhancer)}")
+        logger.info(f" ModelSpecificEnhancer created: {type(enhancer)}")
         return enhancer
         
     except Exception as e:
-        logger.error(f"❌ Failed to initialize MultiProviderService enhancer: {str(e)}")
+        logger.error(f" Failed to initialize MultiProviderService enhancer: {str(e)}")
         # Return ModelSpecificEnhancer without MultiProviderService - it has its own fallback logic
         logger.info("🔄 Creating ModelSpecificEnhancer without MultiProviderService (will use internal fallback)")
         return ModelSpecificEnhancer()
@@ -66,8 +66,8 @@ async def enhance_prompt(
         Enhanced prompt result
     """
     try:
-        logger.info(f"📝 Enhancement request received: {request.prompt[:50]}...")
-        logger.info(f"🎯 Target model: {request.model}")
+        logger.info(f" Enhancement request received: {request.prompt[:50]}...")
+        logger.info(f" Target model: {request.model}")
         
         # Enhance the prompt
         result = await enhancer.enhance_prompt(
@@ -75,11 +75,11 @@ async def enhance_prompt(
             target_model=request.model
         )
         
-        logger.info(f"✅ Enhancement completed successfully")
+        logger.info(f" Enhancement completed successfully")
         return result
         
     except Exception as e:
-        logger.error(f"❌ Enhancement failed: {str(e)}")
+        logger.error(f" Enhancement failed: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Enhancement failed: {str(e)}"
@@ -103,9 +103,11 @@ async def enhance_prompt_stream(
         Server-Sent Events stream of enhanced prompt
     """
     try:
-        logger.info(f"🌊 Streaming enhancement request: {request.prompt[:50]}...")
-        logger.info(f"👤 User email: {user_email}")
-        logger.info(f"🎯 Target model: {request.model}")
+        logger.info(f" P BUTTON API CALL - Backend received enhancement request")
+        logger.info(f" P BUTTON - Prompt: {request.prompt[:50]}...")
+        logger.info(f" P BUTTON - User email: {user_email}")
+        logger.info(f" P BUTTON - Target model: {request.model}")
+        logger.info(f" P BUTTON - Prompt length: {len(request.prompt)} characters")
         
         # Check user limits BEFORE processing (CRITICAL FIX)
         if user_email:
@@ -118,7 +120,7 @@ async def enhance_prompt_stream(
                 
                 # Check if user has reached daily limit
                 if user_tier == 'free' and daily_used >= daily_limit:
-                    logger.warning(f"⚠️ User {user_email} has reached daily limit: {daily_used}/{daily_limit}")
+                    logger.warning(f" User {user_email} has reached daily limit: {daily_used}/{daily_limit}")
                     
                     # Send limit_reached as streaming response WITHOUT making API calls
                     async def limit_reached_stream():
@@ -135,10 +137,10 @@ async def enhance_prompt_stream(
                         }
                     )
                 
-                logger.info(f"✅ User {user_email} has {daily_limit - daily_used} prompts remaining")
+                logger.info(f" User {user_email} has {daily_limit - daily_used} prompts remaining")
                 
             except Exception as e:
-                logger.error(f"❌ Failed to check user limits: {e} - BLOCKING for safety")
+                logger.error(f" Failed to check user limits: {e} - BLOCKING for safety")
                 # BLOCK the request when limit check fails - better safe than sorry
                 async def error_limit_stream():
                     yield f"data: {json.dumps({'type': 'limit_reached', 'data': {'daily_prompts_used': 10, 'daily_limit': 10, 'subscription_tier': 'free'}})}\n\n"
@@ -179,10 +181,10 @@ async def enhance_prompt_stream(
                         # Send updated count
                         yield f"data: {json.dumps({'type': 'count_update', 'data': result.get('enhanced_prompts', 0)})}\n\n"
                     except Exception as e:
-                        logger.error(f"❌ Failed to increment count: {e}")
+                        logger.error(f" Failed to increment count: {e}")
                 
             except Exception as e:
-                logger.error(f"❌ Streaming error: {str(e)}")
+                logger.error(f" Streaming error: {str(e)}")
                 yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
         
         return StreamingResponse(
@@ -196,7 +198,7 @@ async def enhance_prompt_stream(
         )
         
     except Exception as e:
-        logger.error(f"❌ Stream enhancement failed: {str(e)}")
+        logger.error(f" Stream enhancement failed: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Stream enhancement failed: {str(e)}"
@@ -218,16 +220,16 @@ async def analyze_prompt(
         Prompt analysis result
     """
     try:
-        logger.info(f"🔍 Analysis request received: {request.prompt[:50]}...")
+        logger.info(f" Analysis request received: {request.prompt[:50]}...")
         
         # Analyze the prompt
         result = await analyzer.analyze_prompt(request.prompt)
         
-        logger.info(f"✅ Analysis completed successfully")
+        logger.info(f" Analysis completed successfully")
         return result
         
     except Exception as e:
-        logger.error(f"❌ Analysis failed: {str(e)}")
+        logger.error(f" Analysis failed: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Analysis failed: {str(e)}"
@@ -256,7 +258,7 @@ async def health_check():
         }
         
     except Exception as e:
-        logger.error(f"❌ Health check failed: {str(e)}")
+        logger.error(f" Health check failed: {str(e)}")
         return {
             "status": "unhealthy",
             "error": str(e),

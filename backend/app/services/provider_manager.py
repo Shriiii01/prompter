@@ -34,22 +34,22 @@ class ProviderManager:
         # OpenAI
         if self.api_keys[ProviderType.OPENAI]:
             self.providers[ProviderType.OPENAI] = OpenAIService(self.api_keys[ProviderType.OPENAI])
-            logger.info("✅ OpenAI provider initialized")
+            logger.info(" OpenAI provider initialized")
         else:
-            logger.warning("⚠️ OpenAI API key not configured")
+            logger.warning(" OpenAI API key not configured")
         
         # Gemini
         if self.api_keys[ProviderType.GEMINI]:
             self.providers[ProviderType.GEMINI] = GeminiService(self.api_keys[ProviderType.GEMINI])
-            logger.info("✅ Gemini provider initialized")
+            logger.info(" Gemini provider initialized")
         else:
-            logger.warning("⚠️ Gemini API key not configured")
+            logger.warning(" Gemini API key not configured")
         
         # Together API (will be implemented inline)
         if self.api_keys[ProviderType.TOGETHER]:
-            logger.info("✅ Together API provider configured")
+            logger.info(" Together API provider configured")
         else:
-            logger.warning("⚠️ Together API key not configured")
+            logger.warning(" Together API key not configured")
     
     def is_provider_available(self, provider_type: ProviderType) -> bool:
         """Check if a provider is available"""

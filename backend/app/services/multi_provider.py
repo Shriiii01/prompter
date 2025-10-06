@@ -41,7 +41,7 @@ class MultiProviderService:
         # Define fallback order
         self.fallback_order = [ProviderType.OPENAI, ProviderType.GEMINI, ProviderType.TOGETHER]
         
-        logger.info("🚀 MultiProviderService initialized with 3-layer fallback system")
+        logger.info(" MultiProviderService initialized with 3-layer fallback system")
     
     async def enhance_prompt(self, prompt: str, target_model: str) -> str:
         """
@@ -55,38 +55,38 @@ class MultiProviderService:
             Enhanced prompt string
         """
         start_time = time.time()
-        logger.info(f"🎯 Starting prompt enhancement for model: {target_model}")
+        logger.info(f" Starting prompt enhancement for model: {target_model}")
         
         # Try each provider in fallback order
         for provider_type in self.fallback_order:
             provider_name = provider_type.value
             
             if not self.provider_manager.is_provider_available(provider_type):
-                logger.warning(f"⚠️ Provider {provider_name} not available, skipping")
+                logger.warning(f" Provider {provider_name} not available, skipping")
                 continue
             
             if not self.circuit_breaker_manager.is_circuit_closed(provider_name):
-                logger.warning(f"⚠️ Circuit breaker open for {provider_name}, skipping")
+                logger.warning(f" Circuit breaker open for {provider_name}, skipping")
                 continue
             
             try:
-                logger.info(f"🚀 Attempting enhancement with {provider_name}")
+                logger.info(f" Attempting enhancement with {provider_name}")
                 enhanced_prompt = await self._enhance_with_provider(provider_type, prompt, target_model)
                 
                 if enhanced_prompt and enhanced_prompt.strip():
                     self._record_success(provider_name, time.time() - start_time)
-                    logger.info(f"✅ Enhancement successful with {provider_name}")
+                    logger.info(f" Enhancement successful with {provider_name}")
                     return enhanced_prompt
                 else:
                     raise Exception("Empty or invalid response")
                     
             except Exception as e:
                 self._record_failure(provider_name)
-                logger.error(f"❌ {provider_name} enhancement failed: {str(e)}")
+                logger.error(f" {provider_name} enhancement failed: {str(e)}")
                 continue
         
         # If all providers fail, return a basic enhancement
-        logger.warning("⚠️ All providers failed, using fallback enhancement")
+        logger.warning(" All providers failed, using fallback enhancement")
         return self.enhancement_engine.create_fallback_enhancement(prompt, target_model)
     
     async def _enhance_with_provider(self, provider_type: ProviderType, prompt: str, target_model: str) -> str:

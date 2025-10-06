@@ -13,36 +13,30 @@ class AuthManager {
 
     async checkLoginStatus() {
         try {
-            console.log('🔍 Checking login status...');
             
             const tokenStatus = await this.checkTokenExpiry();
-            console.log('📊 Token status:', tokenStatus);
             
             if (tokenStatus.valid) {
                 const userInfo = await this.getStoredUserInfo();
-                if (userInfo && userInfo.display_name) {
-                    console.log('✅ User fully logged in');
+                if (userInfo && userInfo.name) {
                     return { status: 'logged_in', userInfo };
                 } else {
-                    console.log('⚠️ User has token but needs to complete name input');
                     const token = await this.getStoredToken();
                     const userInfoFromToken = await this.getUserInfo(token);
                     return { status: 'needs_name', userInfo: userInfoFromToken };
                 }
             } else {
-                console.log(`❌ Token invalid: ${tokenStatus.reason}`);
                 await this.clearStoredData();
                 return { status: 'not_logged_in' };
             }
         } catch (error) {
-            console.error('❌ Error checking login status:', error);
+            console.error(' Error checking login status:', error);
             return { status: 'error', error: error.message };
         }
     }
 
     async handleLogin() {
         try {
-            console.log('🚀 Starting login process');
 
             // Check if we have an expired token that can be refreshed
             const tokenStatus = await this.checkTokenExpiry();
@@ -51,7 +45,6 @@ class AuthManager {
                 const refreshedToken = await this.refreshToken();
                 
                 if (refreshedToken) {
-                    console.log('✅ Token refreshed successfully');
                     const userInfo = await this.getUserInfo(refreshedToken);
                     await this.storeTokenOnly(refreshedToken);
                     return { status: 'needs_name', userInfo };
@@ -69,7 +62,7 @@ class AuthManager {
                 throw new Error('Login cancelled or failed');
             }
         } catch (error) {
-            console.error('❌ Login error:', error);
+            console.error(' Login error:', error);
             let errorMessage = 'Please try signing in again';
             
             if (error.message.includes('OAuth flow was cancelled')) {
@@ -106,22 +99,18 @@ class AuthManager {
 
     async launchOAuthFlow() {
         return new Promise((resolve, reject) => {
-            console.log('🚀 Launching OAuth flow...');
             console.log('🔑 Client ID:', this.clientId);
             console.log('📋 Scopes:', this.scopes);
-            console.log('🔧 Chrome identity available:', typeof chrome.identity !== 'undefined');
             
             // First try the simpler getAuthToken method
             chrome.identity.getAuthToken({
                 interactive: true
             }, (token) => {
                 console.log('🔄 OAuth callback received');
-                console.log('📡 Token received:', !!token);
-                console.log('📡 Token length:', token ? token.length : 0);
                 
                 if (chrome.runtime.lastError) {
-                    console.error('❌ Chrome runtime error:', chrome.runtime.lastError);
-                    console.error('❌ Error details:', chrome.runtime.lastError.message);
+                    console.error(' Chrome runtime error:', chrome.runtime.lastError);
+                    console.error(' Error details:', chrome.runtime.lastError.message);
                     
                     // If getAuthToken fails, try launchWebAuthFlow as fallback
                     console.log('🔄 Trying launchWebAuthFlow as fallback...');
@@ -130,13 +119,10 @@ class AuthManager {
                 }
 
                 if (!token) {
-                    console.log('❌ No token received - user cancelled');
                     reject(new Error('OAuth flow was cancelled by user'));
                     return;
                 }
 
-                console.log('✅ Token received successfully');
-                console.log('🔍 Token preview:', token.substring(0, 20) + '...');
                 resolve(token);
             });
         });
@@ -159,28 +145,25 @@ class AuthManager {
             interactive: true
         }, (responseUrl) => {
             if (chrome.runtime.lastError) {
-                console.error('❌ WebAuthFlow error:', chrome.runtime.lastError);
+                console.error(' WebAuthFlow error:', chrome.runtime.lastError);
                 reject(new Error(`WebAuthFlow failed: ${chrome.runtime.lastError.message}`));
                 return;
             }
 
             if (!responseUrl) {
-                console.log('❌ No response URL from WebAuthFlow');
                 reject(new Error('WebAuthFlow was cancelled by user'));
                 return;
             }
 
-            console.log('✅ WebAuthFlow response received');
             
             // Extract token from response URL
             const urlParams = new URLSearchParams(responseUrl.split('#')[1]);
             const token = urlParams.get('access_token');
             
             if (token) {
-                console.log('✅ Token extracted from WebAuthFlow');
                 resolve(token);
             } else {
-                console.error('❌ No token found in WebAuthFlow response');
+                console.error(' No token found in WebAuthFlow response');
                 reject(new Error('No token received from WebAuthFlow'));
             }
         });
@@ -200,7 +183,6 @@ class AuthManager {
             }
 
             const userInfo = await response.json();
-            console.log('✅ User info fetched:', userInfo);
 
             return {
                 id: userInfo.id,
@@ -212,7 +194,7 @@ class AuthManager {
                 email_verified: userInfo.verified_email
             };
         } catch (error) {
-            console.error('❌ Error fetching user info:', error);
+            console.error(' Error fetching user info:', error);
             throw new Error('Failed to fetch user information');
         }
     }
@@ -251,7 +233,7 @@ class AuthManager {
 
             return { valid: true, reason: 'valid', timeUntilExpiry };
         } catch (error) {
-            console.error('❌ Error checking token expiry:', error);
+            console.error(' Error checking token expiry:', error);
             return { valid: false, reason: 'error' };
         }
     }
@@ -262,29 +244,25 @@ class AuthManager {
             
             const userInfo = await this.getStoredUserInfo();
             if (!userInfo || !userInfo.email) {
-                console.log('❌ No user info available for refresh');
                 return null;
             }
 
             const newToken = await this.launchOAuthFlow();
             if (!newToken) {
-                console.log('❌ Token refresh failed - user cancelled');
                 return null;
             }
 
             const isValid = await this.verifyToken(newToken);
             if (!isValid) {
-                console.log('❌ Refreshed token is invalid');
                 return null;
             }
 
             const newUserInfo = await this.getUserInfo(newToken);
             await this.storeUserData(newToken, newUserInfo);
             
-            console.log('✅ Token refreshed successfully');
             return newToken;
         } catch (error) {
-            console.error('❌ Token refresh failed:', error);
+            console.error(' Token refresh failed:', error);
             return null;
         }
     }
@@ -331,7 +309,7 @@ class AuthManager {
                 }, resolve);
             });
         } catch (error) {
-            console.error('❌ Failed to store user data securely:', error);
+            console.error(' Failed to store user data securely:', error);
             console.log('🔄 Falling back to plain storage...');
             return new Promise((resolve) => {
                 chrome.storage.local.set({
@@ -355,7 +333,7 @@ class AuthManager {
                 }, resolve);
             });
         } catch (error) {
-            console.error('❌ Failed to store token securely:', error);
+            console.error(' Failed to store token securely:', error);
             console.log('🔄 Falling back to plain storage...');
             return new Promise((resolve) => {
                 chrome.storage.local.set({
@@ -373,7 +351,7 @@ class AuthManager {
             console.log('🔐 Token retrieved securely:', !!token);
             return token;
         } catch (error) {
-            console.error('❌ Failed to get encrypted token:', error);
+            console.error(' Failed to get encrypted token:', error);
             console.log('🔄 Falling back to plain storage...');
             return new Promise((resolve) => {
                 chrome.storage.local.get(['google_token'], (result) => {
@@ -390,7 +368,7 @@ class AuthManager {
             console.log('🔐 User info retrieved securely:', !!userInfo);
             return userInfo;
         } catch (error) {
-            console.error('❌ Failed to get encrypted user info:', error);
+            console.error(' Failed to get encrypted user info:', error);
             console.log('🔄 Falling back to plain storage...');
             return new Promise((resolve) => {
                 chrome.storage.local.get(['user_info'], (result) => {
@@ -413,7 +391,7 @@ class AuthManager {
                 }, resolve);
             });
         } catch (error) {
-            console.error('❌ Failed to store user info securely:', error);
+            console.error(' Failed to store user info securely:', error);
             console.log('🔄 Falling back to plain storage...');
             return new Promise((resolve) => {
                 chrome.storage.local.set({
@@ -435,7 +413,7 @@ class AuthManager {
                 chrome.storage.local.remove(['login_time'], resolve);
             });
         } catch (error) {
-            console.error('❌ Failed to clear encrypted data:', error);
+            console.error(' Failed to clear encrypted data:', error);
             console.log('🔄 Falling back to plain storage clearing...');
             return new Promise((resolve) => {
                 chrome.storage.local.remove(['google_token', 'user_info', 'login_time'], resolve);
@@ -454,14 +432,12 @@ class AuthManager {
                 
                 if (tokenStatus.reason === 'expiring_soon') {
                     const minutesLeft = Math.ceil(tokenStatus.timeUntilExpiry / 60);
-                    console.log(`⚠️ Token expires in ${minutesLeft} minutes`);
                 } else if (tokenStatus.reason === 'expired') {
-                    console.log('❌ Token expired - user needs to re-authenticate');
                     // Trigger logout event
                     window.dispatchEvent(new CustomEvent('tokenExpired'));
                 }
             } catch (error) {
-                console.error('❌ Error in token refresh monitoring:', error);
+                console.error(' Error in token refresh monitoring:', error);
             }
         }, 120000); // Check every 2 minutes
     }

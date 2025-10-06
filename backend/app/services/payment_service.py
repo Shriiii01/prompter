@@ -21,14 +21,14 @@ class PaymentService:
         logger.info(f"🔑 Razorpay Secret Key: {self.secret_key[:10]}..." if self.secret_key else "None")
         
         if not self.key_id or not self.secret_key:
-            logger.warning("⚠️ Razorpay credentials not configured")
+            logger.warning(" Razorpay credentials not configured")
             self.client = None
         else:
             try:
                 self.client = razorpay.Client(auth=(self.key_id, self.secret_key))
-                logger.info("✅ Razorpay client initialized successfully")
+                logger.info(" Razorpay client initialized successfully")
             except Exception as e:
-                logger.error(f"❌ Failed to initialize Razorpay client: {e}")
+                logger.error(f" Failed to initialize Razorpay client: {e}")
                 self.client = None
     
     async def create_order(self, user_email: str, amount: int = 500) -> Dict:
@@ -64,7 +64,7 @@ class PaymentService:
             }
             
             order = self.client.order.create(data=order_data)
-            logger.info(f"✅ Created order {order['id']} for {user_email} - ${amount/100}")
+            logger.info(f" Created order {order['id']} for {user_email} - ${amount/100}")
             
             return {
                 'order_id': order['id'],
@@ -75,7 +75,7 @@ class PaymentService:
             }
             
         except Exception as e:
-            logger.error(f"❌ Failed to create order for {user_email}: {e}")
+            logger.error(f" Failed to create order for {user_email}: {e}")
             raise Exception(f"Payment order creation failed: {str(e)}")
     
     async def verify_payment(self, payment_id: str, order_id: str, signature: str) -> bool:
@@ -102,11 +102,11 @@ class PaymentService:
             
             # This will raise an exception if signature is invalid
             self.client.utility.verify_payment_signature(params_dict)
-            logger.info(f"✅ Payment verified successfully: {payment_id}")
+            logger.info(f" Payment verified successfully: {payment_id}")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Payment verification failed for {payment_id}: {e}")
+            logger.error(f" Payment verification failed for {payment_id}: {e}")
             return False
     
     async def get_payment_details(self, payment_id: str) -> Optional[Dict]:
@@ -133,7 +133,7 @@ class PaymentService:
                 'created_at': payment['created_at']
             }
         except Exception as e:
-            logger.error(f"❌ Failed to fetch payment details for {payment_id}: {e}")
+            logger.error(f" Failed to fetch payment details for {payment_id}: {e}")
             return None
 
 # Global payment service instance

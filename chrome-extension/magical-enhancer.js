@@ -1,5 +1,5 @@
 // 🪄 PromptGrammerly - Prompt Enhancer Content Script
-// ✅ FIXED: Extension context invalidated error with safe storage handling
+//  FIXED: Extension context invalidated error with safe storage handling
 
 class MagicalEnhancer {
     constructor() {
@@ -46,23 +46,20 @@ class MagicalEnhancer {
             });
 
             if (userData.user_info?.email) {
-                console.log('✅ User authenticated globally:', userData.user_info.email);
                 // User is authenticated, extension should work on any supported platform
             } else {
-                console.log('⚠️ User not authenticated globally - will prompt for login when needed');
             }
 
             // Listen for authentication changes across tabs
             chrome.storage.onChanged.addListener((changes, namespace) => {
                 if (namespace === 'local' && changes.user_info) {
-                    console.log('🔄 Authentication state changed across tabs');
                     // Refresh extension state when authentication changes
                     this.checkLoginStatus();
                 }
             });
 
         } catch (error) {
-            console.error('❌ Cross-tab auth initialization failed:', error);
+            console.error('Cross-tab auth initialization failed:', error);
         }
     }
 
@@ -517,22 +514,29 @@ class MagicalEnhancer {
         // Clean up any orphaned icons before scanning
         this.cleanupOrphanedIcons();
         
-        if (window.location.hostname.includes('meta.ai')) {
-            console.log('🔍 Scanning Meta AI for input fields...');
-            console.log('🔍 Current URL:', window.location.href);
-        }
 
         // Optimized selectors for faster detection - focus on main chat inputs only
         const selectors = [
-            // Perplexity AI specific selectors (prioritized)
+            // Perplexity AI specific selectors (prioritized) - UPDATED 2024
             'textarea[placeholder*="Ask anything or @mention a Space"]',
             'textarea[placeholder*="Ask anything or @mention"]',
             'textarea[placeholder*="Ask anything"]',
+            'textarea[placeholder*="Ask"]',
             'div[contenteditable="true"][role="textbox"][aria-label*="Ask anything"]',
             'div[contenteditable="true"][role="textbox"]',
             'textarea[data-testid*="composer"]',
             'textarea[data-testid*="search"]',
             'textarea[data-testid*="input"]',
+            'textarea[data-testid*="query"]',
+            'textarea[data-testid*="prompt"]',
+            // Additional Perplexity selectors
+            'textarea[class*="composer"]',
+            'textarea[class*="input"]',
+            'textarea[class*="search"]',
+            'div[contenteditable="true"][class*="composer"]',
+            'div[contenteditable="true"][class*="input"]',
+            // Generic textarea fallbacks
+            'textarea:not([readonly]):not([disabled])',
             // ChatGPT main input - most common
             'textarea[placeholder*="Message ChatGPT"]',
             'div[contenteditable="true"][data-id*="root"]',
@@ -603,15 +607,6 @@ class MagicalEnhancer {
                 }
                 
                 if (this.isValidInputFast(element)) { // Use fast validation
-                    // Debug for Perplexity
-                    if (window.location.hostname.includes('perplexity.ai')) {
-                        console.log(`✅ Adding icon to element:`, {
-                            tagName: element.tagName,
-                            placeholder: element.placeholder,
-                            className: element.className,
-                            id: element.id
-                        });
-                    }
                     this.addIconToInput(element);
                     newlyAdded++;
                     
@@ -771,6 +766,9 @@ class MagicalEnhancer {
             
             // Store reference for positioning updates
             icon._targetElement = inputElement;
+            
+            //  AUTO-REPOSITIONING: Keep icon positioned relative to input on scroll/resize
+            this.setupAutoRepositioning(icon, inputElement);
 
         } finally {
             // Always unlock after creation attempt
@@ -819,6 +817,10 @@ class MagicalEnhancer {
         iconsToRemove.forEach(inputElement => {
             const icon = this.icons.get(inputElement);
             if (icon) {
+                // Cleanup auto-repositioning listeners
+                if (icon._cleanup) {
+                    icon._cleanup();
+                }
                 icon.remove();
                 this.icons.delete(inputElement);
             }
@@ -832,22 +834,32 @@ class MagicalEnhancer {
     positionIconFast(icon, inputElement) {
         const rect = inputElement.getBoundingClientRect();
         
-        // Simplified fast positioning - just place it to the right of input
-        const iconSize = 40; // Updated to match new size
-        const spacing = 8; // Reduced spacing for faster positioning
+        //  FIXED: Position icon OUTSIDE input box, never inside
+        const iconSize = 32; // Smaller for better UX
+        const spacing = 15; // More spacing to ensure it's clearly outside
         
+        // Always position to the RIGHT of the input box, never inside
         let left = rect.right + spacing;
         let top = rect.top + (rect.height - iconSize) / 2;
         
-        // Basic bounds checking
-        if (left + iconSize > window.innerWidth - 5) {
-            left = rect.left - iconSize - spacing; // Place to the left if no space on right
+        // Smart positioning: if no space on right, position on left side
+        if (left + iconSize > window.innerWidth - 10) {
+            left = rect.left - iconSize - spacing; // Left side of input
         }
         
-        if (top < 5) top = 5;
-        if (top + iconSize > window.innerHeight - 5) top = window.innerHeight - iconSize - 5;
+        // CRITICAL: Ensure it's NEVER inside the input bounds
+        if (left >= rect.left && left <= rect.right) {
+            left = rect.right + spacing; // Force outside on right
+        }
+        if (left < rect.left - iconSize && left > rect.left - iconSize - spacing) {
+            left = rect.left - iconSize - spacing; // Force outside on left
+        }
         
-        // Apply position immediately
+        // Vertical bounds checking with more margin
+        if (top < 15) top = 15;
+        if (top + iconSize > window.innerHeight - 15) top = window.innerHeight - iconSize - 15;
+        
+        // Apply position with enhanced styling for draggability
         icon.style.position = 'fixed';
         icon.style.left = `${left}px`;
         icon.style.top = `${top}px`;
@@ -855,6 +867,44 @@ class MagicalEnhancer {
         icon.style.width = `${iconSize}px`;
         icon.style.height = `${iconSize}px`;
         icon.style.pointerEvents = 'auto';
+        icon.style.cursor = 'grab';
+        icon.style.borderRadius = '8px';
+        icon.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        icon.style.transition = 'all 0.2s ease';
+        icon.style.backgroundColor = '#007AFF';
+        icon.style.border = '2px solid rgba(255,255,255,0.2)';
+        
+        // Store position for repositioning on scroll/resize
+        icon._lastPosition = { left, top };
+        icon._inputRect = rect;
+    }
+
+    setupAutoRepositioning(icon, inputElement) {
+        //  AUTO-REPOSITIONING: Keep icon properly positioned
+        let repositionTimer;
+        
+        const repositionIcon = () => {
+            if (!icon.isConnected || !inputElement.isConnected) return;
+            
+            // Don't reposition if user is dragging
+            if (icon._isDragging) return;
+            
+            clearTimeout(repositionTimer);
+            repositionTimer = setTimeout(() => {
+                this.positionIconFast(icon, inputElement);
+            }, 100);
+        };
+        
+        // Listen for scroll and resize events
+        window.addEventListener('scroll', repositionIcon, { passive: true });
+        window.addEventListener('resize', repositionIcon, { passive: true });
+        
+        // Store cleanup function
+        icon._cleanup = () => {
+            window.removeEventListener('scroll', repositionIcon);
+            window.removeEventListener('resize', repositionIcon);
+            clearTimeout(repositionTimer);
+        };
     }
 
     makeIconDraggableAndClickable(icon, inputElement) {
@@ -865,12 +915,14 @@ class MagicalEnhancer {
         icon.draggable = false;
         icon.style.cursor = 'grab';
         icon.style.userSelect = 'none';
+        icon.style.touchAction = 'none'; // Better mobile support
 
         icon.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
             
             dragStartTime = Date.now();
             isDragging = true;
+            icon._isDragging = true; // Flag for auto-repositioning
             
             startX = e.clientX;
             startY = e.clientY;
@@ -918,6 +970,7 @@ class MagicalEnhancer {
             const totalMovement = deltaX + deltaY;
             
             isDragging = false;
+            icon._isDragging = false; // Clear flag for auto-repositioning
             icon.style.cursor = 'grab';
             
             // If it was a quick click with minimal movement, treat as click
@@ -1021,19 +1074,19 @@ class MagicalEnhancer {
     }
 
     async handleIconClick(inputElement, icon) {
+        
         if (this.isProcessing || icon.isProcessing) {
-
             return;
         }
 
         const text = this.getInputText(inputElement);
         if (!text.trim()) {
-
             icon.classList.remove('processing');
             return;
         }
+        
 
-        // 🚨 SMART LIMIT CHECK: Get real daily usage from backend before blocking
+        //  SMART LIMIT CHECK: Get real daily usage from backend before blocking
         try {
             const userData = await new Promise((resolve) => {
                 chrome.storage.local.get(['user_info'], resolve);
@@ -1068,28 +1121,23 @@ class MagicalEnhancer {
                         const dailyUsed = userStatus.daily_prompts_used || 0;
                         const dailyLimit = userStatus.daily_limit || 10;
 
-                        console.log(`📊 Real daily check: ${dailyUsed}/${dailyLimit} prompts used by ${userEmail}`);
 
                         // Only block if actually at limit (9+ used = would exceed on 10th)
                         if (dailyUsed >= 9) {
-                            console.log(`🚨 LIMIT REACHED: Blocking at ${dailyUsed}/${dailyLimit} prompts`);
                             this.showLimitNotification(inputElement);
                             icon.classList.remove('processing');
                             return;
                         }
 
                         // User has prompts remaining - allow
-                        console.log(`✅ ALLOWED: ${dailyLimit - dailyUsed} prompts remaining`);
                     } else {
-                        console.warn('⚠️ Backend status check failed, allowing request (backend will enforce)');
                     }
                 } catch (backendError) {
-                    console.warn('⚠️ Backend check failed:', backendError.message);
                     // Allow request if backend check fails - backend will still enforce limits
                 }
             }
         } catch (error) {
-            console.error('❌ Frontend limit check error:', error);
+            console.error('Frontend limit check error:', error);
             // Allow request on error - backend safety net will catch it
         }
 
@@ -1261,7 +1309,7 @@ class MagicalEnhancer {
                 setTimeout(() => {
                     chrome.runtime.sendMessage({ action: 'open_popup_for_login' }, (response) => {
                         if (chrome.runtime.lastError) {
-                            streamText.textContent = '❌ Login failed. Please click the extension icon to sign in manually.';
+                            streamText.textContent = ' Login failed. Please click the extension icon to sign in manually.';
                         }
                     });
                 }, 1000);
@@ -1284,7 +1332,7 @@ class MagicalEnhancer {
             const finalPromptCount = finalCheckData.last_known_prompt_count || 0;
             const finalUserTier = finalCheckData.user_info?.subscription_tier || 'free';
 
-            // 🚨 FINAL SAFETY CHECK: Only block if actually at limit
+            //  FINAL SAFETY CHECK: Only block if actually at limit
             if (finalUserTier === 'free' && userEmail) {
                 try {
                     const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
@@ -1300,14 +1348,13 @@ class MagicalEnhancer {
 
                         // Only block if actually at 9+ prompts (would exceed limit)
                         if (finalDailyUsed >= 9) {
-                            console.log(`🚨 FINAL BLOCK: User at ${finalDailyUsed}/10 prompts - stopping`);
                             this.showLimitNotification(inputElement);
                             streamText.textContent = 'Daily limit reached! Upgrade to Pro for unlimited prompts.';
                             return;
                         }
                     }
                 } catch (e) {
-                    console.warn('⚠️ Final limit check failed:', e.message);
+                    console.warn(' Final limit check failed:', e.message);
                     // Allow if check fails - backend will enforce
                 }
             }
@@ -1332,9 +1379,16 @@ class MagicalEnhancer {
                 idempotencyKey: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
             };
 
+            console.log(' P BUTTON - Sending API call to background script:', {
+                action: messageData.action,
+                targetModel: messageData.targetModel,
+                userEmail: messageData.userEmail,
+                promptLength: inputText.length
+            });
+
             // Add timeout for message sending
             const messageTimeout = setTimeout(() => {
-
+                console.log('⏰ P BUTTON - API call timeout, background script not responding');
                 streamText.textContent = 'Error: Background script not responding. Please refresh the page.';
             }, 5000);
 
@@ -1431,15 +1485,15 @@ class MagicalEnhancer {
         content.innerHTML = `
             <div class="ce-upgrade-modal">
                 <div class="ce-upgrade-header">
-                    <h3>🎯 Daily Limit Reached!</h3>
+                    <h3> Daily Limit Reached!</h3>
                 </div>
                 <div class="ce-upgrade-body">
                     <p>You've used all <strong>10 free prompts</strong> today.</p>
                     <p>Upgrade to Pro for <strong>unlimited prompts</strong>!</p>
                     <div class="ce-upgrade-features">
-                        <div class="ce-feature">✅ Unlimited daily prompts</div>
-                        <div class="ce-feature">✅ Priority processing</div>
-                        <div class="ce-feature">✅ Advanced AI models</div>
+                        <div class="ce-feature"> Unlimited daily prompts</div>
+                        <div class="ce-feature"> Priority processing</div>
+                        <div class="ce-feature"> Advanced AI models</div>
                     </div>
                     <div class="ce-upgrade-price">
                         <span class="ce-price">$5<span class="ce-period">/month</span></span>
@@ -1608,7 +1662,7 @@ class MagicalEnhancer {
         if (!enhancedText) {
             content.innerHTML = `
                 <div style="text-align: center; padding: 20px;">
-                    <div style="color: #dc3545; font-size: 16px; margin-bottom: 10px;">⚠️ Authentication Required</div>
+                    <div style="color: #dc3545; font-size: 16px; margin-bottom: 10px;"> Authentication Required</div>
                     <div style="color: #808080; font-size: 14px; line-height: 1.5;">
                         Please sign in with Google to use AI enhancement.<br>
                         Click the extension icon to sign in.
@@ -1826,7 +1880,7 @@ Additional context: Please structure your response in a clear, organized manner 
     }
 
     formatText(text) {
-        // 🚨 CRITICAL FIX: Preserve AI-generated structure instead of flattening it
+        //  CRITICAL FIX: Preserve AI-generated structure instead of flattening it
         // The AI generates structured prompts with sections - we must keep this structure!
 
         let formatted = text.trim();
@@ -1844,7 +1898,7 @@ Additional context: Please structure your response in a clear, organized manner 
         // Ensure it doesn't start with newlines
         formatted = formatted.replace(/^\n+/, '');
 
-        // 🚨 KEY FIX: Return the text AS-IS from AI
+        //  KEY FIX: Return the text AS-IS from AI
         // The AI already generates perfectly structured prompts with sections
         // We should NOT reformat or flatten them!
         return formatted;
@@ -1854,12 +1908,29 @@ Additional context: Please structure your response in a clear, organized manner 
         // Format the text for clean, structured insertion
         const formattedText = this.formatText(text);
         
-        if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
+        //  SPECIAL HANDLING FOR PERPLEXITY AI
+        if (window.location.hostname.includes('perplexity.ai')) {
+
+            inputElement.focus();
+            
+            // Use a more robust method to insert text by simulating a paste event.
+            const dataTransfer = new DataTransfer();
+            dataTransfer.setData('text/plain', formattedText);
+            
+            const pasteEvent = new ClipboardEvent('paste', {
+                clipboardData: dataTransfer,
+                bubbles: true,
+                cancelable: true
+            });
+            
+            inputElement.dispatchEvent(pasteEvent);
+            
+        } else if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
             inputElement.value = formattedText;
             inputElement.dispatchEvent(new Event('input', { bubbles: true }));
             inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (inputElement.contentEditable === 'true') {
-            // 🚨 CRITICAL FIX: For contentEditable elements, preserve EXACT AI structure
+            //  CRITICAL FIX: For contentEditable elements, preserve EXACT AI structure
             // Do NOT flatten or reformat - the AI generates perfect structure
 
             // Only minimal cleanup: remove excessive consecutive newlines
@@ -1875,7 +1946,37 @@ Additional context: Please structure your response in a clear, organized manner 
             inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         }
         
-        inputElement.focus();
+        //  FIX: Special handling for Perplexity AI and Meta AI
+        if (window.location.hostname.includes('perplexity.ai') || window.location.hostname.includes('meta.ai')) {
+            
+            // Force focus and trigger additional events for these platforms
+            inputElement.focus();
+            inputElement.click();
+            
+            // Trigger additional events that these platforms might need
+            inputElement.dispatchEvent(new Event('focus', { bubbles: true }));
+            inputElement.dispatchEvent(new Event('blur', { bubbles: true }));
+            inputElement.dispatchEvent(new Event('focus', { bubbles: true }));
+            
+            // For Perplexity, also try to trigger the search/ask functionality
+            if (window.location.hostname.includes('perplexity.ai')) {
+                
+                // Wait a bit for the text to be processed
+                setTimeout(() => {
+                    // Look for and trigger the ask button if it exists
+                    const askButton = document.querySelector('button[type="submit"], button[aria-label*="Ask"], button[aria-label*="Search"], button[data-testid*="submit"], button[class*="submit"]');
+                    if (askButton) {
+                        askButton.click();
+                    } else {
+                        // Try pressing Enter key
+                        inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                        inputElement.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+                    }
+                }, 200);
+            }
+        } else {
+            inputElement.focus();
+        }
 
     }
 
@@ -1895,6 +1996,10 @@ Additional context: Please structure your response in a clear, organized manner 
             if (icon.updatePosition) {
                 window.removeEventListener('scroll', icon.updatePosition);
                 window.removeEventListener('resize', icon.updatePosition);
+            }
+            // Cleanup auto-repositioning listeners
+            if (icon._cleanup) {
+                icon._cleanup();
             }
             icon.remove();
         });

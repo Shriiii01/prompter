@@ -1,4 +1,4 @@
-// 🎨 UI Manager - Centralized UI State Management
+//  UI Manager - Centralized UI State Management
 class UIManager {
     constructor() {
         this.sections = {
@@ -27,7 +27,7 @@ class UIManager {
         this.statsRefreshInterval = null;
     }
 
-    // 🎯 Show login form
+    // Show login form
     showLoginForm() {
         this.clearStatsRefresh();
         this.stopTokenRefreshMonitoring();
@@ -38,7 +38,7 @@ class UIManager {
         this.hideSection('extensionControl');
     }
 
-    // 🎯 Show name input form
+    //  Show name input form
     showNameInputForm(userInfo) {
         this.hideSection('auth');
         this.hideSection('user');
@@ -54,7 +54,7 @@ class UIManager {
         }
     }
 
-    // 🎯 Show user info
+    //  Show user info
     showUserInfo(userInfo) {
         this.updateUserInfo(userInfo);
         this.hideSection('auth');
@@ -73,10 +73,10 @@ class UIManager {
         this.startTokenRefreshMonitoring();
     }
 
-    // 🎯 Update user info display
+    //  Update user info display
     updateUserInfo(userInfo) {
         if (this.elements.userName) {
-            const displayName = userInfo.display_name || userInfo.name || 'User';
+            const displayName = userInfo.name || 'User';
             this.elements.userName.textContent = displayName;
         }
         
@@ -85,7 +85,7 @@ class UIManager {
         }
     }
 
-    // 🎯 Set loading state for login button
+    //  Set loading state for login button
     setLoginLoading(loading) {
         if (this.elements.loginBtn && this.elements.loginText && this.elements.loginLoading) {
             if (loading) {
@@ -100,7 +100,7 @@ class UIManager {
         }
     }
 
-    // 🎯 Set loading state for name submit button
+    //  Set loading state for name submit button
     setNameSubmitLoading(loading) {
         if (this.elements.nameSubmitBtn && this.elements.nameSubmitText && this.elements.nameSubmitLoading) {
             if (loading) {
@@ -115,7 +115,7 @@ class UIManager {
         }
     }
 
-    // 🎯 Show status message
+    //  Show status message
     showStatus(message, type = 'info') {
         if (this.elements.status) {
             this.elements.status.textContent = message;
@@ -133,17 +133,15 @@ class UIManager {
         }
     }
 
-    // 🎯 Update enhanced count display
+    //  Update enhanced count display
     updateEnhancedCount(count) {
         if (this.elements.enhancedCount) {
             this.elements.enhancedCount.textContent = count.toString();
-            console.log(`📊 Updated enhanced count display: ${count}`);
         } else {
-            console.log('❌ Enhanced count element not found!');
         }
     }
 
-    // 🎯 Check and update extension state
+    //  Check and update extension state
     checkExtensionState() {
         if (this.elements.startStopBtn) {
             chrome.storage.local.get(['extension_active'], (result) => {
@@ -159,7 +157,7 @@ class UIManager {
         }
     }
 
-    // 🎯 Update start/stop button state
+    //  Update start/stop button state
     updateStartStopButton(isActive) {
         if (this.elements.startStopBtn) {
             if (isActive) {
@@ -173,7 +171,7 @@ class UIManager {
         }
     }
 
-    // 🎯 Set start/stop button loading
+    //  Set start/stop button loading
     setStartStopLoading(loading, text = 'Starting...') {
         if (this.elements.startStopBtn) {
             if (loading) {
@@ -185,32 +183,32 @@ class UIManager {
         }
     }
 
-    // 🎯 Get name input value
+    //  Get name input value
     getNameInputValue() {
         return this.elements.nameInputField ? this.elements.nameInputField.value.trim() : '';
     }
 
-    // 🎯 Clear name input
+    //  Clear name input
     clearNameInput() {
         if (this.elements.nameInputField) {
             this.elements.nameInputField.value = '';
         }
     }
 
-    // 🎯 Clear user info
+    //  Clear user info
     clearUserInfo() {
         if (this.elements.userName) this.elements.userName.textContent = '';
         if (this.elements.userEmail) this.elements.userEmail.textContent = '';
     }
 
-    // 🎯 Clear enhanced count
+    //  Clear enhanced count
     clearEnhancedCount() {
         if (this.elements.enhancedCount) {
             this.elements.enhancedCount.textContent = '0';
         }
     }
 
-    // 🎯 Show section
+    //  Show section
     showSection(sectionName) {
         const section = this.sections[sectionName];
         if (section) {
@@ -219,7 +217,7 @@ class UIManager {
         }
     }
 
-    // 🎯 Hide section
+    //  Hide section
     hideSection(sectionName) {
         const section = this.sections[sectionName];
         if (section) {
@@ -227,7 +225,7 @@ class UIManager {
         }
     }
 
-    // 🎯 Hide all sections except one
+    //  Hide all sections except one
     hideAllSectionsExcept(exceptSection) {
         Object.keys(this.sections).forEach(sectionName => {
             if (sectionName !== exceptSection) {
@@ -236,7 +234,7 @@ class UIManager {
         });
     }
 
-    // 🎯 Start stats refresh interval
+    //  Start stats refresh interval
     startStatsRefresh() {
         this.clearStatsRefresh();
         this.statsRefreshInterval = setInterval(() => {
@@ -245,7 +243,7 @@ class UIManager {
         }, 30000); // Every 30 seconds
     }
 
-    // 🎯 Clear stats refresh interval
+    //  Clear stats refresh interval
     clearStatsRefresh() {
         if (this.statsRefreshInterval) {
             clearInterval(this.statsRefreshInterval);
@@ -253,21 +251,21 @@ class UIManager {
         }
     }
 
-    // 🎯 Start token refresh monitoring
+    //  Start token refresh monitoring
     startTokenRefreshMonitoring() {
         // This would be handled by the AuthManager
         // Just a placeholder for UI coordination
         console.log('🔄 Token refresh monitoring started');
     }
 
-    // 🎯 Stop token refresh monitoring
+    //  Stop token refresh monitoring
     stopTokenRefreshMonitoring() {
         // This would be handled by the AuthManager
         // Just a placeholder for UI coordination
         console.log('🔄 Token refresh monitoring stopped');
     }
 
-    // 🎯 Validate name input
+    //  Validate name input
     validateNameInput() {
         const name = this.getNameInputValue();
         if (!name) {
@@ -280,7 +278,7 @@ class UIManager {
         return true;
     }
 
-    // 🎯 Focus name input
+    //  Focus name input
     focusNameInput() {
         if (this.elements.nameInputField) {
             this.elements.nameInputField.focus();
@@ -288,29 +286,29 @@ class UIManager {
         }
     }
 
-    // 🎯 Show error state
+    //  Show error state
     showError(message) {
         this.showStatus(message, 'error');
     }
 
-    // 🎯 Show success state
+    //  Show success state
     showSuccess(message) {
         this.showStatus(message, 'success');
     }
 
-    // 🎯 Show info state
+    //  Show info state
     showInfo(message) {
         this.showStatus(message, 'info');
     }
 
-    // 🎯 Clear status
+    //  Clear status
     clearStatus() {
         if (this.elements.status) {
             this.elements.status.classList.add('hidden');
         }
     }
 
-    // 🎯 Get all UI elements for event binding
+    //  Get all UI elements for event binding
     getElementsForBinding() {
         return {
             loginBtn: document.getElementById('login-btn'),

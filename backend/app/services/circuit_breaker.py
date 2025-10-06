@@ -52,7 +52,7 @@ class CircuitBreaker:
         if self.state == CircuitState.HALF_OPEN and self.success_count >= self.success_threshold:
             self.state = CircuitState.CLOSED
             self.failure_count = 0
-            logger.info("✅ Circuit breaker closed")
+            logger.info(" Circuit breaker closed")
     
     def record_failure(self):
         """Record a failed request"""
@@ -62,10 +62,10 @@ class CircuitBreaker:
         # Open circuit if too many failures
         if self.state == CircuitState.CLOSED and self.failure_count >= self.failure_threshold:
             self.state = CircuitState.OPEN
-            logger.warning("⚠️ Circuit breaker opened")
+            logger.warning(" Circuit breaker opened")
         elif self.state == CircuitState.HALF_OPEN:
             self.state = CircuitState.OPEN
-            logger.warning("⚠️ Circuit breaker reopened")
+            logger.warning(" Circuit breaker reopened")
     
     def get_state(self) -> Dict[str, Any]:
         """Get current circuit breaker state"""

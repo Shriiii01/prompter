@@ -23,7 +23,7 @@ router = APIRouter(tags=["enhancement"])  # No prefix here, will be added in mai
 def get_enhancer():
     """Dependency to get MultiProviderService enhancer instance"""
     try:
-        logger.info(f"🔧 Initializing MultiProviderService enhancer...")
+        logger.info(f" Initializing MultiProviderService enhancer...")
         logger.info(f"🔑 OpenAI API key available: {bool(config.settings.openai_api_key)}")
         logger.info(f"🔑 Gemini API key available: {bool(config.settings.gemini_api_key)}")
         logger.info(f"🔑 Together API key available: {bool(config.settings.together_api_key)}")
@@ -35,17 +35,17 @@ def get_enhancer():
             together_key=config.settings.together_api_key
         )
         
-        logger.info("✅ MultiProviderService initialized successfully")
-        logger.info(f"🔧 MultiProviderService type: {type(multi_provider_service)}")
+        logger.info(" MultiProviderService initialized successfully")
+        logger.info(f" MultiProviderService type: {type(multi_provider_service)}")
         
         # Create ModelSpecificEnhancer with MultiProviderService
-        logger.info("✅ Creating ModelSpecificEnhancer with MultiProviderService")
+        logger.info(" Creating ModelSpecificEnhancer with MultiProviderService")
         enhancer = ModelSpecificEnhancer(multi_provider_service=multi_provider_service)
-        logger.info(f"✅ ModelSpecificEnhancer created: {type(enhancer)}")
+        logger.info(f" ModelSpecificEnhancer created: {type(enhancer)}")
         return enhancer
         
     except Exception as e:
-        logger.error(f"❌ Failed to initialize MultiProviderService enhancer: {str(e)}")
+        logger.error(f" Failed to initialize MultiProviderService enhancer: {str(e)}")
         # Return ModelSpecificEnhancer without MultiProviderService - it has its own fallback logic
         logger.info("🔄 Creating ModelSpecificEnhancer without MultiProviderService (will use internal fallback)")
         return ModelSpecificEnhancer()
@@ -69,7 +69,7 @@ def detect_model_from_url(url: str) -> LLMModel:
     
     hostname = url.lower()
     
-    # 🚀 OPTIMIZED: Single dict lookup instead of multiple if/elif
+    #  OPTIMIZED: Single dict lookup instead of multiple if/elif
     domain_mapping = {
         'openai.com': LLMModel.GPT_4O_MINI,
         'chatgpt.com': LLMModel.GPT_4O_MINI,
@@ -109,11 +109,11 @@ async def enhance_prompt(
         )
     
     try:
-        # ✅ User authentication verified - now you have the user's email and info
+        #  User authentication verified - now you have the user's email and info
         if not fast_mode:
             logger.info(f"Verified user: {user_email} (Name: {user_info.get('name', 'Unknown')})")
         
-        # 📊 Track user in database (ALWAYS CREATE FOR UI)
+        #  Track user in database (ALWAYS CREATE FOR UI)
         try:
             user_record = await db_service.get_or_create_user(email=user_email, user_info=user_info)
             if not fast_mode:
@@ -152,14 +152,14 @@ async def enhance_prompt(
         if not fast_mode:
             logger.info(f"Enhancement completed in {processing_time:.2f}s for {client_ip}")
         
-        # 📊 Track successful enhancement in database (ALWAYS TRACK FOR UI)
+        #  Track successful enhancement in database (ALWAYS TRACK FOR UI)
         try:
             # Increment user's prompt count (always track for popup UI)
             new_count = await db_service.increment_user_prompts(email=user_email)
-            logger.info(f"✅ User stats updated: {user_email} -> {new_count} prompts")
+            logger.info(f" User stats updated: {user_email} -> {new_count} prompts")
             
         except Exception as e:
-            logger.error(f"❌ Failed to track enhancement in database: {e}")
+            logger.error(f" Failed to track enhancement in database: {e}")
             # Don't fail the request, just log the error
         
         return result
@@ -307,23 +307,23 @@ async def quick_test(
         user_email = request.get('user_email', None)  # Optional user email for tracking
         
         # Input validation - 4000 character limit
-        logger.info(f"🔍 Validating prompt length: {len(prompt)} characters")
+        logger.info(f" Validating prompt length: {len(prompt)} characters")
         
         if not prompt or len(prompt.strip()) < 3:
-            logger.warning(f"❌ Prompt too short: {len(prompt)} characters")
+            logger.warning(f" Prompt too short: {len(prompt)} characters")
             raise HTTPException(
                 status_code=400, 
                 detail="Prompt must be at least 3 characters long"
             )
         
         if len(prompt) > 4000:
-            logger.warning(f"❌ Prompt too long: {len(prompt)} characters")
+            logger.warning(f" Prompt too long: {len(prompt)} characters")
             raise HTTPException(
                 status_code=400, 
                 detail="Prompt too long. Maximum 4,000 characters allowed"
             )
         
-        logger.info(f"✅ Prompt validation passed: {len(prompt)} characters")
+        logger.info(f" Prompt validation passed: {len(prompt)} characters")
         
         # Auto-detect target model from URL
         detected_model = detect_model_from_url(url)
@@ -336,12 +336,12 @@ async def quick_test(
             context=None
         )
         
-        # 🎯 INCREMENT USER PROMPT COUNT IF EMAIL PROVIDED
+        #  INCREMENT USER PROMPT COUNT IF EMAIL PROVIDED
         if user_email:
             try:
-                logger.info(f"📊 Incrementing prompt count for user: {user_email}")
+                logger.info(f" Incrementing prompt count for user: {user_email}")
                 new_count = await db_service.increment_user_prompts(user_email)
-                logger.info(f"✅ Prompt count incremented to: {new_count}")
+                logger.info(f" Prompt count incremented to: {new_count}")
                 
                 # Add response fields to indicate count was incremented
                 response_data = {
@@ -354,7 +354,7 @@ async def quick_test(
                     "new_count": new_count
                 }
             except Exception as db_error:
-                logger.warning(f"⚠️ Failed to increment prompt count: {db_error}")
+                logger.warning(f" Failed to increment prompt count: {db_error}")
                 response_data = {
                     "success": True,
                     "original": result.original,
@@ -364,7 +364,7 @@ async def quick_test(
                     "count_incremented": False
                 }
         else:
-            logger.info("📊 No user email provided - prompt count not incremented")
+            logger.info(" No user email provided - prompt count not incremented")
             response_data = {
                 "success": True,
                 "original": result.original,
@@ -584,7 +584,7 @@ async def get_user_count_by_email(email: str):
         
         if stats:
             # User exists, return their stats
-            logger.info(f"✅ User found: {email} with {stats['enhanced_prompts']} prompts")
+            logger.info(f" User found: {email} with {stats['enhanced_prompts']} prompts")
             return {
                 "count": stats["enhanced_prompts"],
                 "email": email,
@@ -593,7 +593,7 @@ async def get_user_count_by_email(email: str):
             }
         else:
             # User doesn't exist, return 0
-            logger.info(f"❌ User not found: {email}")
+            logger.info(f" User not found: {email}")
             return {
                 "count": 0,
                 "email": email,
@@ -672,35 +672,35 @@ async def update_user_name(
 async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header(None, alias="X-User-ID")):
     """Stream enhanced prompt in chunks for magical animation using ONLY AI service"""
     try:
-        logger.info(f"🚀 SIMPLE AI ENHANCEMENT: Starting for prompt: {request.prompt[:50]}...")
-        logger.info(f"🎯 Target model: {request.target_model or 'gpt-4o-mini'}")
+        logger.info(f" SIMPLE AI ENHANCEMENT: Starting for prompt: {request.prompt[:50]}...")
+        logger.info(f" Target model: {request.target_model or 'gpt-4o-mini'}")
         logger.info(f"📧 User ID received: {x_user_id}")
-        logger.info(f"🔍 DEBUGGING BACKEND:")
+        logger.info(f" DEBUGGING BACKEND:")
         logger.info(f"  - User ID received: {x_user_id}")
         logger.info(f"  - User ID type: {type(x_user_id)}")
         logger.info(f"  - User ID length: {len(x_user_id) if x_user_id else 0}")
         logger.info(f"  - User ID is empty?: {not x_user_id}")
         logger.info(f"  - User ID repr: {repr(x_user_id)}")
         logger.info(f"  - Headers: X-User-ID={x_user_id}")
-        logger.info(f"🔧 Available providers: OpenAI={'✅' if config.settings.openai_api_key and config.settings.openai_api_key != 'your_openai_api_key_here' else '❌'}, Gemini={'✅' if config.settings.gemini_api_key and config.settings.gemini_api_key != 'your_gemini_api_key_here' else '❌'}")
+        logger.info(f" Available providers: OpenAI={'' if config.settings.openai_api_key and config.settings.openai_api_key != 'your_openai_api_key_here' else ''}, Gemini={'' if config.settings.gemini_api_key and config.settings.gemini_api_key != 'your_gemini_api_key_here' else ''}")
 
         # Increment user's prompt count (always track for popup UI)
         if x_user_id:
             try:
-                logger.info(f"📊 Incrementing prompt count for user: {x_user_id}")
-                logger.info(f"🔍 ABOUT TO CALL increment_user_prompts with: {x_user_id}")
+                logger.info(f" Incrementing prompt count for user: {x_user_id}")
+                logger.info(f" ABOUT TO CALL increment_user_prompts with: {x_user_id}")
                 new_count = await db_service.increment_user_prompts(x_user_id)
-                logger.info(f"✅ Prompt count incremented to: {new_count}")
-                logger.info(f"🔍 NEW COUNT RETURNED: {new_count}")
+                logger.info(f" Prompt count incremented to: {new_count}")
+                logger.info(f" NEW COUNT RETURNED: {new_count}")
             except Exception as db_error:
-                logger.warning(f"⚠️ Failed to increment prompt count: {db_error}")
+                logger.warning(f" Failed to increment prompt count: {db_error}")
         else:
-            logger.info("📊 No user email provided - prompt count not incremented")
+            logger.info(" No user email provided - prompt count not incremented")
 
         # Use REAL streaming from AI service
         try:
             detected_model = "gpt-4o-mini"
-            logger.info(f"🚀 Starting REAL streaming with {detected_model}")
+            logger.info(f" Starting REAL streaming with {detected_model}")
             
             async def generate_stream():
                 """Generate REAL streaming response from AI"""
@@ -716,7 +716,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                         if current_count:
                             yield f"data: {json.dumps({'type': 'count_update', 'data': current_count.get('enhanced_prompts', 0)})}\n\n"
                     except Exception as e:
-                        logger.warning(f"⚠️ Failed to get updated count: {e}")
+                        logger.warning(f" Failed to get updated count: {e}")
                 
                 # Stream the response in real-time as it comes from OpenAI
                 current_text = ""
@@ -733,7 +733,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                 yield "data: [DONE]\n\n"
                 
         except Exception as ai_error:
-            logger.error(f"❌ AI service failed: {ai_error}")
+            logger.error(f" AI service failed: {ai_error}")
             # If AI service fails, raise the error instead of using fallback
             raise ai_error
         
@@ -779,7 +779,7 @@ async def increment_user_count(request: dict):
         # Increment the user's prompt count
         new_count = await db_service.increment_user_prompts(user_email)
         
-        logger.info(f"✅ Incremented prompt count for {user_email}: {new_count}")
+        logger.info(f" Incremented prompt count for {user_email}: {new_count}")
         
         return {
             "success": True,
@@ -788,7 +788,7 @@ async def increment_user_count(request: dict):
         }
         
     except Exception as e:
-        logger.error(f"❌ Failed to increment user count: {e}")
+        logger.error(f" Failed to increment user count: {e}")
         return {
             "success": False,
             "error": str(e)

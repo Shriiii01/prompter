@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 async def demonstrate_modular_usage():
     """Demonstrate how to use the refactored modular structure"""
     
-    print("🚀 MultiProviderService Modular Structure Demo")
+    print(" MultiProviderService Modular Structure Demo")
     print("=" * 50)
     
     # 1. Using the complete MultiProviderService (backward compatible)
@@ -29,17 +29,17 @@ async def demonstrate_modular_usage():
     # Test enhancement
     try:
         result = await service.enhance_prompt("Explain quantum computing", "gpt-4")
-        print(f"✅ Enhanced prompt: {result[:100]}...")
+        print(f" Enhanced prompt: {result[:100]}...")
     except Exception as e:
-        print(f"⚠️ Enhancement failed: {e}")
+        print(f" Enhancement failed: {e}")
     
     # Get statistics
     stats = service.get_provider_stats()
-    print(f"📊 Provider stats: {len(stats)} providers configured")
+    print(f" Provider stats: {len(stats)} providers configured")
     
     # Get health status
     health = service.get_health_status()
-    print(f"🏥 Health status: {health['status']}")
+    print(f" Health status: {health['status']}")
     
     # 2. Using individual modules directly
     print("\n2. Individual Module Usage:")
@@ -63,11 +63,11 @@ async def demonstrate_modular_usage():
     
     # Get stats
     all_stats = stats_tracker.get_all_stats()
-    print(f"📊 Recorded stats for {len(all_stats)} providers")
+    print(f" Recorded stats for {len(all_stats)} providers")
     
     # Enhancement Engine
     enhancement_engine = EnhancementEngine()
-    print("⚙️ Enhancement engine initialized")
+    print("⚙ Enhancement engine initialized")
     
     # Test fallback enhancement
     fallback = enhancement_engine.create_fallback_enhancement("Simple prompt", "gpt-4")
@@ -78,19 +78,19 @@ async def demonstrate_modular_usage():
     print("-" * 40)
     
     # Easy to test individual components
-    print("✅ Each module can be tested independently")
-    print("✅ Easy to mock dependencies")
-    print("✅ Clear separation of concerns")
-    print("✅ Simple to extend with new features")
+    print(" Each module can be tested independently")
+    print(" Easy to mock dependencies")
+    print(" Clear separation of concerns")
+    print(" Simple to extend with new features")
     
     # 4. Performance monitoring
     print("\n4. Performance Monitoring:")
     print("-" * 40)
     
     overall_stats = stats_tracker.get_overall_stats()
-    print(f"📊 Overall requests: {overall_stats.get('total_requests', 0)}")
-    print(f"✅ Successful requests: {overall_stats.get('total_successful', 0)}")
-    print(f"❌ Failed requests: {overall_stats.get('total_failed', 0)}")
+    print(f" Overall requests: {overall_stats.get('total_requests', 0)}")
+    print(f" Successful requests: {overall_stats.get('total_successful', 0)}")
+    print(f" Failed requests: {overall_stats.get('total_failed', 0)}")
     
     # 5. Circuit breaker demonstration
     print("\n5. Circuit Breaker Demo:")
@@ -99,7 +99,7 @@ async def demonstrate_modular_usage():
     # Simulate failures
     for i in range(3):
         circuit_manager.record_failure("openai")
-        print(f"❌ Recorded failure {i+1} for OpenAI")
+        print(f" Recorded failure {i+1} for OpenAI")
     
     # Check circuit state
     circuit_state = circuit_manager.is_circuit_closed("openai")
@@ -107,14 +107,14 @@ async def demonstrate_modular_usage():
     
     # Simulate success
     circuit_manager.record_success("openai")
-    print("✅ Recorded success for OpenAI")
+    print(" Recorded success for OpenAI")
     
     # Get circuit stats
     circuit_stats = circuit_manager.get_circuit_stats()
     openai_stats = circuit_stats.get("openai", {})
-    print(f"📊 OpenAI circuit stats: {openai_stats}")
+    print(f" OpenAI circuit stats: {openai_stats}")
     
-    print("\n🎉 Demo completed successfully!")
+    print("\n Demo completed successfully!")
     print("The modular structure provides better maintainability and testability.")
 
 def demonstrate_backward_compatibility():
@@ -135,11 +135,11 @@ def demonstrate_backward_compatibility():
     
     for method in methods:
         if hasattr(service, method):
-            print(f"✅ {method} method available")
+            print(f" {method} method available")
         else:
-            print(f"❌ {method} method missing")
+            print(f" {method} method missing")
     
-    print("✅ Backward compatibility maintained!")
+    print(" Backward compatibility maintained!")
 
 if __name__ == "__main__":
     # Run the demonstration

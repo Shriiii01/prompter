@@ -56,9 +56,9 @@ class ModelSpecificEnhancer:
         
         # Log initialization status
         if self.multi_provider_service:
-            logger.info("🚀 Initialized Model-Specific Enhancer (MultiProviderService for all models) - OPTIMIZED FOR SPEED")
+            logger.info(" Initialized Model-Specific Enhancer (MultiProviderService for all models) - OPTIMIZED FOR SPEED")
         else:
-            logger.warning("⚠️ Initialized Model-Specific Enhancer without MultiProviderService - using fast fallback enhancement")
+            logger.warning(" Initialized Model-Specific Enhancer without MultiProviderService - using fast fallback enhancement")
     
     async def enhance(self, prompt: str, target_model: LLMModel, 
                      context: Optional[str] = None) -> EnhancementResult:
@@ -68,7 +68,7 @@ class ModelSpecificEnhancer:
         start_time = time.time()
         model_name = target_model.value
         
-        logger.info(f"🎯 Starting enhancement for '{prompt[:50]}...' with model {model_name}")
+        logger.info(f" Starting enhancement for '{prompt[:50]}...' with model {model_name}")
         
         # FAST CACHE CHECK
         cache_key = f"{prompt[:100]}_{model_name}"
@@ -89,18 +89,18 @@ class ModelSpecificEnhancer:
         try:
             # Validate MultiProviderService
             if not self.multi_provider_service:
-                logger.error("❌ No MultiProviderService available - using fast fallback")
+                logger.error(" No MultiProviderService available - using fast fallback")
                 enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
                 model_used = f"fallback-no-multi-provider-{model_name}"
             else:
-                logger.info(f"✅ MultiProviderService available: {type(self.multi_provider_service)}")
+                logger.info(f" MultiProviderService available: {type(self.multi_provider_service)}")
                 
                 # SPEED OPTIMIZATION: Skip expensive analysis for most prompts
                 should_enhance, reasoning = self._should_enhance_prompt(prompt)
-                logger.info(f"🔍 Enhancement decision: {should_enhance} - {reasoning}")
+                logger.info(f" Enhancement decision: {should_enhance} - {reasoning}")
                 
                 if not should_enhance:
-                    logger.info(f"⏭️ Skipping enhancement: {reasoning}")
+                    logger.info(f"⏭ Skipping enhancement: {reasoning}")
                     analysis = self.analyzer.analyze(prompt)
                     return EnhancementResult(
                         original=prompt,
@@ -115,25 +115,25 @@ class ModelSpecificEnhancer:
                 
                 # Use MultiProviderService for all enhancements
                 try:
-                    logger.info(f"🚀 Attempting MultiProviderService enhancement for {model_name}")
+                    logger.info(f" Attempting MultiProviderService enhancement for {model_name}")
                     enhanced_prompt, is_fallback = await self._enhance_with_multi_provider(prompt, model_name)
                     
                     if is_fallback:
                         # Fallback was used due to exception
                         model_used = f"fallback-exception-{model_name}"
-                        logger.info(f"✅ Fallback enhancement used due to exception: {enhanced_prompt[:100]}...")
+                        logger.info(f" Fallback enhancement used due to exception: {enhanced_prompt[:100]}...")
                     else:
                         # Validate the enhancement from MultiProviderService
                         if enhanced_prompt and enhanced_prompt.strip():
                             model_used = f"multi-provider-for-{model_name}"
-                            logger.info(f"✅ MultiProviderService enhancement successful: {enhanced_prompt[:100]}...")
+                            logger.info(f" MultiProviderService enhancement successful: {enhanced_prompt[:100]}...")
                         else:
-                            logger.warning(f"⚠️ MultiProviderService returned empty enhancement, using fast fallback")
+                            logger.warning(f" MultiProviderService returned empty enhancement, using fast fallback")
                             enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
                             model_used = f"fallback-invalid-response-{model_name}"
                         
                 except Exception as multi_provider_error:
-                    logger.error(f"❌ MultiProviderService enhancement failed: {str(multi_provider_error)}")
+                    logger.error(f" MultiProviderService enhancement failed: {str(multi_provider_error)}")
                     enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
                     model_used = f"fallback-exception-{model_name}"
             
@@ -156,11 +156,11 @@ class ModelSpecificEnhancer:
                 timestamp=datetime.now()
             )
             
-            logger.info(f"✅ Enhancement completed in {result.enhancement_time:.2f}s")
+            logger.info(f" Enhancement completed in {result.enhancement_time:.2f}s")
             return result
             
         except Exception as e:
-            logger.error(f"❌ Enhancement failed: {str(e)}")
+            logger.error(f" Enhancement failed: {str(e)}")
             # Return fast fallback result
             analysis = self.analyzer.analyze(prompt)
             return EnhancementResult(
@@ -203,17 +203,17 @@ class ModelSpecificEnhancer:
         Returns: (enhanced_prompt, is_fallback)
         """
         
-        logger.info(f"🚀 Using MultiProviderService for {target_model}")
+        logger.info(f" Using MultiProviderService for {target_model}")
         
         try:
             # Use the MultiProviderService with aggressive timeouts
             enhanced_prompt = await self.multi_provider_service.enhance_prompt(prompt, target_model)
             
-            logger.info(f"✅ MultiProviderService enhancement successful for {target_model}")
+            logger.info(f" MultiProviderService enhancement successful for {target_model}")
             return enhanced_prompt, False
                 
         except Exception as e:
-            logger.error(f"❌ MultiProviderService failed for {target_model}: {str(e)}")
+            logger.error(f" MultiProviderService failed for {target_model}: {str(e)}")
             fallback_prompt = self._create_fallback_enhancement(prompt, target_model)
             return fallback_prompt, True
     
@@ -254,7 +254,7 @@ class ModelSpecificEnhancer:
         if enhanced_prompt == prompt or "certainly" in enhanced_prompt.lower() or "here" in enhanced_prompt.lower():
             enhanced_prompt = f"You are an expert. Please provide a comprehensive and detailed response to: {prompt}"
         
-        logger.info(f"✅ Fallback enhancement created: {enhanced_prompt[:100]}...")
+        logger.info(f" Fallback enhancement created: {enhanced_prompt[:100]}...")
         return enhanced_prompt
     
     def _identify_improvements(self, original: str, enhanced: str) -> list[str]:
