@@ -1,8 +1,8 @@
-// 🌐 PRODUCTION CONFIGURATION
+//  PRODUCTION CONFIGURATION
 // Update this file with your Railway URL before deploying
 
 const PRODUCTION_CONFIG = {
-  // 🚨 UPDATE THIS WITH YOUR ACTUAL RAILWAY URL
+  //  UPDATE THIS WITH YOUR ACTUAL RAILWAY URL
   API_BASE_URL: 'http://localhost:8000',
   
   // Development URL (don't change this)
@@ -25,7 +25,7 @@ const isProduction = () => {
     return window.location.protocol === 'https:' || 
            window.location.hostname !== 'localhost';
   } catch (error) {
-    console.warn('⚠️ Error detecting production environment:', error);
+    console.warn(' Error detecting production environment:', error);
     return false; // Default to development
   }
 };
@@ -35,7 +35,7 @@ const getApiUrl = () => {
   try {
     return isProduction() ? PRODUCTION_CONFIG.API_BASE_URL : PRODUCTION_CONFIG.DEV_API_BASE_URL;
   } catch (error) {
-    console.warn('⚠️ Error getting API URL, using fallback:', error);
+    console.warn(' Error getting API URL, using fallback:', error);
     return PRODUCTION_CONFIG.DEV_API_BASE_URL;
   }
 };
@@ -46,7 +46,7 @@ const validateConfig = () => {
   const missingProps = requiredProps.filter(prop => !PRODUCTION_CONFIG.hasOwnProperty(prop));
   
   if (missingProps.length > 0) {
-    console.error('❌ Missing required config properties:', missingProps);
+    console.error(' Missing required config properties:', missingProps);
     return false;
   }
   
@@ -56,12 +56,12 @@ const validateConfig = () => {
 // Health check for CONFIG availability
 const healthCheck = () => {
   if (typeof window === 'undefined') {
-    console.warn('⚠️ Window object not available');
+    console.warn(' Window object not available');
     return false;
   }
   
   if (!window.CONFIG) {
-    console.warn('⚠️ CONFIG not available on window object');
+    console.warn(' CONFIG not available on window object');
     return false;
   }
   
@@ -71,7 +71,7 @@ const healthCheck = () => {
 // Export configuration with error handling
 const createConfig = () => {
   if (!validateConfig()) {
-    console.error('❌ Configuration validation failed');
+    console.error(' Configuration validation failed');
     return null;
   }
   
@@ -93,7 +93,7 @@ const ensureConfigAvailable = () => {
   return new Promise((resolve, reject) => {
     // Check if CONFIG is already available
     if (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.healthCheck && window.CONFIG.healthCheck()) {
-      console.log('✅ CONFIG already available and healthy');
+      console.log(' CONFIG already available and healthy');
       configLoadResolved = true;
       resolve(window.CONFIG);
       return;
@@ -103,7 +103,7 @@ const ensureConfigAvailable = () => {
     configLoadTimeout = setTimeout(() => {
       if (!configLoadResolved) {
         configLoadResolved = true;
-        console.error('❌ CONFIG load timeout reached (10 seconds)');
+        console.error(' CONFIG load timeout reached (10 seconds)');
         reject(new Error('CONFIG failed to load within 10 seconds'));
       }
     }, CONFIG_LOAD_TIMEOUT);
@@ -115,16 +115,16 @@ const ensureConfigAvailable = () => {
         if (typeof window !== 'undefined') {
           window.CONFIG = config;
         }
-        console.log('✅ CONFIG loaded successfully');
+        console.log(' CONFIG loaded successfully');
         configLoadResolved = true;
         clearTimeout(configLoadTimeout);
         resolve(config);
       } else {
-        console.error('❌ Failed to create CONFIG');
+        console.error(' Failed to create CONFIG');
         reject(new Error('Failed to create CONFIG'));
       }
     } catch (error) {
-      console.error('❌ Error loading CONFIG:', error);
+      console.error(' Error loading CONFIG:', error);
       configLoadResolved = true;
       clearTimeout(configLoadTimeout);
       reject(error);
@@ -136,7 +136,7 @@ const ensureConfigAvailable = () => {
 const initializeConfig = async () => {
   try {
     const config = await ensureConfigAvailable();
-    console.log('🌐 Configuration loaded successfully:', {
+    console.log(' Configuration loaded successfully:', {
       isProduction: config.isProduction(),
       apiUrl: config.getApiUrl(),
       productionUrl: config.API_BASE_URL,
@@ -144,13 +144,13 @@ const initializeConfig = async () => {
     });
     return config;
   } catch (error) {
-    console.error('❌ CONFIG initialization failed:', error.message);
+    console.error(' CONFIG initialization failed:', error.message);
     
     // Create a fallback config for graceful degradation
     const fallbackConfig = createConfig();
     if (fallbackConfig && typeof window !== 'undefined') {
       window.CONFIG = fallbackConfig;
-      console.warn('⚠️ Using fallback CONFIG due to initialization failure');
+      console.warn(' Using fallback CONFIG due to initialization failure');
     }
     
     throw error;
@@ -160,7 +160,7 @@ const initializeConfig = async () => {
 // Start CONFIG initialization
 if (typeof window !== 'undefined') {
   initializeConfig().catch(error => {
-    console.error('❌ CONFIG initialization failed with error:', error);
+    console.error(' CONFIG initialization failed with error:', error);
   });
 }
 
@@ -169,4 +169,4 @@ if (typeof window !== 'undefined') {
   window.CONFIG = window.CONFIG || createConfig();
 }
 
-console.log('🌐 Configuration module loaded'); 
+console.log(' Configuration module loaded'); 

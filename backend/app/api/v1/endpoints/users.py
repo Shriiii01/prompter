@@ -96,7 +96,7 @@ async def get_user_by_email(email: str):
         return UserResponse(
             id=user["id"],
             email=user["email"],
-            name=user.get("name", "User"),
+            name=user.get("name") or "User",  # Ensure name is never None
             enhanced_prompts=user.get("enhanced_prompts", 0),
             created_at=user.get("created_at", "")
         )
@@ -117,11 +117,11 @@ async def increment_user_count(email: str):
         Updated user data with new count
     """
     try:
-        logger.info(f"📊 Incrementing count for user: {email}")
+        logger.info(f" Incrementing count for user: {email}")
         
         # Increment the count
         new_count = await db_service.increment_user_prompts(email)
-        logger.info(f"✅ Count incremented to: {new_count}")
+        logger.info(f" Count incremented to: {new_count}")
         
         # Get updated user data
         user_data = await db_service.get_user_stats(email)
@@ -134,13 +134,13 @@ async def increment_user_count(email: str):
         return UserResponse(
             id=user_data.get('id', ''),
             email=email,
-            name=user_data.get('name', 'User'),
+            name=user_data.get('name') or 'User',  # Ensure name is never None
             enhanced_prompts=user_data.get('enhanced_prompts', 0),
             created_at=user_data.get('created_at', '')
         )
         
     except Exception as e:
-        logger.error(f"❌ Failed to increment count for {email}: {e}")
+        logger.error(f" Failed to increment count for {email}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to increment count: {str(e)}"

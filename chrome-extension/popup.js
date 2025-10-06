@@ -12,9 +12,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (window.CONFIG) {
-        console.log('✅ CONFIG loaded successfully');
     } else {
-        console.warn('⚠️ CONFIG not loaded, using fallback');
+        console.warn(' CONFIG not loaded, using fallback');
         // Create fallback config
         window.CONFIG = {
             getApiUrl: () => 'http://localhost:8000'
@@ -146,53 +145,85 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Check login status
     function checkLogin() {
-
+        
         chrome.runtime.sendMessage({ action: 'check_login' }, (response) => {
 
             if (response && response.loggedIn) {
-                // Check if user has display_name, if not show name input
-                if (response.userInfo && !response.userInfo.display_name) {
-
-                    showNameInput();
-                } else {
-
+                
+                // Check if user has name in local storage first
+                if (response.userInfo && response.userInfo.name) {
                     showUserDashboard(response.userInfo);
                     // Also fetch current count for already logged in user
                     if (response.userInfo.email) {
                         fetchEnhancedCount(response.userInfo.email);
                     }
+                } else {
+                    // Check database for existing name
+                    checkUserInDatabase(response.userInfo);
                 }
             } else {
-
                 showAuthSection();
             }
         });
     }
 
+    // Check if user exists in database with name
+    function checkUserInDatabase(userInfo) {
+        if (!userInfo || !userInfo.email) {
+            showNameInput();
+            return;
+        }
+
+        
+        const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+        fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(userInfo.email)}`)
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            })
+            .then(userData => {
+                console.log(' Database user data:', userData);
+                
+                if (userData && userData.name && userData.name !== 'User') {
+                    // Update local storage with the name from database
+                    const updatedUserInfo = { ...userInfo, name: userData.name };
+                    chrome.storage.local.set({ user_info: updatedUserInfo }, () => {
+                        showUserDashboard(updatedUserInfo);
+                        fetchEnhancedCount(userInfo.email);
+                    });
+                } else {
+                    showNameInput();
+                }
+            })
+            .catch(error => {
+                console.error(' Error checking database:', error);
+                showNameInput();
+            });
+    }
+
     // Login function
     function login() {
-
-        // The loading state is already handled by the button click event
-        // Don't interfere with it here
         
         chrome.runtime.sendMessage({ action: 'login' }, (response) => {
-
+            
             // Reset login button state
             if (loginText) loginText.classList.remove('hidden');
             if (loginLoading) loginLoading.classList.add('hidden');
             if (loginBtn) loginBtn.disabled = false;
             
             if (response && response.success) {
-
+                
                 if (response.needsName) {
-
                     showNameInput();
                 } else {
-
                     showUserDashboard(response.userInfo);
                 }
             } else {
-
+                // Show error message to user
+                showError('Login failed. Please try again.');
             }
         });
     }
@@ -220,16 +251,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const displayName = nameInput.value.trim();
         
         if (!displayName) {
-
             return;
         }
 
+
         // Store the name and update database
         chrome.storage.local.get(['user_info'], (data) => {
-            const userInfo = { ...data.user_info, display_name: displayName };
+            const userInfo = { ...data.user_info, name: displayName };
+            
+            // First update local storage
             chrome.storage.local.set({ user_info: userInfo }, () => {
 
-                // Update user in database with display name
+                // Then update user in database
                 const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
                 fetch(`${apiUrl}/api/v1/users`, {
                     method: 'POST',
@@ -238,14 +271,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     },
                     body: JSON.stringify({
                         email: userInfo.email,
-                        name: displayName // Use display name instead of Google name
+                        name: displayName
                     })
                 }).then(response => {
-
+                    if (response.ok) {
+                    } else {
+                        console.error(' Failed to save name to database:', response.status);
+                    }
                     showUserDashboard(userInfo);
                 }).catch(error => {
-
-                    // Still show logged in even if database update fails
+                    console.error(' Error saving name to database:', error);
+                    // Still show dashboard even if database save fails
                     showUserDashboard(userInfo);
                 });
             });
@@ -270,9 +306,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (loggedInSection) loggedInSection.style.display = 'block';
         
         if (userNameSpan && userInfo) {
-            userNameSpan.textContent = userInfo.display_name || userInfo.name || userInfo.email || 'User';
+            userNameSpan.textContent = userInfo.name || userInfo.email || 'User';
         }
         hideError();
+    }
+
+    // Error handling function
+    function showError(message) {
+        console.error(' Error:', message);
+        // You can add a toast notification or error display here
+        alert(message); // Simple error display for now
     }
 
     // Update functions for new UI
@@ -322,7 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (userInfo) {
             // Set user name
             if (userNameSpan) {
-                userNameSpan.textContent = userInfo.display_name || userInfo.name || 'User';
+                userNameSpan.textContent = userInfo.name || 'User';
             }
             
             // Set user email

@@ -18,14 +18,14 @@ class PromptEnhancer:
         self.analyzer = PromptAnalyzer()
         self.cache = CacheService()
         
-        print("🚀 PromptEnhancer initialized with Fast Pipeline")
+        print(" PromptEnhancer initialized with Fast Pipeline")
     
     async def enhance(self, prompt: str, target_model: LLMModel, 
                      context: Optional[str] = None) -> EnhancementResult:
         """Fast prompt enhancement with caching"""
         
         start_time = time.time()
-        print(f"🎯 Fast enhancing: {prompt[:50]}...")
+        print(f" Fast enhancing: {prompt[:50]}...")
 
         # Handle edge cases first
         edge_case_result = self._handle_edge_cases(prompt, start_time)
@@ -37,7 +37,7 @@ class PromptEnhancer:
         cached_result = await self.cache.get(cache_key)
         
         if cached_result:
-            print("✅ Cache hit - returning cached result")
+            print(" Cache hit - returning cached result")
             return EnhancementResult(**cached_result)
         
         try:
@@ -65,11 +65,11 @@ class PromptEnhancer:
             # Cache the result
             await self.cache.set(cache_key, result.dict(), ttl=3600)
             
-            print(f"✅ Enhancement completed in {result.enhancement_time:.2f}s")
+            print(f" Enhancement completed in {result.enhancement_time:.2f}s")
             return result
             
         except Exception as e:
-            print(f"❌ Enhancement failed: {e}")
+            print(f" Enhancement failed: {e}")
             # Return basic fallback
             return EnhancementResult(
                 original=prompt,

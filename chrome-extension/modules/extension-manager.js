@@ -1,20 +1,20 @@
-// 🔧 Extension Manager - Content Script Control
+//  Extension Manager - Content Script Control
 class ExtensionManager {
     constructor() {
         this.isActive = false;
     }
 
-    // 🚀 Start extension
+    //  Start extension
     async startExtension() {
         try {
-            console.log('🚀 Starting extension...');
+            console.log(' Starting extension...');
             
             const tabs = await this.getActiveTab();
             if (!tabs[0]) {
                 throw new Error('No active tab found');
             }
             
-            console.log('📡 Found active tab:', tabs[0].id, tabs[0].url);
+            console.log(' Found active tab:', tabs[0].id, tabs[0].url);
             
             // Inject content script first
             await this.injectContentScript(tabs[0]);
@@ -26,7 +26,7 @@ class ExtensionManager {
             const response = await this.sendMessage(tabs[0].id, { action: 'startExtension' });
             
             if (response && response.success) {
-                console.log('✅ Extension started successfully');
+                console.log(' Extension started successfully');
                 this.isActive = true;
                 this.updateStorageState(true);
                 
@@ -41,7 +41,7 @@ class ExtensionManager {
             }
             
         } catch (error) {
-            console.error('❌ Start error:', error);
+            console.error(' Start error:', error);
             throw error;
         }
     }
@@ -59,11 +59,11 @@ class ExtensionManager {
             this.isActive = false;
             this.updateStorageState(false);
             
-            console.log('✅ Extension stopped');
+            console.log(' Extension stopped');
             return { success: true };
             
         } catch (error) {
-            console.error('❌ Stop error:', error);
+            console.error(' Stop error:', error);
             // Still update state even if message fails
             this.isActive = false;
             this.updateStorageState(false);
@@ -94,13 +94,13 @@ class ExtensionManager {
             await this.disableExtension();
             
         } catch (error) {
-            console.error('❌ Quit error:', error);
+            console.error(' Quit error:', error);
             // Still try to disable extension
             await this.disableExtension();
         }
     }
 
-    // 📡 Inject content script
+    //  Inject content script
     async injectContentScript(tab) {
         return new Promise((resolve, reject) => {
             console.log('🔄 Injecting content script...');
@@ -110,17 +110,17 @@ class ExtensionManager {
                 files: ['magical-enhancer.js']
             }, () => {
                 if (chrome.runtime.lastError) {
-                    console.error('❌ Failed to inject content script:', chrome.runtime.lastError);
+                    console.error(' Failed to inject content script:', chrome.runtime.lastError);
                     reject(new Error('Failed to inject content script'));
                 } else {
-                    console.log('✅ Content script injected');
+                    console.log(' Content script injected');
                     resolve();
                 }
             });
         });
     }
 
-    // 📡 Send message to content script
+    //  Send message to content script
     async sendMessage(tabId, message) {
         return new Promise((resolve, reject) => {
             chrome.tabs.sendMessage(tabId, message, (response) => {
@@ -141,33 +141,33 @@ class ExtensionManager {
         });
     }
 
-    // 💾 Update storage state
+    //  Update storage state
     updateStorageState(isActive) {
         chrome.storage.local.set({ 'extension_active': isActive }, () => {
-            console.log(`💾 Extension state updated: ${isActive}`);
+            console.log(` Extension state updated: ${isActive}`);
         });
     }
 
-    // 🔧 Disable extension
+    //  Disable extension
     async disableExtension() {
         return new Promise((resolve) => {
             chrome.management.setEnabled(chrome.runtime.id, false, () => {
                 if (chrome.runtime.lastError) {
                     console.error('Error disabling extension:', chrome.runtime.lastError);
                 } else {
-                    console.log('✅ Extension disabled');
+                    console.log(' Extension disabled');
                 }
                 resolve();
             });
         });
     }
 
-    // ⏱️ Delay utility
+    // ⏱ Delay utility
     delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // 📊 Get current state
+    //  Get current state
     async getCurrentState() {
         return new Promise((resolve) => {
             chrome.storage.local.get(['extension_active'], (result) => {
@@ -183,7 +183,7 @@ class ExtensionManager {
         return state;
     }
 
-    // 📡 Notify content script
+    //  Notify content script
     async notifyContentScript(action, data = null) {
         try {
             const tabs = await this.getActiveTab();

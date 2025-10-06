@@ -1,4 +1,4 @@
-// 🔍 Authentication Debugging Utility
+//  Authentication Debugging Utility
 // Include this file temporarily in popup.html during debugging
 // Remove once authentication issues are resolved
 
@@ -10,7 +10,7 @@ class AuthDebugger {
     }
 
     init() {
-        console.log('🔍 Auth Debugger initialized');
+        console.log(' Auth Debugger initialized');
         this.createDebugUI();
         this.runDiagnostics();
     }
@@ -40,7 +40,7 @@ class AuthDebugger {
         const header = document.createElement('div');
         header.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <strong style="color: #ff6b6b;">🔍 Auth Debugger</strong>
+                <strong style="color: #ff6b6b;"> Auth Debugger</strong>
                 <button id="close-debug" style="background: #ff6b6b; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer;">×</button>
             </div>
         `;
@@ -122,7 +122,7 @@ class AuthDebugger {
         this.logContainer.scrollTop = this.logContainer.scrollHeight;
 
         // Also log to console
-        console.log(`🔍 [${type.toUpperCase()}] ${message}`);
+        console.log(` [${type.toUpperCase()}] ${message}`);
     }
 
     clearLogs() {
@@ -168,11 +168,11 @@ class AuthDebugger {
         
         try {
             if (typeof chrome === 'undefined' || !chrome.identity) {
-                this.log('❌ Chrome identity API not available', 'error');
+                this.log(' Chrome identity API not available', 'error');
                 return;
             }
 
-            this.log('✅ Chrome identity API available', 'success');
+            this.log(' Chrome identity API available', 'success');
             
             // Test getRedirectURL
             const redirectUrl = chrome.identity.getRedirectURL();
@@ -180,13 +180,13 @@ class AuthDebugger {
             
             // Validate redirect URL format
             if (redirectUrl.includes('chromiumapp.org')) {
-                this.log('✅ Redirect URL format is correct', 'success');
+                this.log(' Redirect URL format is correct', 'success');
             } else {
-                this.log('⚠️ Redirect URL format may be incorrect', 'warning');
+                this.log(' Redirect URL format may be incorrect', 'warning');
             }
             
         } catch (error) {
-            this.log(`❌ Chrome identity test failed: ${error.message}`, 'error');
+            this.log(` Chrome identity test failed: ${error.message}`, 'error');
         }
     }
 
@@ -195,11 +195,11 @@ class AuthDebugger {
         
         try {
             if (typeof SecureStorage === 'undefined') {
-                this.log('❌ SecureStorage class not available', 'error');
+                this.log(' SecureStorage class not available', 'error');
                 return;
             }
 
-            this.log('✅ SecureStorage class available', 'success');
+            this.log(' SecureStorage class available', 'success');
             
             const storage = new SecureStorage();
             
@@ -214,7 +214,7 @@ class AuthDebugger {
             // Test storage operations
             const testData = { test: 'data', timestamp: Date.now() };
             const stored = await storage.setEncrypted('debug_test', testData);
-            this.log(`💾 Test data stored: ${stored}`, 'info');
+            this.log(` Test data stored: ${stored}`, 'info');
             
             const retrieved = await storage.getEncrypted('debug_test');
             this.log(`📥 Test data retrieved: ${JSON.stringify(retrieved)}`, 'info');
@@ -224,7 +224,7 @@ class AuthDebugger {
             this.log('🧹 Test data cleaned up', 'info');
             
         } catch (error) {
-            this.log(`❌ SecureStorage test failed: ${error.message}`, 'error');
+            this.log(` SecureStorage test failed: ${error.message}`, 'error');
         }
     }
 
@@ -237,19 +237,19 @@ class AuthDebugger {
             const oauth2 = manifest.oauth2;
             
             if (!oauth2) {
-                this.log('❌ No OAuth2 configuration in manifest', 'error');
+                this.log(' No OAuth2 configuration in manifest', 'error');
                 return;
             }
             
-            this.log(`✅ OAuth2 configured in manifest`, 'success');
+            this.log(` OAuth2 configured in manifest`, 'success');
             this.log(`🔑 Client ID: ${oauth2.client_id}`, 'info');
             this.log(`📋 Scopes: ${oauth2.scopes.join(', ')}`, 'info');
             
             // Validate client ID format
             if (oauth2.client_id.includes('.apps.googleusercontent.com')) {
-                this.log('✅ Client ID format is correct', 'success');
+                this.log(' Client ID format is correct', 'success');
             } else {
-                this.log('⚠️ Client ID format may be incorrect', 'warning');
+                this.log(' Client ID format may be incorrect', 'warning');
             }
             
             // Check required scopes
@@ -257,13 +257,13 @@ class AuthDebugger {
             const missingScopes = requiredScopes.filter(scope => !oauth2.scopes.includes(scope));
             
             if (missingScopes.length === 0) {
-                this.log('✅ All required scopes are configured', 'success');
+                this.log(' All required scopes are configured', 'success');
             } else {
-                this.log(`❌ Missing scopes: ${missingScopes.join(', ')}`, 'error');
+                this.log(` Missing scopes: ${missingScopes.join(', ')}`, 'error');
             }
             
         } catch (error) {
-            this.log(`❌ OAuth config test failed: ${error.message}`, 'error');
+            this.log(` OAuth config test failed: ${error.message}`, 'error');
         }
     }
 
@@ -276,20 +276,20 @@ class AuthDebugger {
             const hostPermissions = manifest.host_permissions || [];
             
             this.log(`📋 Permissions: ${permissions.join(', ')}`, 'info');
-            this.log(`🌐 Host permissions: ${hostPermissions.join(', ')}`, 'info');
+            this.log(` Host permissions: ${hostPermissions.join(', ')}`, 'info');
             
             // Check required permissions
             const requiredPermissions = ['identity', 'storage'];
             const missingPermissions = requiredPermissions.filter(perm => !permissions.includes(perm));
             
             if (missingPermissions.length === 0) {
-                this.log('✅ All required permissions are granted', 'success');
+                this.log(' All required permissions are granted', 'success');
             } else {
-                this.log(`❌ Missing permissions: ${missingPermissions.join(', ')}`, 'error');
+                this.log(` Missing permissions: ${missingPermissions.join(', ')}`, 'error');
             }
             
         } catch (error) {
-            this.log(`❌ Permissions test failed: ${error.message}`, 'error');
+            this.log(` Permissions test failed: ${error.message}`, 'error');
         }
     }
 
@@ -301,24 +301,24 @@ class AuthDebugger {
             const clientId = manifest.oauth2?.client_id;
             
             if (!clientId) {
-                this.log('❌ No client ID found in manifest', 'error');
+                this.log(' No client ID found in manifest', 'error');
                 return;
             }
             
             this.log('📋 Google Cloud Console Setup Checklist:', 'info');
-            this.log('1. ✅ Client ID configured in manifest', 'success');
-            this.log('2. ⚠️ Verify in Google Cloud Console:', 'warning');
+            this.log('1.  Client ID configured in manifest', 'success');
+            this.log('2.  Verify in Google Cloud Console:', 'warning');
             this.log('   - Go to https://console.cloud.google.com/', 'info');
             this.log('   - Navigate to APIs & Services > Credentials', 'info');
             this.log('   - Find OAuth 2.0 Client ID matching:', 'info');
             this.log(`   - ${clientId}`, 'info');
-            this.log('3. ⚠️ Check Authorized redirect URIs:', 'warning');
+            this.log('3.  Check Authorized redirect URIs:', 'warning');
             this.log('   - Should include: https://<extension-id>.chromiumapp.org/', 'info');
-            this.log('4. ⚠️ Verify Application type is "Chrome Extension"', 'warning');
-            this.log('5. ⚠️ Ensure Google Identity API is enabled', 'warning');
+            this.log('4.  Verify Application type is "Chrome Extension"', 'warning');
+            this.log('5.  Ensure Google Identity API is enabled', 'warning');
             
         } catch (error) {
-            this.log(`❌ Google Cloud setup test failed: ${error.message}`, 'error');
+            this.log(` Google Cloud setup test failed: ${error.message}`, 'error');
         }
     }
 
@@ -337,12 +337,12 @@ class AuthDebugger {
                 `state=${this.generateState()}&` +
                 `nonce=${this.generateNonce()}`;
 
-            this.log(`🌐 Auth URL: ${authUrl}`, 'info');
+            this.log(` Auth URL: ${authUrl}`, 'info');
             
             // Note: This will actually launch the OAuth flow
             // Only use this for debugging when needed
-            this.log('⚠️ This will launch the actual OAuth flow', 'warning');
-            this.log('⚠️ Click "Test OAuth" again to proceed', 'warning');
+            this.log(' This will launch the actual OAuth flow', 'warning');
+            this.log(' Click "Test OAuth" again to proceed', 'warning');
             
             // Uncomment the following lines to actually test the OAuth flow
             /*
@@ -351,16 +351,16 @@ class AuthDebugger {
                 interactive: true
             }, (redirectUrl) => {
                 if (chrome.runtime.lastError) {
-                    this.log(`❌ OAuth flow failed: ${chrome.runtime.lastError.message}`, 'error');
+                    this.log(` OAuth flow failed: ${chrome.runtime.lastError.message}`, 'error');
                     return;
                 }
                 
                 if (!redirectUrl) {
-                    this.log('❌ OAuth flow cancelled by user', 'error');
+                    this.log(' OAuth flow cancelled by user', 'error');
                     return;
                 }
                 
-                this.log(`✅ OAuth flow successful: ${redirectUrl}`, 'success');
+                this.log(` OAuth flow successful: ${redirectUrl}`, 'success');
                 
                 // Parse the response
                 try {
@@ -368,32 +368,32 @@ class AuthDebugger {
                     const fragment = url.hash.substring(1);
                     const params = new URLSearchParams(fragment);
                     
-                    this.log(`🔍 URL fragment: ${fragment}`, 'info');
-                    this.log(`🔍 All params: ${JSON.stringify(Object.fromEntries(params.entries()))}`, 'info');
+                    this.log(` URL fragment: ${fragment}`, 'info');
+                    this.log(` All params: ${JSON.stringify(Object.fromEntries(params.entries()))}`, 'info');
                     
                     const idToken = params.get('id_token');
                     const accessToken = params.get('access_token');
                     
                     if (idToken) {
-                        this.log('✅ ID token received', 'success');
+                        this.log(' ID token received', 'success');
                     } else {
-                        this.log('❌ No ID token received', 'error');
+                        this.log(' No ID token received', 'error');
                     }
                     
                     if (accessToken) {
-                        this.log('✅ Access token received', 'success');
+                        this.log(' Access token received', 'success');
                     } else {
-                        this.log('❌ No access token received', 'error');
+                        this.log(' No access token received', 'error');
                     }
                     
                 } catch (error) {
-                    this.log(`❌ Error parsing OAuth response: ${error.message}`, 'error');
+                    this.log(` Error parsing OAuth response: ${error.message}`, 'error');
                 }
             });
             */
             
         } catch (error) {
-            this.log(`❌ OAuth flow test failed: ${error.message}`, 'error');
+            this.log(` OAuth flow test failed: ${error.message}`, 'error');
         }
     }
 
@@ -417,5 +417,5 @@ if (typeof window !== 'undefined') {
         });
     }
 } else {
-    console.warn('⚠️ Window object not available, skipping AuthDebugger setup');
+    console.warn(' Window object not available, skipping AuthDebugger setup');
 } 

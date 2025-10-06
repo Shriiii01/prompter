@@ -60,9 +60,9 @@ class AdvancedRateLimiter:
             )
             await self.redis_client.ping()
             self.redis_available = True
-            logger.info("✅ Redis connected for distributed rate limiting")
+            logger.info(" Redis connected for distributed rate limiting")
         except Exception as e:
-            logger.warning(f"⚠️ Redis unavailable, using in-memory rate limiting: {e}")
+            logger.warning(f" Redis unavailable, using in-memory rate limiting: {e}")
             self.redis_available = False
     
     def _get_client_ip(self, request: Request) -> str:

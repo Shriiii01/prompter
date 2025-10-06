@@ -109,11 +109,11 @@ app.include_router(enhance_v1_endpoints.router, prefix="/api/v1")
 app.include_router(users_v1_endpoints.router, prefix="/api/v1")
 app.include_router(payment_endpoints.router, prefix="/api/v1/payment", tags=["payment"])
 try:
-    print("🔧 Loading streaming enhance router...")
+    print(" Loading streaming enhance router...")
     app.include_router(enhance_router.router, prefix="/api")  # Add streaming endpoint
-    print("✅ Streaming enhance router loaded successfully")
+    print(" Streaming enhance router loaded successfully")
 except Exception as e:
-    print(f"❌ Failed to load streaming enhance router: {e}")
+    print(f" Failed to load streaming enhance router: {e}")
     import traceback
     traceback.print_exc()
 app.include_router(websocket.router)

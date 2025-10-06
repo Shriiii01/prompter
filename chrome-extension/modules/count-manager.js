@@ -1,4 +1,4 @@
-// 📊 Count Manager - Simplified Optimistic Updates
+//  Count Manager - Simplified Optimistic Updates
 class CountManager {
     constructor() {
         this.apiBaseUrl = CONFIG.getApiUrl();
@@ -7,10 +7,10 @@ class CountManager {
         this.updateCounter = 0;
     }
 
-    // 🚀 Simplified optimistic increment
+    //  Simplified optimistic increment
     async incrementCount(userEmail) {
         try {
-            console.log('🚀 Starting count increment for:', userEmail);
+            console.log(' Starting count increment for:', userEmail);
             
             // Get current count from display
             const currentCount = this.getCurrentDisplayCount();
@@ -19,9 +19,9 @@ class CountManager {
             // Generate unique update ID
             const updateId = `update_${Date.now()}_${++this.updateCounter}`;
             
-            // 🚀 OPTIMISTIC UPDATE: Immediately update display
+            //  OPTIMISTIC UPDATE: Immediately update display
             this.updateDisplay(newCount);
-            console.log(`🚀 Optimistic update: ${currentCount} → ${newCount}`);
+            console.log(` Optimistic update: ${currentCount} → ${newCount}`);
             
             // Store pending update for potential rollback
             this.pendingUpdates.set(updateId, {
@@ -36,7 +36,7 @@ class CountManager {
             return { success: true, updateId };
             
         } catch (error) {
-            console.error('❌ Error in count increment:', error);
+            console.error(' Error in count increment:', error);
             return { success: false, error: error.message };
         }
     }
@@ -54,7 +54,7 @@ class CountManager {
             
             if (response.ok) {
                 const result = await response.json();
-                console.log(`✅ Backend update successful: ${result.new_count}`);
+                console.log(` Backend update successful: ${result.new_count}`);
                 
                 // Update display with actual backend count
                 this.updateDisplay(result.new_count);
@@ -66,25 +66,25 @@ class CountManager {
                 this.showSuccessIndicator();
                 
             } else {
-                console.log(`❌ Backend update failed: ${response.status}`);
+                console.log(` Backend update failed: ${response.status}`);
                 this.handleBackendFailure(updateId);
             }
             
         } catch (error) {
-            console.error(`❌ Backend update error:`, error);
+            console.error(` Backend update error:`, error);
             this.handleBackendFailure(updateId);
         }
     }
 
-    // 🚨 Handle backend failure - rollback
+    //  Handle backend failure - rollback
     handleBackendFailure(updateId) {
         const pendingUpdate = this.pendingUpdates.get(updateId);
         if (!pendingUpdate) {
-            console.log('⚠️ No pending update found for rollback');
+            console.log(' No pending update found for rollback');
             return;
         }
         
-        // 🚨 ROLLBACK: Restore original count
+        //  ROLLBACK: Restore original count
         this.updateDisplay(pendingUpdate.originalCount);
         console.log(`🔄 Rollback complete: ${pendingUpdate.originalCount}`);
         
@@ -94,7 +94,7 @@ class CountManager {
         // Show error indicator
         this.showErrorIndicator();
         
-        // 🚀 OPTIONAL: Retry after delay
+        //  OPTIONAL: Retry after delay
         setTimeout(() => {
             this.retryBackendUpdate(updateId, pendingUpdate.userEmail);
         }, 3000);
@@ -113,21 +113,21 @@ class CountManager {
             
             if (response.ok) {
                 const result = await response.json();
-                console.log(`✅ Retry successful: ${result.new_count}`);
+                console.log(` Retry successful: ${result.new_count}`);
                 this.updateDisplay(result.new_count);
                 this.showSuccessIndicator();
             } else {
-                console.log(`❌ Retry failed: ${response.status}`);
+                console.log(` Retry failed: ${response.status}`);
                 this.showErrorIndicator();
             }
             
         } catch (error) {
-            console.error(`❌ Retry error:`, error);
+            console.error(` Retry error:`, error);
             this.showErrorIndicator();
         }
     }
 
-    // 📊 Load count from backend
+    //  Load count from backend
     async loadCount(userEmail) {
         try {
             console.log('🔄 Loading count from backend...');
@@ -156,25 +156,25 @@ class CountManager {
                 this.updateDisplay(count);
                 this.cacheCount(count);
                 
-                console.log('✅ Loaded count from backend:', count);
+                console.log(' Loaded count from backend:', count);
                 return count;
             } else {
                 throw new Error(`Backend returned ${response.status}`);
             }
             
         } catch (error) {
-            console.log('📡 Backend unavailable, using cached count');
+            console.log(' Backend unavailable, using cached count');
             const cachedCount = this.getCachedCount();
             this.updateDisplay(cachedCount);
             return cachedCount;
         }
     }
 
-    // 🎯 Get current count from display
+    //  Get current count from display
     getCurrentDisplayCount() {
         const element = document.getElementById('enhanced-count');
         if (!element) {
-            console.log('❌ Enhanced count element not found');
+            console.log(' Enhanced count element not found');
             return 0;
         }
         
@@ -182,16 +182,16 @@ class CountManager {
         return count;
     }
 
-    // 📊 Update display with count
+    //  Update display with count
     updateDisplay(count) {
         const element = document.getElementById('enhanced-count');
         if (!element) {
-            console.log('❌ Enhanced count element not found');
+            console.log(' Enhanced count element not found');
             return;
         }
         
         element.textContent = count.toString();
-        console.log(`📊 Updated display: ${count}`);
+        console.log(` Updated display: ${count}`);
         
         // Show visual indicator for pending updates
         if (this.pendingUpdates.size > 0) {
@@ -206,10 +206,10 @@ class CountManager {
         this.cacheCount(count);
     }
 
-    // 💾 Cache count locally
+    //  Cache count locally
     cacheCount(count) {
         chrome.storage.local.set({ 'cached_prompt_count': count }, () => {
-            console.log(`💾 Cached count: ${count}`);
+            console.log(` Cached count: ${count}`);
         });
     }
 
@@ -222,7 +222,7 @@ class CountManager {
         });
     }
 
-    // ✅ Show success indicator
+    //  Show success indicator
     showSuccessIndicator() {
         const element = document.getElementById('enhanced-count');
         if (element) {
@@ -233,7 +233,7 @@ class CountManager {
         }
     }
 
-    // ❌ Show error indicator
+    //  Show error indicator
     showErrorIndicator() {
         const element = document.getElementById('enhanced-count');
         if (element) {
@@ -257,7 +257,7 @@ class CountManager {
         }
     }
 
-    // 🚀 Start cleanup interval
+    //  Start cleanup interval
     startCleanupInterval() {
         setInterval(() => {
             this.cleanupStaleUpdates();
@@ -270,9 +270,9 @@ class CountManager {
         console.log('🧹 Cleared all pending updates');
     }
 
-    // 📊 Debug pending updates
+    //  Debug pending updates
     debugPendingUpdates() {
-        console.log('📊 Pending Updates Status:');
+        console.log(' Pending Updates Status:');
         console.log(`Total pending updates: ${this.pendingUpdates.size}`);
         
         for (const [updateId, update] of this.pendingUpdates.entries()) {

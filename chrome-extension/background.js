@@ -77,7 +77,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                     // Ensure user exists in database
 
-                    const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+                    const apiUrl = 'http://localhost:8000'; // Background script doesn't have access to window.CONFIG
                     fetch(`${apiUrl}/api/v1/users`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -99,6 +99,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     // After OAuth always ask for display name in the popup
 
                     sendResponse({ success: true, userInfo, needsName: true });
+
+                    //  Seamless Login Flow: Re-open the popup to show the dashboard
+                    // This creates a smooth transition for the user after login.
+                    chrome.action.openPopup();
                     
                                     // Don't auto-activate - wait for user to click Start button
                 });
@@ -127,7 +131,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Best-effort revoke and clear
         chrome.identity.getAuthToken({ interactive: false }, (token) => {
             if (token) {
-                chrome.identity.removeCachedAuthToken({ token }, () => console.log('🗑️ Revoked OAuth token'));
+                chrome.identity.removeCachedAuthToken({ token }, () => console.log(' Revoked OAuth token'));
             }
             chrome.storage.local.clear(() => {
 
@@ -150,7 +154,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 // This fixes cross-tab switching issues
                 globalThis.activeEnhancementTabId = tabId;
 
-                // 🚨 CRITICAL MONEY PROTECTION: Backend double-check before making expensive API calls
+                //  CRITICAL MONEY PROTECTION: Backend double-check before making expensive API calls
                 if (userEmail) {
                     try {
                         // Quick check of user status before proceeding
@@ -167,9 +171,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             const dailyLimit = userStatus.daily_limit || 10;
                             const userTier = userStatus.subscription_tier || 'free';
 
-                            // 🚨 EMERGENCY BACKEND BLOCK: If user has used 9+ of 10 prompts, block API call
+                            //  EMERGENCY BACKEND BLOCK: If user has used 9+ of 10 prompts, block API call
                             if (userTier === 'free' && dailyUsed >= 9) {
-                                console.error(`🚨 BACKEND BLOCK: Free user ${userEmail} at ${dailyUsed}/${dailyLimit} prompts - BLOCKING API CALL!`);
+                                console.error(` BACKEND BLOCK: Free user ${userEmail} at ${dailyUsed}/${dailyLimit} prompts - BLOCKING API CALL!`);
 
                                 const targetTabId = globalThis.activeEnhancementTabId || tabId;
                                 chrome.tabs.sendMessage(targetTabId, {
@@ -184,18 +188,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 return;
                             }
 
-                            console.log(`✅ Backend check passed: ${userEmail} at ${dailyUsed}/${dailyLimit} prompts`);
                         } else {
-                            console.warn(`⚠️ Could not verify user status: ${statusCheck.status}`);
                         }
                     } catch (statusError) {
-                        console.error('❌ Backend status check failed:', statusError);
+                        console.error('Backend status check failed:', statusError);
                         // Continue with request even if check fails (don't block due to network issues)
                     }
                 }
 
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 45000); // Longer timeout for streaming
+
 
                 const res = await fetch(`${apiUrl}/api/stream-enhance`, {
                     method: 'POST',
@@ -213,6 +216,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }),
                     signal: controller.signal
                 });
+
 
                 if (!res.ok) {
                     const txt = await res.text().catch(() => '');
@@ -359,7 +363,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         (async () => {
             try {
-                const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+                const apiUrl = 'http://localhost:8000'; // Background script doesn't have access to window.CONFIG
 
                 // FIRST: Check current user status to avoid unnecessary API calls
 

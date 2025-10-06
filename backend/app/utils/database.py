@@ -362,8 +362,8 @@ class DatabaseService:
             "Content-Type": "application/json"
         }
         
-        # Remove name field since database doesn't have it
-        db_data = {k: v for k, v in user_data.items() if k != "name"}
+        # Keep name field since database now has it
+        db_data = user_data
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -425,7 +425,7 @@ class DatabaseService:
                 return {
                     "id": user.get("id"),
                     "email": user.get("email"),
-                    "name": "User",  # Default name since database doesn't have name field
+                    "name": user.get("name") or "User",  # Ensure name is never None
                     "enhanced_prompts": user.get("enhanced_prompts", 0),
                     "created_at": user.get("created_at")
                 }
@@ -451,7 +451,7 @@ class DatabaseService:
             return {
                 "id": str(uuid.uuid4()),
                 "email": email,
-                "name": user_data.get("name", "User"),
+                "name": user_data.get("name") or "User",  # Ensure name is never None
                 "enhanced_prompts": user_data.get("enhanced_prompts", 0),
                 "created_at": datetime.utcnow().isoformat()
             }
@@ -627,20 +627,20 @@ class DatabaseService:
 
     async def increment_user_prompts(self, email: str) -> int:
         """Increment user's prompt count and return new count."""
-        logger.info(f"🔍 DATABASE: increment_user_prompts called with email: {email}")
-        logger.info(f"🔍 DATABASE: email type: {type(email)}, length: {len(email) if email else 0}")
+        logger.info(f" DATABASE: increment_user_prompts called with email: {email}")
+        logger.info(f" DATABASE: email type: {type(email)}, length: {len(email) if email else 0}")
 
         if not self._is_configured():
-            logger.error("🔍 DATABASE: Database not configured!")
+            logger.error(" DATABASE: Database not configured!")
             return 0
 
         try:
             # Try the atomic RPC function first
-            logger.info(f"🔍 DATABASE: About to call record_enhancement_atomic")
+            logger.info(f" DATABASE: About to call record_enhancement_atomic")
             result = await self.record_enhancement_atomic(email, str(uuid.uuid4()), "chatgpt")
             new_count = result.get("enhanced_prompts", 0)
-            logger.info(f"🔍 DATABASE: RPC result: {result}")
-            logger.info(f"🔍 DATABASE: New count from RPC: {new_count}")
+            logger.info(f" DATABASE: RPC result: {result}")
+            logger.info(f" DATABASE: New count from RPC: {new_count}")
 
             # If RPC failed (returns 0), use fallback direct update
             if new_count == 0:

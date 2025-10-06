@@ -43,7 +43,7 @@ async def create_payment_order(request: Dict[str, Any]):
         # Create Razorpay order
         order = await payment_service.create_order(user_email)
         
-        logger.info(f"✅ Payment order created for {user_email}")
+        logger.info(f" Payment order created for {user_email}")
         
         # Flatten response to match extension expectations
         return {
@@ -56,7 +56,7 @@ async def create_payment_order(request: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"❌ Failed to create payment order: {e}")
+        logger.error(f" Failed to create payment order: {e}")
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to create payment order: {str(e)}"
@@ -101,7 +101,7 @@ async def verify_payment(request: Dict[str, Any]):
         is_valid = await payment_service.verify_payment(payment_id, order_id, signature)
         
         if not is_valid:
-            logger.warning(f"❌ Invalid payment signature for {user_email}")
+            logger.warning(f" Invalid payment signature for {user_email}")
             raise HTTPException(
                 status_code=400, 
                 detail="Invalid payment signature"
@@ -111,7 +111,7 @@ async def verify_payment(request: Dict[str, Any]):
         success = await db_service.upgrade_user_to_pro(user_email)
         
         if not success:
-            logger.error(f"❌ Failed to upgrade user {user_email} to pro")
+            logger.error(f" Failed to upgrade user {user_email} to pro")
             raise HTTPException(
                 status_code=500, 
                 detail="Failed to upgrade user subscription"
@@ -120,7 +120,7 @@ async def verify_payment(request: Dict[str, Any]):
         # Get updated user subscription status
         subscription_status = await db_service.check_user_subscription_status(user_email)
         
-        logger.info(f"✅ User {user_email} successfully upgraded to pro")
+        logger.info(f" User {user_email} successfully upgraded to pro")
         
         return {
             "success": True,
@@ -132,7 +132,7 @@ async def verify_payment(request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Payment verification failed: {e}")
+        logger.error(f" Payment verification failed: {e}")
         raise HTTPException(
             status_code=500, 
             detail=f"Payment verification failed: {str(e)}"
@@ -156,7 +156,7 @@ async def get_subscription_status(user_email: str):
         return status
         
     except Exception as e:
-        logger.error(f"❌ Failed to get subscription status for {user_email}: {e}")
+        logger.error(f" Failed to get subscription status for {user_email}: {e}")
         raise HTTPException(
             status_code=500, 
             detail="Failed to get subscription status"
@@ -174,7 +174,7 @@ async def razorpay_webhook(request: Request):
         # Verify webhook signature for security
         webhook_signature = request.headers.get("x-razorpay-signature")
         if not webhook_signature:
-            logger.warning("❌ Missing webhook signature")
+            logger.warning(" Missing webhook signature")
             raise HTTPException(status_code=400, detail="Missing webhook signature")
         
         # Get raw body for signature verification
@@ -191,7 +191,7 @@ async def razorpay_webhook(request: Request):
                 config.settings.razorpay_webhook_secret
             )
         except Exception as e:
-            logger.warning(f"❌ Invalid webhook signature: {e}")
+            logger.warning(f" Invalid webhook signature: {e}")
             raise HTTPException(status_code=400, detail="Invalid webhook signature")
         
         # Parse JSON payload
@@ -203,7 +203,7 @@ async def razorpay_webhook(request: Request):
         event = payload_json.get("event")
         payload = payload_json.get("payload", {})
         
-        logger.info(f"📡 Razorpay webhook received: {event}")
+        logger.info(f" Razorpay webhook received: {event}")
         
         if event == "payment.captured":
             payment = payload.get("payment", {})
@@ -219,11 +219,11 @@ async def razorpay_webhook(request: Request):
                 try:
                     success = await db_service.upgrade_user_to_pro(user_email)
                     if success:
-                        logger.info(f"✅ User {user_email} auto-upgraded via webhook")
+                        logger.info(f" User {user_email} auto-upgraded via webhook")
                     else:
-                        logger.warning(f"⚠️ Failed to auto-upgrade {user_email} via webhook")
+                        logger.warning(f" Failed to auto-upgrade {user_email} via webhook")
                 except Exception as e:
-                    logger.error(f"❌ Webhook auto-upgrade failed for {user_email}: {e}")
+                    logger.error(f" Webhook auto-upgrade failed for {user_email}: {e}")
         
         elif event == "payment.failed":
             payment = payload.get("payment", {})
@@ -231,20 +231,20 @@ async def razorpay_webhook(request: Request):
             error_code = payment.get("error_code")
             error_description = payment.get("error_description")
             
-            logger.warning(f"❌ Payment failed: {user_email} - {error_code}: {error_description}")
+            logger.warning(f" Payment failed: {user_email} - {error_code}: {error_description}")
         
         elif event == "order.paid":
             order = payload.get("order", {})
             user_email = order.get("notes", {}).get("user_email")
             
-            logger.info(f"✅ Order paid: {user_email}")
+            logger.info(f" Order paid: {user_email}")
         
         return {"status": "processed", "event": event}
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Webhook processing failed: {e}")
+        logger.error(f" Webhook processing failed: {e}")
         raise HTTPException(status_code=500, detail="Webhook processing failed")
 
 
@@ -327,5 +327,5 @@ async def checkout_page(order_id: str, user_email: str):
         return HTMLResponse(content=html, status_code=200)
 
     except Exception as e:
-        logger.error(f"❌ Failed to serve checkout page: {e}")
+        logger.error(f" Failed to serve checkout page: {e}")
         return HTMLResponse(content="<h3>Failed to load checkout page.</h3>", status_code=500)
