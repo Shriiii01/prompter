@@ -55,7 +55,7 @@ app.add_middleware(
 # Rate limiting middleware - 30 requests/month per user
 app.middleware("http")(rate_limiter)
 
-# Request logging middleware
+# Request logging middlewar
 @app.middleware("http")
 async def log_requests(request, call_next):
     start_time = time.time()
@@ -217,4 +217,4 @@ def clean_enhanced_text(text):
 if __name__ == "__main__":
     logger.info("Starting Prompt Assistant API server...")
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
