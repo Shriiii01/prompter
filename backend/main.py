@@ -217,4 +217,4 @@ def clean_enhanced_text(text):
 if __name__ == "__main__":
     logger.info("Starting Prompt Assistant API server...")
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
