@@ -2,8 +2,8 @@
 // Update this file with your Railway URL before deploying
 
 const PRODUCTION_CONFIG = {
-  //  UPDATE THIS WITH YOUR ACTUAL RAILWAY URL
-  API_BASE_URL: 'http://localhost:8000',
+  //  PRODUCTION URL - PromptGrammerly
+  API_BASE_URL: 'https://promptgrammerly.com',
   
   // Development URL (don't change this)
   DEV_API_BASE_URL: 'http://localhost:8000',
