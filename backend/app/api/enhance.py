@@ -348,7 +348,7 @@ async def quick_test(
                     "success": True,
                     "original": result.original,
                     "enhanced": result.enhanced,
-                    "model_used": result.model_used,
+                    "model_used": result.model_name,
                     "processing_time": result.enhancement_time,
                     "count_incremented": True,
                     "new_count": new_count
@@ -359,7 +359,7 @@ async def quick_test(
                     "success": True,
                     "original": result.original,
                     "enhanced": result.enhanced,
-                    "model_used": result.model_used,
+                    "model_used": result.model_name,
                     "processing_time": result.enhancement_time,
                     "count_incremented": False
                 }
@@ -369,7 +369,7 @@ async def quick_test(
                 "success": True,
                 "original": result.original,
                 "enhanced": result.enhanced,
-                "model_used": result.model_used,
+                "model_used": result.model_name,
                 "processing_time": result.enhancement_time,
                 "count_incremented": False
             }

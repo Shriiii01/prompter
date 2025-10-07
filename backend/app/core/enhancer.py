@@ -54,7 +54,7 @@ class PromptEnhancer:
             result = EnhancementResult(
                 original=prompt,
                 enhanced=cleaned_prompt,
-                model_used=f"fast-enhancer-{target_model.value}",
+                model_name=f"fast-enhancer-{target_model.value}",
                 improvements=self._identify_improvements(prompt, cleaned_prompt),
                 analysis=analysis,
                 enhancement_time=time.time() - start_time,
@@ -74,7 +74,7 @@ class PromptEnhancer:
             return EnhancementResult(
                 original=prompt,
                 enhanced=prompt,
-                model_used="fallback",
+                model_name="fallback",
                 improvements=["Unable to enhance - using original"],
                 analysis=self.analyzer.analyze(prompt),
                 enhancement_time=time.time() - start_time,
@@ -89,7 +89,7 @@ class PromptEnhancer:
             return EnhancementResult(
                 original=prompt,
                 enhanced=f"Tell me a story about these emojis: {prompt}",
-                model_used="edge-case-handler",
+                model_name="edge-case-handler",
                 improvements=["Converted emoji-only prompt to a creative request"],
                 analysis=self.analyzer.analyze(prompt),
                 enhancement_time=time.time() - start_time,

@@ -42,7 +42,7 @@ class EnhanceRequest(BaseModel):
     fast_mode: Optional[bool] = Field(default=False, description="Skip database operations for faster response")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "prompt": "help me write code",
                 "target_model": "gpt-4o-mini",
@@ -57,7 +57,7 @@ class AnalyzeRequest(BaseModel):
     include_suggestions: Optional[bool] = Field(default=True, description="Include improvement suggestions")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "prompt": "help me write code",
                 "include_suggestions": True
@@ -70,7 +70,7 @@ class WebSocketMessage(BaseModel):
     data: Dict[str, Any] = Field(default_factory=dict, description="Message data")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "type": "enhance",
                 "data": {

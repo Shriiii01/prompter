@@ -14,7 +14,7 @@ class PromptIssue(BaseModel):
     suggestion: str = Field(..., description="Suggestion for improvement")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "issue_type": "vague",
                 "severity": "medium",
@@ -33,7 +33,7 @@ class PromptAnalysis(BaseModel):
     estimated_tokens: int = Field(..., description="Estimated token count")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "quality_score": 75.5,
                 "issues": [
@@ -55,7 +55,7 @@ class EnhancementResult(BaseModel):
     """Result of prompt enhancement"""
     original: str = Field(..., description="Original prompt")
     enhanced: str = Field(..., description="Enhanced prompt")
-    model_used: str = Field(..., description="Model used for enhancement")
+    model_name: str = Field(..., description="Model used for enhancement")
     improvements: List[str] = Field(default_factory=list, description="List of improvements made")
     analysis: Optional[PromptAnalysis] = Field(default=None, description="Analysis of the original prompt")
     enhancement_time: float = Field(..., description="Time taken for enhancement in seconds")
@@ -63,11 +63,11 @@ class EnhancementResult(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now, description="Timestamp of enhancement")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "original": "help me write code",
                 "enhanced": "Please help me write clean, well-documented code with specific requirements and expected output format.",
-                "model_used": "gpt-4o-mini",
+                "model_name": "gpt-4o-mini",
                 "improvements": ["Added specificity", "Included output format"],
                 "enhancement_time": 0.5,
                 "cached": False,
