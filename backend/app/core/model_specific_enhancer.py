@@ -78,7 +78,7 @@ class ModelSpecificEnhancer:
             return EnhancementResult(
                 original=prompt,
                 enhanced=cached_result,
-                model_used=f"cached-{model_name}",
+                model_name=f"cached-{model_name}",
                 improvements=["Cached enhancement"],
                 analysis=self.analyzer.analyze(prompt),
                 enhancement_time=time.time() - start_time,
@@ -91,7 +91,7 @@ class ModelSpecificEnhancer:
             if not self.multi_provider_service:
                 logger.error(" No MultiProviderService available - using fast fallback")
                 enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
-                model_used = f"fallback-no-multi-provider-{model_name}"
+                model_name = f"fallback-no-multi-provider-{model_name}"
             else:
                 logger.info(f" MultiProviderService available: {type(self.multi_provider_service)}")
                 
@@ -105,7 +105,7 @@ class ModelSpecificEnhancer:
                     return EnhancementResult(
                         original=prompt,
                         enhanced=prompt,
-                        model_used=f"skip-{model_name}",
+                        model_name=f"skip-{model_name}",
                         improvements=["No enhancement needed - prompt is already effective"],
                         analysis=analysis,
                         enhancement_time=time.time() - start_time,
@@ -120,22 +120,22 @@ class ModelSpecificEnhancer:
                     
                     if is_fallback:
                         # Fallback was used due to exception
-                        model_used = f"fallback-exception-{model_name}"
+                        model_name = f"fallback-exception-{model_name}"
                         logger.info(f" Fallback enhancement used due to exception: {enhanced_prompt[:100]}...")
                     else:
                         # Validate the enhancement from MultiProviderService
                         if enhanced_prompt and enhanced_prompt.strip():
-                            model_used = f"multi-provider-for-{model_name}"
+                            model_name = f"multi-provider-for-{model_name}"
                             logger.info(f" MultiProviderService enhancement successful: {enhanced_prompt[:100]}...")
                         else:
                             logger.warning(f" MultiProviderService returned empty enhancement, using fast fallback")
                             enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
-                            model_used = f"fallback-invalid-response-{model_name}"
+                            model_name = f"fallback-invalid-response-{model_name}"
                         
                 except Exception as multi_provider_error:
                     logger.error(f" MultiProviderService enhancement failed: {str(multi_provider_error)}")
                     enhanced_prompt = self._create_fallback_enhancement(prompt, model_name)
-                    model_used = f"fallback-exception-{model_name}"
+                    model_name = f"fallback-exception-{model_name}"
             
             # SPEED OPTIMIZATION: Skip expensive analysis for result
             analysis = self.analyzer.analyze(prompt)
@@ -148,7 +148,7 @@ class ModelSpecificEnhancer:
             result = EnhancementResult(
                 original=prompt,
                 enhanced=enhanced_prompt,
-                model_used=model_used,
+                model_name=model_name,
                 improvements=improvements,
                 analysis=analysis,
                 enhancement_time=time.time() - start_time,
@@ -166,7 +166,7 @@ class ModelSpecificEnhancer:
             return EnhancementResult(
                 original=prompt,
                 enhanced=self._create_fallback_enhancement(prompt, model_name),
-                model_used=f"fallback-{model_name}",
+                model_name=f"fallback-{model_name}",
                 improvements=["Enhancement failed - using fallback"],
                 analysis=analysis,
                 enhancement_time=time.time() - start_time,
