@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     
     # Server
     host: str = "0.0.0.0"
-    port: int = 8080
+    port: int = 8000
     workers: int = 4
     
     # API Keys for Three-Tier Fallback System
