@@ -1070,22 +1070,7 @@ class MagicalEnhancer {
     }
 
     createPLogo() {
-        return `<div style="
-            width: 24px; 
-            height: 24px; 
-            background: linear-gradient(135deg, #007AFF, #0056CC);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            color: white;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-            box-shadow: 0 2px 4px rgba(0,122,255,0.3);
-            border: 1px solid rgba(255,255,255,0.2);
-        ">P</div>`;
+        return `<img src="${chrome.runtime.getURL('icons/icon32.png')}" style="width: 24px; height: 24px; border-radius: 4px;" alt="PromptGrammerly">`;
     }
 
     async handleIconClick(inputElement, icon) {
