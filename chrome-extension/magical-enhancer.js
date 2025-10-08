@@ -1070,7 +1070,7 @@ class MagicalEnhancer {
     }
 
     createPLogo() {
-        return `<img src="${chrome.runtime.getURL('icons/icon32.png')}" style="width: 24px; height: 24px; border-radius: 4px;" alt="PromptGrammerly">`;
+        return `P`;
     }
 
     async handleIconClick(inputElement, icon) {
