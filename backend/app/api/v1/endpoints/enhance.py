@@ -70,7 +70,7 @@ async def enhance_prompt(
         logger.info(f" Target model: {request.target_model}")
         
         # Enhance the prompt
-        result = await enhancer.enhance_prompt(
+        result = await enhancer.enhance(
             prompt=request.prompt,
             target_model=request.target_model
         )
@@ -159,13 +159,15 @@ async def enhance_prompt_stream(
         # Stream the enhancement
         async def generate_stream():
             try:
-                # Get the streaming enhancement
-                async for chunk in enhancer.enhance_prompt_stream(
+                # Get the enhancement result
+                result = await enhancer.enhance(
                     prompt=request.prompt,
-                    target_model=request.model
-                ):
-                    if chunk:
-                        yield f"data: {json.dumps({'type': 'chunk', 'data': chunk})}\n\n"
+                    target_model=request.target_model
+                )
+                
+                # Send the result as a single chunk
+                if result and result.enhanced_prompt:
+                    yield f"data: {json.dumps({'type': 'chunk', 'data': result.enhanced_prompt})}\n\n"
                 
                 # Send completion signal
                 yield f"data: {json.dumps({'type': 'complete', 'data': ''})}\n\n"
