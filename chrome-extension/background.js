@@ -291,13 +291,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         return; // Stop processing stream
                                     }
 
-                                    // Forward chunk to content script immediately
+                                    // Forward chunk to content script immediately (but skip count updates)
                                     // Use stored tab ID to handle cross-tab switching
-                                    const targetTabId = globalThis.activeEnhancementTabId || tabId;
-                                    chrome.tabs.sendMessage(targetTabId, {
-                                        action: 'stream_chunk',
-                                        chunk: chunk
-                                    });
+                                    if (chunk.type !== 'count_update') {
+                                        const targetTabId = globalThis.activeEnhancementTabId || tabId;
+                                        chrome.tabs.sendMessage(targetTabId, {
+                                            action: 'stream_chunk',
+                                            chunk: chunk
+                                        });
+                                    }
                                     
                                 } catch (parseError) {
 
