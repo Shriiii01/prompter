@@ -1349,7 +1349,7 @@ class MagicalEnhancer {
                         // Only block if actually at 9+ prompts (would exceed limit)
                         if (finalDailyUsed >= 9) {
                             this.showLimitNotification(inputElement);
-                            streamText.textContent = 'Daily limit reached! Upgrade to Pro for unlimited prompts.';
+                            streamText.textContent = 'You\'ve used all 10 free prompts today. Your free prompts will reset tomorrow, or upgrade to Pro for unlimited access.';
                             return;
                         }
                     }
@@ -1485,11 +1485,11 @@ class MagicalEnhancer {
         content.innerHTML = `
             <div class="ce-upgrade-modal">
                 <div class="ce-upgrade-header">
-                    <h3> Daily Limit Reached!</h3>
+                    <h3>Free Prompts Used Up!</h3>
                 </div>
                 <div class="ce-upgrade-body">
                     <p>You've used all <strong>10 free prompts</strong> today.</p>
-                    <p>Upgrade to Pro for <strong>unlimited prompts</strong>!</p>
+                    <p>Your free prompts will reset tomorrow, or upgrade to Pro for <strong>unlimited access</strong>!</p>
                     <div class="ce-upgrade-features">
                         <div class="ce-feature"> Unlimited daily prompts</div>
                         <div class="ce-feature"> Priority processing</div>
@@ -1623,7 +1623,7 @@ class MagicalEnhancer {
                 max-width: 280px;
                 line-height: 1.3;
             ">
-                Daily limit reached. Upgrade to Pro for unlimited access.
+                You've used all 10 free prompts today. Your free prompts will reset tomorrow, or upgrade to Pro for unlimited access.
             </div>
         `;
 
@@ -2232,3 +2232,4 @@ Additional context: Please structure your response in a clear, organized manner 
 if (!window.magicalEnhancer) {
     window.magicalEnhancer = new MagicalEnhancer();
 }
+
