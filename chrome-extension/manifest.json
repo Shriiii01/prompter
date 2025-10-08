@@ -38,7 +38,7 @@
                 "https://poe.com/*",
                 "https://www.meta.ai/?utm_source=ai_meta_site&utm_medium=web&utm_content=AI_nav&utm_campaign=06112025_moment"
             ],
-            "js": ["magical-enhancer.js"],
+            "js": ["config.js", "magical-enhancer.js"],
             "run_at": "document_end"
         }
     ],
