@@ -704,10 +704,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
             
             async def generate_stream():
                 """Generate REAL streaming response from AI"""
-                # Send initial metadata
-                yield f"data: {json.dumps({'type': 'model', 'data': detected_model})}\n\n"
-                yield f"data: {json.dumps({'type': 'enhancer', 'data': detected_model})}\n\n"
-                # Removed the "Enhancing with..." message as requested
+                # Removed model metadata - just show enhanced prompt directly
                 
                 # Send updated count after increment
                 if x_user_id:
