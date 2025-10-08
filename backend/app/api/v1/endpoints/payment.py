@@ -310,7 +310,7 @@ async def checkout_page(order_id: str, user_email: str):
           modal: {{
             ondismiss: function() {{ setStatus('Payment window closed. If you completed the payment, you will be upgraded shortly.'); }}
           }},
-          theme: {{ color: '#34C759' }}
+          theme: {{ color: '#FFFFFF' }}
         }};
 
         try {{
