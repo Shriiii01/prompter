@@ -67,12 +67,12 @@ async def enhance_prompt(
     """
     try:
         logger.info(f" Enhancement request received: {request.prompt[:50]}...")
-        logger.info(f" Target model: {request.model}")
+        logger.info(f" Target model: {request.target_model}")
         
         # Enhance the prompt
         result = await enhancer.enhance_prompt(
             prompt=request.prompt,
-            target_model=request.model
+            target_model=request.target_model
         )
         
         logger.info(f" Enhancement completed successfully")
@@ -106,7 +106,7 @@ async def enhance_prompt_stream(
         logger.info(f" P BUTTON API CALL - Backend received enhancement request")
         logger.info(f" P BUTTON - Prompt: {request.prompt[:50]}...")
         logger.info(f" P BUTTON - User email: {user_email}")
-        logger.info(f" P BUTTON - Target model: {request.model}")
+        logger.info(f" P BUTTON - Target model: {request.target_model}")
         logger.info(f" P BUTTON - Prompt length: {len(request.prompt)} characters")
         
         # Check user limits BEFORE processing (CRITICAL FIX)
