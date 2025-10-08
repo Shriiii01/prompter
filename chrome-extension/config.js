@@ -3,7 +3,7 @@
 
 const PRODUCTION_CONFIG = {
   //  PRODUCTION URL - Railway
-  API_BASE_URL: 'https://charming-transformation-production.up.railway.app',
+  API_BASE_URL: 'https://prompter-production-76a3.up.railway.app',
   
   // Development URL (don't change this)
   DEV_API_BASE_URL: 'http://localhost:8000',
