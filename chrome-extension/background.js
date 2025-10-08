@@ -77,7 +77,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                     // Ensure user exists in database
 
-                    const apiUrl = 'http://localhost:8000'; // Background script doesn't have access to window.CONFIG
+                    const apiUrl = 'https://prompter-production-76a3.up.railway.app'; // Production Railway URL
                     fetch(`${apiUrl}/api/v1/users`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -363,7 +363,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         (async () => {
             try {
-                const apiUrl = 'http://localhost:8000'; // Background script doesn't have access to window.CONFIG
+                const apiUrl = 'https://prompter-production-76a3.up.railway.app'; // Production Railway URL
 
                 // FIRST: Check current user status to avoid unnecessary API calls
 
