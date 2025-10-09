@@ -163,26 +163,15 @@ class AIService:
         # Use centralized system prompts for consistency across providers
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
-        # Use dynamic model parameter and correct API parameters for GPT-5-mini
-        if "gpt-5" in target_model:
-            data = {
-                "model": target_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                "max_completion_tokens": 500
-            }
-        else:
-            data = {
-                "model": target_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                "max_tokens": 500,
-                "temperature": 0.3
-            }
+        data = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 500,
+            "temperature": 0.3
+        }
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -192,8 +181,7 @@ class AIService:
                 timeout=aiohttp.ClientTimeout(total=30)
             ) as response:
                 if response.status != 200:
-                    error_text = await response.text()
-                    raise Exception(f"OpenAI API error: {response.status} - {error_text}")
+                    raise Exception(f"OpenAI API error: {response.status}")
                 
                 result = await response.json()
                 return result["choices"][0]["message"]["content"]
@@ -208,29 +196,16 @@ class AIService:
         # Use centralized system prompts for consistency across providers
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
-        # GPT-5-mini doesn't support streaming without organization verification
-        # Use non-streaming for GPT-5 models, streaming for others
-        if "gpt-5" in target_model:
-            data = {
-                "model": target_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                "max_completion_tokens": 500
-                # No stream parameter for GPT-5 models
-            }
-        else:
-            data = {
-                "model": target_model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                "max_tokens": 500,
-                "temperature": 0.3,
-                "stream": True
-            }
+        data = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 500,
+            "temperature": 0.3,
+            "stream": True
+        }
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -240,40 +215,23 @@ class AIService:
                 timeout=aiohttp.ClientTimeout(total=30)
             ) as response:
                 if response.status != 200:
-                    error_text = await response.text()
-                    raise Exception(f"OpenAI API error: {response.status} - {error_text}")
+                    raise Exception(f"OpenAI API error: {response.status}")
                 
-                # Handle streaming vs non-streaming responses
-                if "gpt-5" in target_model:
-                    # GPT-5 models use non-streaming (organization verification required for streaming)
-                    result = await response.json()
-                    content = result["choices"][0]["message"]["content"]
-                    # Simulate streaming by yielding the content in chunks
-                    import time
-                    words = content.split()
-                    current_text = ""
-                    for i, word in enumerate(words):
-                        current_text += word + " "
-                        yield current_text
-                        # Add small delay to simulate streaming
-                        if i % 3 == 0:  # Every 3 words
-                            await asyncio.sleep(0.1)
-                else:
-                    # Other models use streaming
-                    async for line in response.content:
-                        line = line.decode('utf-8').strip()
-                        if line.startswith('data: '):
-                            data_str = line[6:]
-                            if data_str == '[DONE]':
-                                break
-                            try:
-                                chunk = json.loads(data_str)
-                                if 'choices' in chunk and len(chunk['choices']) > 0:
-                                    delta = chunk['choices'][0].get('delta', {})
-                                    if 'content' in delta:
-                                        yield delta['content']
-                            except json.JSONDecodeError:
-                                continue
+                # Stream the response
+                async for line in response.content:
+                    line = line.decode('utf-8').strip()
+                    if line.startswith('data: '):
+                        data_str = line[6:]
+                        if data_str == '[DONE]':
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            if 'choices' in chunk and len(chunk['choices']) > 0:
+                                delta = chunk['choices'][0].get('delta', {})
+                                if 'content' in delta:
+                                    yield delta['content']
+                        except json.JSONDecodeError:
+                            continue
     
     async def _enhance_with_gemini(self, prompt: str, target_model: str) -> str:
         """Enhance prompt using Gemini API with system prompts from prompts.py."""

@@ -628,86 +628,34 @@ class DatabaseService:
     async def increment_user_prompts(self, email: str) -> int:
         """Increment user's prompt count and return new count."""
         logger.info(f" DATABASE: increment_user_prompts called with email: {email}")
+        logger.info(f" DATABASE: email type: {type(email)}, length: {len(email) if email else 0}")
 
         if not self._is_configured():
-            logger.warning(" DATABASE: Database not configured, returning 0")
+            logger.error(" DATABASE: Database not configured!")
             return 0
 
         try:
-            # Use direct database update (skip RPC to avoid errors)
-            logger.info(f" DATABASE: Using direct database update for {email}")
-            return await self._increment_user_prompts_direct(email)
+            # Try the atomic RPC function first
+            logger.info(f" DATABASE: About to call record_enhancement_atomic")
+            result = await self.record_enhancement_atomic(email, str(uuid.uuid4()), "chatgpt")
+            new_count = result.get("enhanced_prompts", 0)
+            logger.info(f" DATABASE: RPC result: {result}")
+            logger.info(f" DATABASE: New count from RPC: {new_count}")
+
+            # If RPC failed (returns 0), use fallback direct update
+            if new_count == 0:
+                logger.warning("RPC function failed, using direct database update as fallback")
+                return await self._increment_user_prompts_fallback(email)
+
+            return new_count
         except Exception as e:
             logger.error(f"Error incrementing user prompts: {str(e)}")
-            return 0
-
-    async def _increment_user_prompts_direct(self, email: str) -> int:
-        """Direct method to increment user prompts using simple database operations."""
-        if not self._is_configured():
-            return 0
-
-        try:
-            headers = {
-                "apikey": self.supabase_key,
-                "Authorization": f"Bearer {self.supabase_key}",
-                "Content-Type": "application/json"
-            }
-
-            # Simple approach: get current count, increment, and update
-            async with aiohttp.ClientSession() as session:
-                # Get current user data
-                async with session.get(
-                    f"{self.supabase_url}/rest/v1/users?email=eq.{email}&select=enhanced_prompts",
-                    headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=5)
-                ) as response:
-                    if response.status == 200:
-                        user_data = await response.json()
-                        if user_data:
-                            # User exists, increment count
-                            current_count = user_data[0].get("enhanced_prompts", 0) or 0
-                            new_count = current_count + 1
-                            
-                            # Update the count
-                            update_data = {"enhanced_prompts": new_count}
-                            async with session.patch(
-                                f"{self.supabase_url}/rest/v1/users?email=eq.{email}",
-                                headers=headers,
-                                json=update_data,
-                                timeout=aiohttp.ClientTimeout(total=5)
-                            ) as update_response:
-                                if update_response.status in [200, 204]:
-                                    logger.info(f"Successfully updated {email}: {current_count} -> {new_count}")
-                                    return new_count
-                                else:
-                                    logger.error(f"Update failed: {update_response.status}")
-                                    return current_count
-                        else:
-                            # User doesn't exist, create with count 1
-                            create_data = {
-                                "email": email,
-                                "enhanced_prompts": 1,
-                                "name": "User"
-                            }
-                            async with session.post(
-                                f"{self.supabase_url}/rest/v1/users",
-                                headers=headers,
-                                json=create_data,
-                                timeout=aiohttp.ClientTimeout(total=5)
-                            ) as create_response:
-                                if create_response.status in [200, 201]:
-                                    logger.info(f"Created new user {email} with count 1")
-                                    return 1
-                                else:
-                                    logger.error(f"Create user failed: {create_response.status}")
-                                    return 0
-                    else:
-                        logger.error(f"Get user failed: {response.status}")
-                        return 0
-
-        except Exception as e:
-            logger.error(f"Direct increment error: {str(e)}")
-            return 0
+            # Fallback to direct database update
+            try:
+                return await self._increment_user_prompts_fallback(email)
+            except Exception as fallback_e:
+                logger.error(f"Fallback increment also failed: {fallback_e}")
+                return 0
 
     async def _increment_user_prompts_fallback(self, email: str) -> int:
         """Fallback method to increment user prompts using direct database operations."""
