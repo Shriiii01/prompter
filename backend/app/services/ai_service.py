@@ -164,7 +164,7 @@ class AIService:
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
         data = {
-            "model": "gpt-5",
+            "model": "gpt-5-mini",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
@@ -197,7 +197,7 @@ class AIService:
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
         data = {
-            "model": "gpt-5",
+            "model": "gpt-5-mini",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
