@@ -10,7 +10,7 @@ class LLMModel(str, Enum):
     """Supported LLM models"""
     # GPT Models
     GPT_4O = "gpt-4o"
-    GPT_5 = "gpt-5"
+    GPT_5_MINI = "gpt-5-mini"
     GPT_4 = "gpt-4"
     GPT_3_5_TURBO = "gpt-3.5-turbo"
     
@@ -37,7 +37,7 @@ class LLMModel(str, Enum):
 class EnhanceRequest(BaseModel):
     """Request model for prompt enhancement"""
     prompt: str = Field(..., description="The prompt to enhance", min_length=1, max_length=2000)
-    target_model: Optional[LLMModel] = Field(default=LLMModel.GPT_5, description="Target AI model for enhancement")
+    target_model: Optional[LLMModel] = Field(default=LLMModel.GPT_5_MINI, description="Target AI model for enhancement")
     context: Optional[str] = Field(default=None, description="Additional context for enhancement")
     fast_mode: Optional[bool] = Field(default=False, description="Skip database operations for faster response")
     
@@ -45,7 +45,7 @@ class EnhanceRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "prompt": "help me write code",
-                "target_model": "gpt-5",
+                "target_model": "gpt-5-mini",
                 "context": "I'm building a web application",
                 "fast_mode": False
             }
