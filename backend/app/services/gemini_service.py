@@ -36,7 +36,7 @@ class GeminiService:
                 }
             }
             
-            url = f"{self.base_url}/models/gemini-1.5-pro:generateContent?key={self.api_key}"
+            url = f"{self.base_url}/models/gemini-2.5-pro:generateContent?key={self.api_key}"
             
             async with aiohttp.ClientSession() as session:
                 async with session.post(

@@ -271,12 +271,12 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
         return {
             "system": "Unified Model-Specific Enhancer",
             "version": "2.0.0",
-            "description": "Uses OpenAI GPT-5-mini for all model enhancements with model-specific prompts",
-            "enhancement_llm": "openai/gpt-5-mini",
+            "description": "Uses Gemini 2.5 Pro for all model enhancements with model-specific prompts",
+            "enhancement_llm": "gemini/gemini-2.5-pro",
             "supported_models": [
                 "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
-                "gemini-1.0-pro", "gemini-1.5-pro", "gemini-1.5-flash"
+                "gemini-1.0-pro", "gemini-1.5-flash"
             ],
             "features": [
                 "Model-specific system prompts",
@@ -420,7 +420,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Most capable OpenAI model",
             "recommended_for": ["complex prompts", "best quality"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "gpt-4o-mini": {
             "name": "GPT-4o Mini",
@@ -428,7 +428,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Fast and cost-effective",
             "recommended_for": ["quick enhancements", "high volume"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "gpt-4": {
             "name": "GPT-4",
@@ -436,7 +436,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Highest quality reasoning",
             "recommended_for": ["complex prompts", "best quality"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "claude-3-5-sonnet": {
             "name": "Claude 3.5 Sonnet",
@@ -444,7 +444,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Balanced performance and quality",
             "recommended_for": ["general purpose", "creative tasks"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "claude-3-opus": {
             "name": "Claude 3 Opus",
@@ -452,7 +452,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Most capable Claude model",
             "recommended_for": ["complex analysis", "creative writing"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
                 },
         "gemini-1.0-pro": {
             "name": "Gemini 1.0 Pro",
@@ -460,15 +460,15 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Original Gemini Pro model",
             "recommended_for": ["general tasks", "conversation", "content creation"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
-        "gemini-1.5-pro": {
-            "name": "Gemini 1.5 Pro",
+        "gemini-1.5-flash": {
+            "name": "Gemini 1.5 Flash",
             "provider": "Google",
             "available": is_openai_available,
-            "description": "Advanced reasoning capabilities",
-            "recommended_for": ["complex analysis", "long context"],
-            "enhancement_llm": "gpt-5-mini"
+            "description": "Fast and efficient model",
+            "recommended_for": ["quick responses", "general tasks"],
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "perplexity": {
             "name": "Perplexity",
@@ -476,7 +476,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Research-focused AI with source citation",
             "recommended_for": ["research queries", "fact-checking", "comprehensive analysis"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "perplexity-pro": {
             "name": "Perplexity Pro",
@@ -484,7 +484,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Advanced research AI with enhanced capabilities",
             "recommended_for": ["complex research", "academic queries", "professional analysis"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "perplexity-sonar": {
             "name": "Perplexity Sonar",
@@ -492,7 +492,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Real-time search and analysis",
             "recommended_for": ["current events", "real-time information", "trending topics"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "meta-ai": {
             "name": "Meta AI",
@@ -500,7 +500,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Intelligent, conversational AI with helpful and natural responses",
             "recommended_for": ["helpful conversations", "practical advice", "general assistance"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "meta-llama-2": {
             "name": "Meta Llama 2",
@@ -508,7 +508,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Second generation Llama with improved conversational abilities",
             "recommended_for": ["dialogue", "content creation", "reasoning tasks"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         },
         "meta-llama-3": {
             "name": "Meta Llama 3",
@@ -516,18 +516,18 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Latest Llama model with advanced reasoning and helpful responses",
             "recommended_for": ["complex reasoning", "helpful assistance", "natural conversations"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gemini-2.5-pro"
         }
     }
     
     return {
         "models": models,
         "total_available": sum(1 for model in models.values() if model["available"]),
-        "enhancement_strategy": "All models use GPT-5-mini for enhancement with model-specific prompts",
-        "recommendation": "gpt-5-mini" if is_openai_available else None,
+        "enhancement_strategy": "All models use Gemini 2.5 Pro for enhancement with model-specific prompts",
+        "recommendation": "gemini-2.5-pro" if is_openai_available else None,
         "unified_enhancement": {
             "enabled": True,
-            "enhancement_llm": "gpt-5-mini",
+            "enhancement_llm": "gemini-2.5-pro",
             "description": "Single LLM enhances prompts for all target models using model-specific system prompts"
         }
     }
@@ -549,7 +549,7 @@ async def get_service_stats(enhancer: PromptEnhancer = Depends(get_enhancer)):
             "supported_models": [
                 "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
-                "gemini-1.0-pro", "gemini-1.5-pro", "gemini-1.5-flash"
+                "gemini-1.0-pro", "gemini-1.5-flash"
             ],
             "features": [
                 "Model-specific prompt optimization",
@@ -695,7 +695,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
     """Stream enhanced prompt in chunks for magical animation using ONLY AI service"""
     try:
         logger.info(f" SIMPLE AI ENHANCEMENT: Starting for prompt: {request.prompt[:50]}...")
-        logger.info(f" Target model: {request.target_model or 'gpt-5-mini'}")
+        logger.info(f" Target model: {request.target_model or 'gemini-2.5-pro'}")
         logger.info(f"📧 User ID received: {x_user_id}")
         logger.info(f" DEBUGGING BACKEND:")
         logger.info(f"  - User ID received: {x_user_id}")
@@ -721,7 +721,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
 
         # Use REAL streaming from AI service
         try:
-            detected_model = "gpt-5-mini"
+            detected_model = "gemini-2.5-pro"
             logger.info(f" Starting REAL streaming with {detected_model}")
             
             async def generate_stream():
@@ -741,7 +741,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                 current_text = ""
                 async for chunk in ai_service._enhance_with_openai_streaming(
                     request.prompt,
-                    request.target_model or "gpt-5-mini"
+                    request.target_model or "gemini-2.5-pro"
                 ):
                     current_text += chunk
                     # Send each chunk as it comes
