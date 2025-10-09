@@ -676,7 +676,7 @@ class DatabaseService:
                                 json=update_data,
                                 timeout=aiohttp.ClientTimeout(total=5)
                             ) as update_response:
-                                if update_response.status == 200:
+                                if update_response.status in [200, 204]:
                                     logger.info(f"Successfully updated {email}: {current_count} -> {new_count}")
                                     return new_count
                                 else:
