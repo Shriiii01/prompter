@@ -24,16 +24,28 @@ class OpenAIService:
             # Use sophisticated model-specific system prompt
             system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
 
-            response = await self.client.chat.completions.create(
-                model=target_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Please enhance this prompt:\n\n{prompt}"}
-                ],
-                max_tokens=1000,
-                temperature=0.7,
-                timeout=30
-            )
+            # Use max_completion_tokens for newer models like gpt-5-mini
+            if "gpt-5" in target_model:
+                response = await self.client.chat.completions.create(
+                    model=target_model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": f"Please enhance this prompt:\n\n{prompt}"}
+                    ],
+                    max_completion_tokens=1000,
+                    timeout=30
+                )
+            else:
+                response = await self.client.chat.completions.create(
+                    model=target_model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": f"Please enhance this prompt:\n\n{prompt}"}
+                    ],
+                    max_tokens=1000,
+                    temperature=0.7,
+                    timeout=30
+                )
             
             enhanced = response.choices[0].message.content.strip()
             logger.info(f" OpenAI enhancement successful: {len(enhanced)} chars")
