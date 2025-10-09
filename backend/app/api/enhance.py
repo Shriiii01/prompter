@@ -8,10 +8,10 @@ from app.core.model_specific_enhancer import ModelSpecificEnhancer
 from app.services.ai_service import AIService, ai_service
 from app.services.multi_provider import MultiProviderService
 from app.utils.auth import get_email_from_token, get_user_info_from_token
-import time
 from app.utils.database import db_service
 from app.core.config import config
 import logging
+import time
 from typing import Optional
 import json
 import asyncio
@@ -271,8 +271,8 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
         return {
             "system": "Unified Model-Specific Enhancer",
             "version": "2.0.0",
-            "description": "Uses OpenAI GPT-5-mini for all model enhancements with model-specific prompts",
-            "enhancement_llm": "openai/gpt-5-mini",
+            "description": "Uses OpenAI GPT-4o-mini for all model enhancements with model-specific prompts",
+            "enhancement_llm": "openai/gpt-4o-mini",
             "supported_models": [
                 "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
@@ -384,7 +384,6 @@ async def quick_test(
             "error": str(e)
         }
 
-
 @router.get("/models")
 async def get_available_models():
     """Get list of available models and their unified enhancement status"""
@@ -399,7 +398,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Most capable OpenAI model",
             "recommended_for": ["complex prompts", "best quality"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "gpt-4o-mini": {
             "name": "GPT-4o Mini",
@@ -407,7 +406,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Fast and cost-effective",
             "recommended_for": ["quick enhancements", "high volume"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "gpt-4": {
             "name": "GPT-4",
@@ -415,7 +414,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Highest quality reasoning",
             "recommended_for": ["complex prompts", "best quality"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "claude-3-5-sonnet": {
             "name": "Claude 3.5 Sonnet",
@@ -423,7 +422,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Balanced performance and quality",
             "recommended_for": ["general purpose", "creative tasks"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "claude-3-opus": {
             "name": "Claude 3 Opus",
@@ -431,7 +430,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Most capable Claude model",
             "recommended_for": ["complex analysis", "creative writing"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
                 },
         "gemini-1.0-pro": {
             "name": "Gemini 1.0 Pro",
@@ -439,7 +438,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Original Gemini Pro model",
             "recommended_for": ["general tasks", "conversation", "content creation"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "gemini-1.5-pro": {
             "name": "Gemini 1.5 Pro",
@@ -447,7 +446,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Advanced reasoning capabilities",
             "recommended_for": ["complex analysis", "long context"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "perplexity": {
             "name": "Perplexity",
@@ -455,7 +454,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Research-focused AI with source citation",
             "recommended_for": ["research queries", "fact-checking", "comprehensive analysis"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "perplexity-pro": {
             "name": "Perplexity Pro",
@@ -463,7 +462,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Advanced research AI with enhanced capabilities",
             "recommended_for": ["complex research", "academic queries", "professional analysis"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "perplexity-sonar": {
             "name": "Perplexity Sonar",
@@ -471,7 +470,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Real-time search and analysis",
             "recommended_for": ["current events", "real-time information", "trending topics"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "meta-ai": {
             "name": "Meta AI",
@@ -479,7 +478,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Intelligent, conversational AI with helpful and natural responses",
             "recommended_for": ["helpful conversations", "practical advice", "general assistance"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "meta-llama-2": {
             "name": "Meta Llama 2",
@@ -487,7 +486,7 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Second generation Llama with improved conversational abilities",
             "recommended_for": ["dialogue", "content creation", "reasoning tasks"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         },
         "meta-llama-3": {
             "name": "Meta Llama 3",
@@ -495,18 +494,18 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Latest Llama model with advanced reasoning and helpful responses",
             "recommended_for": ["complex reasoning", "helpful assistance", "natural conversations"],
-            "enhancement_llm": "gpt-5-mini"
+            "enhancement_llm": "gpt-4o-mini"
         }
     }
     
     return {
         "models": models,
         "total_available": sum(1 for model in models.values() if model["available"]),
-        "enhancement_strategy": "All models use GPT-5-mini for enhancement with model-specific prompts",
-        "recommendation": "gpt-5-mini" if is_openai_available else None,
+        "enhancement_strategy": "All models use GPT-4o mini for enhancement with model-specific prompts",
+        "recommendation": "gpt-4o-mini" if is_openai_available else None,
         "unified_enhancement": {
             "enabled": True,
-            "enhancement_llm": "gpt-5-mini",
+            "enhancement_llm": "gpt-4o-mini",
             "description": "Single LLM enhances prompts for all target models using model-specific system prompts"
         }
     }
@@ -674,7 +673,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
     """Stream enhanced prompt in chunks for magical animation using ONLY AI service"""
     try:
         logger.info(f" SIMPLE AI ENHANCEMENT: Starting for prompt: {request.prompt[:50]}...")
-        logger.info(f" Target model: {request.target_model or 'gpt-5-mini'}")
+        logger.info(f" Target model: {request.target_model or 'gpt-4o-mini'}")
         logger.info(f"📧 User ID received: {x_user_id}")
         logger.info(f" DEBUGGING BACKEND:")
         logger.info(f"  - User ID received: {x_user_id}")
@@ -688,19 +687,19 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
         # Increment user's prompt count (always track for popup UI)
         if x_user_id:
             try:
-                logger.info(f" 🔄 NEW DATABASE CODE: Incrementing prompt count for user: {x_user_id}")
-                logger.info(f" 🔄 NEW DATABASE CODE: Using direct database method (no RPC)")
+                logger.info(f" Incrementing prompt count for user: {x_user_id}")
+                logger.info(f" ABOUT TO CALL increment_user_prompts with: {x_user_id}")
                 new_count = await db_service.increment_user_prompts(x_user_id)
-                logger.info(f" ✅ NEW DATABASE CODE: Prompt count incremented to: {new_count}")
-                logger.info(f" ✅ NEW DATABASE CODE: SUCCESS - No more RPC errors!")
+                logger.info(f" Prompt count incremented to: {new_count}")
+                logger.info(f" NEW COUNT RETURNED: {new_count}")
             except Exception as db_error:
-                logger.error(f" ❌ NEW DATABASE CODE: Failed to increment prompt count: {db_error}")
+                logger.warning(f" Failed to increment prompt count: {db_error}")
         else:
             logger.info(" No user email provided - prompt count not incremented")
 
         # Use REAL streaming from AI service
         try:
-            detected_model = "gpt-5-mini"
+            detected_model = "gpt-4o-mini"
             logger.info(f" Starting REAL streaming with {detected_model}")
             
             async def generate_stream():
@@ -720,7 +719,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                 current_text = ""
                 async for chunk in ai_service._enhance_with_openai_streaming(
                     request.prompt,
-                    request.target_model or "gpt-5-mini"
+                    request.target_model or "gpt-4o-mini"
                 ):
                     current_text += chunk
                     # Send each chunk as it comes

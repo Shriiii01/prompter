@@ -67,7 +67,7 @@ class EnhancementResult(BaseModel):
             "example": {
                 "original": "help me write code",
                 "enhanced": "Please help me write clean, well-documented code with specific requirements and expected output format.",
-                "model_name": "gpt-5-mini",
+                "model_name": "gpt-4o-mini",
                 "improvements": ["Added specificity", "Included output format"],
                 "enhancement_time": 0.5,
                 "cached": False,

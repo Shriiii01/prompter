@@ -1386,11 +1386,11 @@ class MagicalEnhancer {
                 promptLength: inputText.length
             });
 
-            // Add timeout for message sending (increased to 15 seconds)
+            // Add timeout for message sending
             const messageTimeout = setTimeout(() => {
                 console.log('⏰ P BUTTON - API call timeout, background script not responding');
                 streamText.textContent = 'Error: Background script not responding. Please refresh the page.';
-            }, 15000);
+            }, 5000);
 
             chrome.runtime.sendMessage(messageData, (response) => {
                 clearTimeout(messageTimeout);
@@ -1401,12 +1401,6 @@ class MagicalEnhancer {
                     return;
                 }
 
-                // Handle successful response
-                if (response && response.success) {
-                    console.log('✅ P BUTTON - Background script responded successfully');
-                } else {
-                    console.log('⚠️ P BUTTON - Background script responded but with issues:', response);
-                }
             });
 
         } catch (error) {
@@ -1861,7 +1855,7 @@ class MagicalEnhancer {
         const hostname = window.location.hostname;
         
         if (hostname.includes('openai.com') || hostname.includes('chatgpt.com')) {
-            return 'gpt-5-mini';
+            return 'gpt-4o-mini';
         } else if (hostname.includes('claude.ai')) {
             return 'claude-3-5-sonnet';
         } else if (hostname.includes('gemini.google.com')) {
@@ -1871,10 +1865,10 @@ class MagicalEnhancer {
         } else if (hostname.includes('meta.ai')) {
             return 'meta-llama-3';
         } else if (hostname.includes('poe.com')) {
-            return 'gpt-5-mini';
+            return 'gpt-4o-mini';
         }
         
-        return 'gpt-5-mini'; // Default fallback for ChatGPT
+        return 'gpt-4o-mini'; // Default fallback for ChatGPT
     }
 
     getFallbackEnhancement(text) {
