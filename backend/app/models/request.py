@@ -12,6 +12,7 @@ class LLMModel(str, Enum):
     GPT_4O = "gpt-4o"
     GPT_4 = "gpt-4"
     GPT_3_5_TURBO = "gpt-3.5-turbo"
+    GPT_5_MINI = "gpt-5-mini"
     
     # Claude Models
     CLAUDE_3_5_SONNET = "claude-3-5-sonnet"
