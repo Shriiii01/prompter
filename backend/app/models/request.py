@@ -38,7 +38,7 @@ class LLMModel(str, Enum):
 class EnhanceRequest(BaseModel):
     """Request model for prompt enhancement"""
     prompt: str = Field(..., description="The prompt to enhance", min_length=1, max_length=2000)
-    target_model: Optional[LLMModel] = Field(default=LLMModel.GPT_5, description="Target AI model for enhancement")
+    target_model: Optional[LLMModel] = Field(default=LLMModel.GPT_4O, description="Target AI model for enhancement")
     context: Optional[str] = Field(default=None, description="Additional context for enhancement")
     fast_mode: Optional[bool] = Field(default=False, description="Skip database operations for faster response")
     
@@ -46,7 +46,7 @@ class EnhanceRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "prompt": "help me write code",
-                "target_model": "gpt-5",
+                "target_model": "gpt-4o",
                 "context": "I'm building a web application",
                 "fast_mode": False
             }
@@ -76,7 +76,7 @@ class WebSocketMessage(BaseModel):
                 "type": "enhance",
                 "data": {
                     "prompt": "help me write code",
-                    "target_model": "gpt-5"
+                    "target_model": "gpt-4o"
                 }
             }
         } 
