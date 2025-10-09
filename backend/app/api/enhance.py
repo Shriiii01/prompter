@@ -274,7 +274,7 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
             "description": "Uses Gemini 2.5 Pro for all model enhancements with model-specific prompts",
             "enhancement_llm": "gemini/gemini-2.5-pro",
             "supported_models": [
-                "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
+                "gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
                 "gemini-1.0-pro", "gemini-1.5-flash"
             ],
@@ -438,6 +438,14 @@ async def get_available_models():
             "recommended_for": ["complex prompts", "best quality"],
             "enhancement_llm": "gemini-2.5-pro"
         },
+        "gpt-5-mini": {
+            "name": "GPT-5 Mini",
+            "provider": "OpenAI",
+            "available": is_openai_available,
+            "description": "Latest OpenAI mini model with improved capabilities",
+            "recommended_for": ["cost-effective enhancements", "low latency", "high volume"],
+            "enhancement_llm": "gpt-5-mini"
+        },
         "claude-3-5-sonnet": {
             "name": "Claude 3.5 Sonnet",
             "provider": "Anthropic",
@@ -547,7 +555,7 @@ async def get_service_stats(enhancer: PromptEnhancer = Depends(get_enhancer)):
             "status": "operational",
             "enhancement_engine": "GPT-4o mini with model-specific prompts",
             "supported_models": [
-                "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
+                "gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
                 "gemini-1.0-pro", "gemini-1.5-flash"
             ],
