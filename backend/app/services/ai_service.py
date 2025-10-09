@@ -163,14 +163,14 @@ class AIService:
         # Use centralized system prompts for consistency across providers
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
+        # Use max_completion_tokens for gpt-5-mini (no temperature parameter)
         data = {
             "model": "gpt-5-mini",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            "max_tokens": 500,
-            "temperature": 0.3
+            "max_completion_tokens": 500
         }
         
         async with aiohttp.ClientSession() as session:
@@ -202,8 +202,7 @@ class AIService:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            "max_tokens": 500,
-            "temperature": 0.3,
+            "max_completion_tokens": 500,
             "stream": True
         }
         
