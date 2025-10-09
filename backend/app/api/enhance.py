@@ -8,10 +8,10 @@ from app.core.model_specific_enhancer import ModelSpecificEnhancer
 from app.services.ai_service import AIService, ai_service
 from app.services.multi_provider import MultiProviderService
 from app.utils.auth import get_email_from_token, get_user_info_from_token
+import time
 from app.utils.database import db_service
 from app.core.config import config
 import logging
-import time
 from typing import Optional
 import json
 import asyncio
@@ -382,6 +382,28 @@ async def quick_test(
         return {
             "success": False,
             "error": str(e)
+        }
+
+@router.get("/debug/database-version")
+async def get_database_version():
+    """Debug endpoint to check which database code version is running."""
+    try:
+        from app.utils.database import db_service
+        
+        # Test the new direct method
+        test_result = await db_service._increment_user_prompts_direct("test@debug.com")
+        
+        return {
+            "status": "success",
+            "message": "New database code is running",
+            "test_result": test_result,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "message": f"Database error: {str(e)}",
+            "timestamp": time.time()
         }
 
 @router.get("/models")
