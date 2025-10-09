@@ -1386,11 +1386,11 @@ class MagicalEnhancer {
                 promptLength: inputText.length
             });
 
-            // Add timeout for message sending
+            // Add timeout for message sending (increased to 15 seconds)
             const messageTimeout = setTimeout(() => {
                 console.log('⏰ P BUTTON - API call timeout, background script not responding');
                 streamText.textContent = 'Error: Background script not responding. Please refresh the page.';
-            }, 5000);
+            }, 15000);
 
             chrome.runtime.sendMessage(messageData, (response) => {
                 clearTimeout(messageTimeout);
@@ -1401,6 +1401,12 @@ class MagicalEnhancer {
                     return;
                 }
 
+                // Handle successful response
+                if (response && response.success) {
+                    console.log('✅ P BUTTON - Background script responded successfully');
+                } else {
+                    console.log('⚠️ P BUTTON - Background script responded but with issues:', response);
+                }
             });
 
         } catch (error) {
