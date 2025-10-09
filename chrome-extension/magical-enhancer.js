@@ -1855,7 +1855,7 @@ class MagicalEnhancer {
         const hostname = window.location.hostname;
         
         if (hostname.includes('openai.com') || hostname.includes('chatgpt.com')) {
-            return 'gpt-4';
+            return 'gpt-4o-mini';
         } else if (hostname.includes('claude.ai')) {
             return 'claude-3-5-sonnet';
         } else if (hostname.includes('gemini.google.com')) {
@@ -1865,10 +1865,10 @@ class MagicalEnhancer {
         } else if (hostname.includes('meta.ai')) {
             return 'meta-llama-3';
         } else if (hostname.includes('poe.com')) {
-            return 'gpt-4';
+            return 'gpt-4o-mini';
         }
         
-        return 'gpt-4'; // Default fallback for ChatGPT
+        return 'gpt-4o-mini'; // Default fallback for ChatGPT
     }
 
     getFallbackEnhancement(text) {
