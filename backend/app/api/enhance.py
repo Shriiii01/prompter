@@ -694,8 +694,13 @@ async def update_user_name(
 async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header(None, alias="X-User-ID")):
     """Stream enhanced prompt in chunks for magical animation using ONLY AI service"""
     try:
+        # Handle 'auto' target model - default to Gemini 2.5 Pro
+        target_model = request.target_model
+        if target_model == 'auto' or not target_model:
+            target_model = 'gemini-2.5-pro'
+        
         logger.info(f" SIMPLE AI ENHANCEMENT: Starting for prompt: {request.prompt[:50]}...")
-        logger.info(f" Target model: {request.target_model or 'gemini-2.5-pro'}")
+        logger.info(f" Target model: {target_model}")
         logger.info(f"📧 User ID received: {x_user_id}")
         logger.info(f" DEBUGGING BACKEND:")
         logger.info(f"  - User ID received: {x_user_id}")
@@ -741,7 +746,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                 current_text = ""
                 async for chunk in ai_service._enhance_with_openai_streaming(
                     request.prompt,
-                    request.target_model or "gemini-2.5-pro"
+                    target_model
                 ):
                     current_text += chunk
                     # Send each chunk as it comes
