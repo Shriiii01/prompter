@@ -12,7 +12,7 @@ class OpenAIService:
     """OpenAI API service for prompt enhancement"""
     
     def __init__(self, api_key: str):
-        self.client = openai.AsyncOpenAI(api_key=api_key)
+        openai.api_key = api_key
         self.api_key = api_key
         logger.info(" OpenAI service initialized")
     
@@ -26,7 +26,7 @@ class OpenAIService:
 
             # Use max_completion_tokens for newer models like gpt-5-mini
             if "gpt-5" in target_model:
-                response = await self.client.chat.completions.create(
+                response = await openai.ChatCompletion.acreate(
                     model=target_model,
                     messages=[
                         {"role": "system", "content": system_prompt},
@@ -36,7 +36,7 @@ class OpenAIService:
                     timeout=30
                 )
             else:
-                response = await self.client.chat.completions.create(
+                response = await openai.ChatCompletion.acreate(
                     model=target_model,
                     messages=[
                         {"role": "system", "content": system_prompt},
