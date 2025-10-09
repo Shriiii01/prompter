@@ -384,27 +384,6 @@ async def quick_test(
             "error": str(e)
         }
 
-@router.get("/debug/database-version")
-async def get_database_version():
-    """Debug endpoint to check which database code version is running."""
-    try:
-        from app.utils.database import db_service
-        
-        # Test the new direct method
-        test_result = await db_service._increment_user_prompts_direct("test@debug.com")
-        
-        return {
-            "status": "success",
-            "message": "New database code is running",
-            "test_result": test_result,
-            "timestamp": time.time()
-        }
-    except Exception as e:
-        return {
-            "status": "error", 
-            "message": f"Database error: {str(e)}",
-            "timestamp": time.time()
-        }
 
 @router.get("/models")
 async def get_available_models():
@@ -709,13 +688,13 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
         # Increment user's prompt count (always track for popup UI)
         if x_user_id:
             try:
-                logger.info(f" Incrementing prompt count for user: {x_user_id}")
-                logger.info(f" ABOUT TO CALL increment_user_prompts with: {x_user_id}")
+                logger.info(f" 🔄 NEW DATABASE CODE: Incrementing prompt count for user: {x_user_id}")
+                logger.info(f" 🔄 NEW DATABASE CODE: Using direct database method (no RPC)")
                 new_count = await db_service.increment_user_prompts(x_user_id)
-                logger.info(f" Prompt count incremented to: {new_count}")
-                logger.info(f" NEW COUNT RETURNED: {new_count}")
+                logger.info(f" ✅ NEW DATABASE CODE: Prompt count incremented to: {new_count}")
+                logger.info(f" ✅ NEW DATABASE CODE: SUCCESS - No more RPC errors!")
             except Exception as db_error:
-                logger.warning(f" Failed to increment prompt count: {db_error}")
+                logger.error(f" ❌ NEW DATABASE CODE: Failed to increment prompt count: {db_error}")
         else:
             logger.info(" No user email provided - prompt count not incremented")
 
