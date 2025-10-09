@@ -212,7 +212,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     },
                     body: JSON.stringify({ 
                         prompt, 
-                        target_model: targetModel || 'auto' 
+                        target_model: targetModel || 'gpt-5-mini' 
                     }),
                     signal: controller.signal
                 });
@@ -432,7 +432,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         'X-Idempotency-Key': idempotencyKey || `${Date.now()}-${Math.random()}`,
                         'X-Platform': (platform || '').toLowerCase()
                     },
-                    body: JSON.stringify({ prompt, target_model: targetModel || 'auto' }),
+                    body: JSON.stringify({ prompt, target_model: targetModel || 'gpt-5-mini' }),
                     signal: controller.signal
                 });
 

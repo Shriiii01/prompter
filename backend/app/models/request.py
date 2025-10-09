@@ -75,7 +75,7 @@ class WebSocketMessage(BaseModel):
                 "type": "enhance",
                 "data": {
                     "prompt": "help me write code",
-                    "target_model": "gpt-5"
+                    "target_model": "gpt-5-mini"
                 }
             }
         } 
