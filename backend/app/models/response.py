@@ -67,7 +67,7 @@ class EnhancementResult(BaseModel):
             "example": {
                 "original": "help me write code",
                 "enhanced": "Please help me write clean, well-documented code with specific requirements and expected output format.",
-                "model_name": "gpt-4o-mini",
+                "model_name": "gpt-4",
                 "improvements": ["Added specificity", "Included output format"],
                 "enhancement_time": 0.5,
                 "cached": False,
@@ -123,3 +123,4 @@ class HealthResponse(BaseModel):
                 "uptime": 3600.5
             }
         } 
+
