@@ -38,7 +38,7 @@ class MultiProviderService:
         # Initialize enhancement engine
         self.enhancement_engine = EnhancementEngine(self.provider_manager.get_together_api_key())
         
-        # Define fallback order
+        # Define fallback order - Gemini first for enhancements
         self.fallback_order = [ProviderType.OPENAI, ProviderType.GEMINI, ProviderType.TOGETHER]
         
         logger.info(" MultiProviderService initialized with 3-layer fallback system")
