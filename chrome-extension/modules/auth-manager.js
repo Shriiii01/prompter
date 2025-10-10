@@ -296,6 +296,27 @@ class AuthManager {
     // Storage methods
     async storeUserData(token, userInfo) {
         try {
+            // CRITICAL FIX: Check if this is a different user and clear cached data
+            const existingData = await new Promise(resolve => {
+                chrome.storage.local.get(['user_info'], resolve);
+            });
+            
+            const oldEmail = existingData.user_info?.email;
+            const newEmail = userInfo.email;
+            
+            // If switching users, clear ALL cached user data
+            if (oldEmail && oldEmail !== newEmail) {
+                console.log('🔄 Different user detected, clearing cached data...');
+                await new Promise(resolve => {
+                    chrome.storage.local.remove([
+                        'last_known_prompt_count',
+                        'user_info',
+                        'cached_subscription_status'
+                    ], resolve);
+                });
+                console.log('✅ Cached data cleared for new user');
+            }
+            
             console.log('🔐 Attempting to store user data securely...');
             const tokenStored = await this.secureStorage.setEncrypted('google_token', token);
             const userInfoStored = await this.secureStorage.setEncrypted('user_info', userInfo);
@@ -311,6 +332,26 @@ class AuthManager {
         } catch (error) {
             console.error(' Failed to store user data securely:', error);
             console.log('🔄 Falling back to plain storage...');
+            
+            // CRITICAL FIX: Also clear cache in fallback mode
+            const existingData = await new Promise(resolve => {
+                chrome.storage.local.get(['user_info'], resolve);
+            });
+            
+            const oldEmail = existingData.user_info?.email;
+            const newEmail = userInfo.email;
+            
+            if (oldEmail && oldEmail !== newEmail) {
+                console.log('🔄 Different user detected in fallback, clearing cached data...');
+                await new Promise(resolve => {
+                    chrome.storage.local.remove([
+                        'last_known_prompt_count',
+                        'user_info',
+                        'cached_subscription_status'
+                    ], resolve);
+                });
+            }
+            
             return new Promise((resolve) => {
                 chrome.storage.local.set({
                     'google_token': token,
