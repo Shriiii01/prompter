@@ -1252,7 +1252,10 @@ class MagicalEnhancer {
                     streamText.innerHTML = aiText.replace(/\n/g, '<br>');
                 }
             } else if (message.action === 'stream_complete') {
-                this.showInsertButton(popup, streamText.textContent, inputElement);
+                // CRITICAL FIX: Get the original text with line breaks preserved
+                // Convert <br> tags back to \n for proper insertion
+                const originalText = streamText.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+                this.showInsertButton(popup, originalText, inputElement);
             } else if (message.action === 'limit_reached') {
                 // Backend detected limit reached during streaming
 
@@ -1752,9 +1755,29 @@ class MagicalEnhancer {
             const newInsertBtn = insertBtn.cloneNode(true);
             insertBtn.parentNode.replaceChild(newInsertBtn, insertBtn);
 
-            newInsertBtn.onclick = () => {
-                // Start API generation immediately when insert is clicked
-                this.startApiGenerationOnInsert();
+            newInsertBtn.onclick = async () => {
+                // Insert the text with proper structure preservation
+                this.insertText(finalText, inputElement);
+                this.closePopup();
+                
+                // Increment count by making a simple API call
+                try {
+                    // Get user email
+                    const userData = await new Promise((resolve) => {
+                        chrome.storage.local.get(['user_info'], resolve);
+                    });
+                    const userEmail = userData.user_info?.email || '';
+                    
+                    if (userEmail) {
+                        // Send message to background to increment count
+                        chrome.runtime.sendMessage({
+                            action: 'increment_count',
+                            userEmail: userEmail
+                        });
+                    }
+                } catch (e) {
+                    // Ignore count increment errors
+                }
             };
 
         }
@@ -1911,7 +1934,9 @@ Additional context: Please structure your response in a clear, organized manner 
             inputElement.dispatchEvent(pasteEvent);
             
         } else if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
-            inputElement.value = formattedText;
+            // CRITICAL FIX: For textarea/input, preserve line breaks as \n
+            // The AI generates structured text with \n - keep them intact
+            inputElement.value = formattedText; // Keep original formatting with \n
             inputElement.dispatchEvent(new Event('input', { bubbles: true }));
             inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (inputElement.contentEditable === 'true') {
