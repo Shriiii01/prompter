@@ -1248,7 +1248,8 @@ class MagicalEnhancer {
             if (message.action === 'stream_chunk') {
                 const aiText = message.chunk?.data || '';
                 if (aiText) {
-                    streamText.textContent = aiText;
+                    // CRITICAL FIX: Use innerHTML to preserve structure and formatting
+                    streamText.innerHTML = aiText.replace(/\n/g, '<br>');
                 }
             } else if (message.action === 'stream_complete') {
                 this.showInsertButton(popup, streamText.textContent, inputElement);
@@ -1736,7 +1737,8 @@ class MagicalEnhancer {
         const textContainer = document.createElement('div');
         textContainer.id = 'final-text';
         textContainer.style.cssText = 'font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;';
-        textContainer.textContent = finalText;
+        // CRITICAL FIX: Use innerHTML to preserve structure and formatting
+        textContainer.innerHTML = finalText.replace(/\n/g, '<br>');
         container.appendChild(textContainer);
 
         // Show insert button
@@ -1880,28 +1882,11 @@ Additional context: Please structure your response in a clear, organized manner 
     }
 
     formatText(text) {
-        //  CRITICAL FIX: Preserve AI-generated structure instead of flattening it
-        // The AI generates structured prompts with sections - we must keep this structure!
-
-        let formatted = text.trim();
-
-        // ONLY do minimal cleanup - preserve the AI's intentional structure
-        // Remove ONLY excessive consecutive newlines (3+ becomes 2)
-        formatted = formatted.replace(/\n{3,}/g, '\n\n');
-
-        // Clean up trailing/leading whitespace on lines but keep structure
-        formatted = formatted.replace(/^\s+|\s+$/gm, '');
-
-        // Remove completely empty lines but keep single newlines between sections
-        formatted = formatted.replace(/\n\s*\n\s*\n/g, '\n\n');
-
-        // Ensure it doesn't start with newlines
-        formatted = formatted.replace(/^\n+/, '');
-
-        //  KEY FIX: Return the text AS-IS from AI
-        // The AI already generates perfectly structured prompts with sections
-        // We should NOT reformat or flatten them!
-        return formatted;
+        //  CRITICAL FIX: Return AI text EXACTLY as generated - no processing!
+        // The AI generates perfectly structured prompts - we must preserve them completely!
+        
+        // Only trim leading/trailing whitespace, keep ALL internal structure
+        return text.trim();
     }
 
     insertText(text, inputElement) {
@@ -1931,15 +1916,12 @@ Additional context: Please structure your response in a clear, organized manner 
             inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         } else if (inputElement.contentEditable === 'true') {
             //  CRITICAL FIX: For contentEditable elements, preserve EXACT AI structure
-            // Do NOT flatten or reformat - the AI generates perfect structure
+            // Do NOT process or reformat - the AI generates perfect structure
+            
+            const cleanedText = formattedText; // Use text exactly as AI generated it
 
-            // Only minimal cleanup: remove excessive consecutive newlines
-            const cleanedText = formattedText
-                .replace(/\n{4,}/g, '\n\n\n') // Keep max 3 newlines between sections
-                .replace(/^\s+|\s+$/g, ''); // Trim start/end only
-
-            // Insert as plain text to preserve ALL formatting and structure
-            inputElement.textContent = cleanedText;
+            // CRITICAL FIX: Use innerHTML to preserve structure and formatting
+            inputElement.innerHTML = cleanedText.replace(/\n/g, '<br>');
             inputElement.dispatchEvent(new Event('input', { bubbles: true }));
 
             // Force the element to recognize the structure change
