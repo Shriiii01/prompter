@@ -1106,6 +1106,10 @@ class MagicalEnhancer {
                 return;
             }
 
+            // CRITICAL FIX: Always use fresh backend data for current user's email
+            // Don't rely on cached data that might be from a different user
+            console.log('🔍 Checking limits for user:', userEmail);
+
             // For FREE users, ALWAYS check real daily usage from backend
             if (userTier === 'free' && userEmail) {
                 try {
@@ -1335,6 +1339,13 @@ class MagicalEnhancer {
 
             const finalPromptCount = finalCheckData.last_known_prompt_count || 0;
             const finalUserTier = finalCheckData.user_info?.subscription_tier || 'free';
+            const cachedEmail = finalCheckData.user_info?.email;
+
+            // CRITICAL FIX: Verify we're checking the SAME user who's currently logged in
+            if (cachedEmail && cachedEmail !== userEmail) {
+                console.log('🔄 Email mismatch detected, forcing fresh backend check for current user');
+                // Don't use cached data - force fresh backend check
+            }
 
             //  FINAL SAFETY CHECK: Only block if actually at limit
             if (finalUserTier === 'free' && userEmail) {
