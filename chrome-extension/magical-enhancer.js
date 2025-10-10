@@ -1913,78 +1913,27 @@ Additional context: Please structure your response in a clear, organized manner 
     }
 
     insertText(text, inputElement) {
-        // Format the text for clean, structured insertion
-        const formattedText = this.formatText(text);
+        // CRITICAL FIX: Use text EXACTLY as it appears in the small UI - NO processing!
+        // The small UI shows perfect structure, so we must preserve it exactly
         
-        //  SPECIAL HANDLING FOR PERPLEXITY AI
-        if (window.location.hostname.includes('perplexity.ai')) {
-
-            inputElement.focus();
-            
-            // Use a more robust method to insert text by simulating a paste event.
-            const dataTransfer = new DataTransfer();
-            dataTransfer.setData('text/plain', formattedText);
-            
-            const pasteEvent = new ClipboardEvent('paste', {
-                clipboardData: dataTransfer,
-                bubbles: true,
-                cancelable: true
-            });
-            
-            inputElement.dispatchEvent(pasteEvent);
-            
-        } else if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
-            // CRITICAL FIX: For textarea/input, preserve line breaks as \n
-            // The AI generates structured text with \n - keep them intact
-            inputElement.value = formattedText; // Keep original formatting with \n
-            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-            inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-        } else if (inputElement.contentEditable === 'true') {
-            //  CRITICAL FIX: For contentEditable elements, preserve EXACT AI structure
-            // Do NOT process or reformat - the AI generates perfect structure
-            
-            const cleanedText = formattedText; // Use text exactly as AI generated it
-
-            // CRITICAL FIX: Use innerHTML to preserve structure and formatting
-            inputElement.innerHTML = cleanedText.replace(/\n/g, '<br>');
-            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-
-            // Force the element to recognize the structure change
-            inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        // Focus the element first
+        inputElement.focus();
         
-        //  FIX: Special handling for Perplexity AI and Meta AI
-        if (window.location.hostname.includes('perplexity.ai') || window.location.hostname.includes('meta.ai')) {
-            
-            // Force focus and trigger additional events for these platforms
-            inputElement.focus();
-            inputElement.click();
-            
-            // Trigger additional events that these platforms might need
-            inputElement.dispatchEvent(new Event('focus', { bubbles: true }));
-            inputElement.dispatchEvent(new Event('blur', { bubbles: true }));
-            inputElement.dispatchEvent(new Event('focus', { bubbles: true }));
-            
-            // For Perplexity, also try to trigger the search/ask functionality
-            if (window.location.hostname.includes('perplexity.ai')) {
-                
-                // Wait a bit for the text to be processed
-                setTimeout(() => {
-                    // Look for and trigger the ask button if it exists
-                    const askButton = document.querySelector('button[type="submit"], button[aria-label*="Ask"], button[aria-label*="Search"], button[data-testid*="submit"], button[class*="submit"]');
-                    if (askButton) {
-                        askButton.click();
-                    } else {
-                        // Try pressing Enter key
-                        inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-                        inputElement.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
-                    }
-                }, 200);
-            }
-        } else {
-            inputElement.focus();
-        }
-
+        // UNIVERSAL FIX: Use paste event for ALL platforms to preserve structure
+        const dataTransfer = new DataTransfer();
+        dataTransfer.setData('text/plain', text); // Use original text with ALL line breaks intact
+        
+        const pasteEvent = new ClipboardEvent('paste', {
+            clipboardData: dataTransfer,
+            bubbles: true,
+            cancelable: true
+        });
+        
+        inputElement.dispatchEvent(pasteEvent);
+        
+        // Also trigger input event to ensure the platform recognizes the change
+        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     closePopup() {
