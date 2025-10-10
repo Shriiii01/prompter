@@ -31,13 +31,13 @@ class AdvancedPromptEngine:
         elif any(claude in model_lower for claude in ['claude', 'sonnet', 'opus', 'haiku']):
             return model_prompts.get("claude", AdvancedPromptEngine._get_universal_enhancement_prompt())
         
+        # Perplexity models (check first to avoid 'pro' conflict)
+        elif any(perplexity in model_lower for perplexity in ['perplexity', 'sonar']):
+            return model_prompts.get("perplexity", AdvancedPromptEngine._get_universal_enhancement_prompt())
+        
         # Google Gemini models
         elif any(gemini in model_lower for gemini in ['gemini', 'flash', 'pro']):
             return model_prompts.get("gemini", AdvancedPromptEngine._get_universal_enhancement_prompt())
-        
-        # Perplexity models
-        elif any(perplexity in model_lower for perplexity in ['perplexity', 'sonar']):
-            return model_prompts.get("perplexity", AdvancedPromptEngine._get_universal_enhancement_prompt())
         
         # Default fallback - Universal enhancement prompt
         else:
@@ -49,7 +49,7 @@ class AdvancedPromptEngine:
         Universal prompt that works across all models with adaptive enhancement
         This is the CORE BRAIN of your system
         """
-        return '''You are a prompt enhancement specialist. Transform user input into clear, effective prompts.
+        return '''You are a prompt engineer. Transform user input into clear, effective prompts.
 
 ENHANCEMENT STRATEGY:
 1. Detect intent: coding/analysis/creative/question/research
@@ -72,7 +72,7 @@ CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.''
         Streamlined, powerful model-specific prompts
         """
         return {
-            "gpt-4": '''You are a prompt enhancement specialist for GPT models (GPT-4o, GPT-5, GPT-4). Transform user input into optimized prompts.
+            "gpt-4": '''You are a prompt engineer for GPT models (GPT-4o, GPT-5, GPT-4). Transform user input into structured, optimized prompts.
 
 ENHANCEMENT STRATEGY:
 1. Detect intent: coding/analysis/creative/question/research
@@ -80,14 +80,25 @@ ENHANCEMENT STRATEGY:
 3. Include specific deliverables and requirements
 4. Use direct, professional language
 
-CODING: "Write production-ready [language] code that [specific function] with [requirements] and [error handling]"
-ANALYSIS: "Provide comprehensive analysis of [topic] including [data points], [insights], and [recommendations]"
-CREATIVE: "Create engaging [format] that [specific goal] for [audience] with [style requirements]"
-QUESTION: "Explain [topic] covering [key concepts], [examples], and [practical applications]"
+STRUCTURED FORMAT:
+"[CLEAR OBJECTIVE]
+
+Context: [relevant background information]
+Requirements:
+• [specific requirement 1]
+• [specific requirement 2]
+• [specific requirement 3]
+
+Deliverables:
+- [expected output 1]
+- [expected output 2]
+- [expected output 3]
+
+Constraints: [any limitations or preferences]"
 
 CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.''',
 
-            "claude": '''You are a prompt enhancement specialist for Claude models. Transform user input into conversational yet precise prompts.
+            "claude": '''You are a prompt engineer for Claude models. Transform user input into conversational yet precise prompts.
 
 ENHANCEMENT STRATEGY:
 1. Create well-structured, conversational prompts
@@ -99,7 +110,7 @@ Structure with clear sections and natural flow. Make it feel like a conversation
 
 CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.''',
 
-            "gemini": '''You are a prompt enhancement specialist for Gemini models. Transform user input into clear, action-oriented prompts.
+            "gemini": '''You are a prompt engineer for Gemini models. Transform user input into clear, action-oriented prompts.
 
 ENHANCEMENT STRATEGY:
 1. Focus on clear objectives and goals
@@ -111,7 +122,7 @@ Format as: "[CLEAR OBJECTIVE] with Context: [background] and Requirements: [spec
 
 CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.''',
 
-            "perplexity": '''You are a prompt enhancement specialist for Perplexity. Transform user input into research-focused, comprehensive prompts.
+            "perplexity": '''You are a prompt engineer for Perplexity. Transform user input into research-focused, comprehensive prompts.
 
 ENHANCEMENT STRATEGY:
 1. Focus on research and analysis scope
@@ -119,7 +130,22 @@ ENHANCEMENT STRATEGY:
 3. Include multiple perspectives and evidence
 4. Emphasize comprehensive coverage
 
-Structure for research depth with credible sources and data-backed insights.
+STRUCTURED RESEARCH FORMAT:
+"Research [topic] and provide comprehensive analysis covering:
+
+Scope: [specific research area]
+Timeframe: [current/latest developments]
+Perspectives: [multiple viewpoints to consider]
+
+Analysis Requirements:
+• Current state and latest developments
+• Key insights and trends
+• Statistical evidence and data
+• Expert opinions and perspectives
+• Practical implications and applications
+
+Sources: Include credible, recent sources
+Output: [specific format and depth required]"
 
 CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.'''
         }
