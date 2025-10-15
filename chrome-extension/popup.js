@@ -3,7 +3,6 @@
 // Global error handler to suppress non-critical OAuth errors
 window.addEventListener('error', (event) => {
     if (event.error && event.error.message && event.error.message.includes('bad client id')) {
-        console.warn('⚠️ OAuth client ID warning suppressed (auth functionality not affected)');
         event.preventDefault(); // Prevent the error from showing in console
     }
 });
@@ -26,11 +25,10 @@ async function ensureBackgroundScriptReady() {
             });
             
             if (response && response.success) {
-                console.log('✅ Background script is ready');
                 return true;
             }
         } catch (error) {
-            console.log(`⏳ Background script not ready (attempt ${attempt}/${maxAttempts}):`, error.message);
+            // Silent retry
         }
         
         if (attempt < maxAttempts) {
@@ -38,7 +36,6 @@ async function ensureBackgroundScriptReady() {
         }
     }
     
-    console.warn('⚠️ Background script not responding after multiple attempts');
     return false;
 }
 
@@ -46,7 +43,6 @@ async function ensureBackgroundScriptReady() {
 function safeSendMessage(message, callback) {
     chrome.runtime.sendMessage(message, (response) => {
         if (chrome.runtime.lastError) {
-            console.error('Message sending error:', chrome.runtime.lastError);
             if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
             return;
         }
@@ -67,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (window.CONFIG) {
     } else {
-        console.warn(' CONFIG not loaded, using fallback');
+        // Using fallback config
         // Create fallback config
         window.CONFIG = {
             getApiUrl: () => 'http://localhost:8000'
@@ -239,7 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             })
             .then(userData => {
-                console.log(' Database user data:', userData);
+                // Database user data loaded
                 
                 if (userData && userData.name && userData.name !== 'User') {
                     // Update local storage with the name from database
@@ -253,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             })
             .catch(error => {
-                console.error(' Error checking database:', error);
+                // Error checking database
                 showNameInput();
             });
     }
@@ -269,7 +265,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (loginBtn) loginBtn.disabled = false;
             
             if (chrome.runtime.lastError) {
-                console.error('Login connection error:', chrome.runtime.lastError);
                 showError('Extension connection error. Please refresh and try again.');
                 return;
             }
@@ -292,7 +287,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     function logout() {
         chrome.runtime.sendMessage({ action: 'logout' }, (response) => {
             if (chrome.runtime.lastError) {
-                console.error('Logout connection error:', chrome.runtime.lastError);
                 // Still show auth section even if logout fails
                 showAuthSection();
                 return;
@@ -343,11 +337,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }).then(response => {
                     if (response.ok) {
                     } else {
-                        console.error(' Failed to save name to database:', response.status);
+                        // Failed to save name to database
                     }
                     showUserDashboard(userInfo);
                 }).catch(error => {
-                    console.error(' Error saving name to database:', error);
+                    // Error saving name to database
                     // Still show dashboard even if database save fails
                     showUserDashboard(userInfo);
                 });
@@ -380,7 +374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Error handling function
     function showError(message) {
-        console.error(' Error:', message);
+        // Error occurred
         // You can add a toast notification or error display here
         alert(message); // Simple error display for now
     }
@@ -484,9 +478,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // CRITICAL FIX: Ensure background script is ready before any operations
     ensureBackgroundScriptReady().then(() => {
-        console.log('✅ Background script ready, popup initialized');
+        // Background script ready, popup initialized
     }).catch((error) => {
-        console.warn('⚠️ Background script not ready:', error);
+        // Background script not ready
     });
     
     // Listen for count updates from background script
