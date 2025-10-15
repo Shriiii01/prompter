@@ -136,14 +136,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === 'logout') {
-        // Best-effort revoke and clear
-        chrome.identity.getAuthToken({ interactive: false }, (token) => {
-            if (token) {
-                chrome.identity.removeCachedAuthToken({ token }, () => console.log(' Revoked OAuth token'));
-            }
-            chrome.storage.local.clear(() => {
-
-                sendResponse({ success: true });
+        // CRITICAL FIX: Deactivate extension on ALL tabs before logout
+        chrome.tabs.query({}, (tabs) => {
+            // Send deactivate message to all tabs
+            tabs.forEach(tab => {
+                chrome.tabs.sendMessage(tab.id, { action: 'deactivate' }, () => {
+                    // Ignore errors for tabs that don't have content script
+                });
+            });
+            
+            // Then proceed with logout
+            chrome.identity.getAuthToken({ interactive: false }, (token) => {
+                if (token) {
+                    chrome.identity.removeCachedAuthToken({ token }, () => console.log(' Revoked OAuth token'));
+                }
+                chrome.storage.local.clear(() => {
+                    console.log('✅ Logout complete - extension deactivated on all tabs');
+                    sendResponse({ success: true });
+                });
             });
         });
         return true;

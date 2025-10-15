@@ -34,6 +34,9 @@ class MagicalEnhancer {
         // Check if extension was already active before page reload
         this.checkAndRestoreActiveState();
         
+        // CRITICAL FIX: Periodic login status check to ensure P button disappears on logout
+        this.startPeriodicLoginCheck();
+        
         // Don't auto-activate - wait for toggle button (unless already active)
     }
 
@@ -2144,14 +2147,36 @@ Additional context: Please structure your response in a clear, organized manner 
             });
             
             this.userInfo = result.user_info;
-            if (this.userInfo) {
-
+            if (this.userInfo && this.userInfo.email) {
+                console.log('✅ User is logged in:', this.userInfo.email);
+                // User is logged in, extension can be active if toggled
             } else {
-
+                console.log('❌ User is not logged in, deactivating extension');
+                // CRITICAL FIX: If user is not logged in, force deactivation
+                this.deactivate();
             }
         } catch (error) {
-
+            console.error('Error checking login status:', error);
+            // On error, assume not logged in and deactivate
+            this.deactivate();
         }
+    }
+
+    // CRITICAL FIX: Periodic check to ensure P button disappears on logout
+    startPeriodicLoginCheck() {
+        // Check every 2 seconds if user is still logged in
+        setInterval(async () => {
+            if (this.isActive) {
+                const result = await new Promise((resolve) => {
+                    chrome.storage.local.get(['user_info'], resolve);
+                });
+                
+                if (!result.user_info || !result.user_info.email) {
+                    console.log('🚨 User logged out detected, deactivating extension');
+                    this.deactivate();
+                }
+            }
+        }, 2000);
     }
 
     makePopupDraggable(popup) {
