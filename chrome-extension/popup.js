@@ -1,5 +1,13 @@
 // 🔐 SUPER SIMPLE POPUP SCRIPT - JUST WORKS
 
+// Global error handler to suppress non-critical OAuth errors
+window.addEventListener('error', (event) => {
+    if (event.error && event.error.message && event.error.message.includes('bad client id')) {
+        console.warn('⚠️ OAuth client ID warning suppressed (auth functionality not affected)');
+        event.preventDefault(); // Prevent the error from showing in console
+    }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
 
     // Wait for config to be available

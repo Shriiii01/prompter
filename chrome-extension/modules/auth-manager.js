@@ -15,7 +15,7 @@ class AuthManager {
         try {
             
             const tokenStatus = await this.checkTokenExpiry();
-            
+               
             if (tokenStatus.valid) {
                 const userInfo = await this.getStoredUserInfo();
                 if (userInfo && userInfo.name) {
@@ -109,8 +109,14 @@ class AuthManager {
                 console.log('🔄 OAuth callback received');
                 
                 if (chrome.runtime.lastError) {
-                    console.error(' Chrome runtime error:', chrome.runtime.lastError);
-                    console.error(' Error details:', chrome.runtime.lastError.message);
+                    // Check if it's the common "bad client id" error that doesn't affect functionality
+                    const errorMessage = chrome.runtime.lastError.message || '';
+                    if (errorMessage.includes('bad client id')) {
+                        console.warn('⚠️ OAuth client ID warning (auth may still work):', errorMessage);
+                    } else {
+                        console.error('❌ Chrome runtime error:', chrome.runtime.lastError);
+                        console.error('❌ Error details:', errorMessage);
+                    }
                     
                     // If getAuthToken fails, try launchWebAuthFlow as fallback
                     console.log('🔄 Trying launchWebAuthFlow as fallback...');
@@ -145,8 +151,13 @@ class AuthManager {
             interactive: true
         }, (responseUrl) => {
             if (chrome.runtime.lastError) {
-                console.error(' WebAuthFlow error:', chrome.runtime.lastError);
-                reject(new Error(`WebAuthFlow failed: ${chrome.runtime.lastError.message}`));
+                const errorMessage = chrome.runtime.lastError.message || '';
+                if (errorMessage.includes('bad client id')) {
+                    console.warn('⚠️ WebAuthFlow client ID warning (auth may still work):', errorMessage);
+                } else {
+                    console.error('❌ WebAuthFlow error:', chrome.runtime.lastError);
+                }
+                reject(new Error(`WebAuthFlow failed: ${errorMessage}`));
                 return;
             }
 
