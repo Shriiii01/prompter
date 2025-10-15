@@ -8,6 +8,52 @@ window.addEventListener('error', (event) => {
     }
 });
 
+// CRITICAL FIX: Ensure background script is ready before any operations
+async function ensureBackgroundScriptReady() {
+    const maxAttempts = 10;
+    const delay = 100; // 100ms between attempts
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const response = await new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+            
+            if (response && response.success) {
+                console.log('✅ Background script is ready');
+                return true;
+            }
+        } catch (error) {
+            console.log(`⏳ Background script not ready (attempt ${attempt}/${maxAttempts}):`, error.message);
+        }
+        
+        if (attempt < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    
+    console.warn('⚠️ Background script not responding after multiple attempts');
+    return false;
+}
+
+// CRITICAL FIX: Safe message sending with proper error handling
+function safeSendMessage(message, callback) {
+    chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+            console.error('Message sending error:', chrome.runtime.lastError);
+            if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
+            return;
+        }
+        if (callback) callback(response);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
 
     // Wait for config to be available
@@ -222,6 +268,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (loginLoading) loginLoading.classList.add('hidden');
             if (loginBtn) loginBtn.disabled = false;
             
+            if (chrome.runtime.lastError) {
+                console.error('Login connection error:', chrome.runtime.lastError);
+                showError('Extension connection error. Please refresh and try again.');
+                return;
+            }
+            
             if (response && response.success) {
                 
                 if (response.needsName) {
@@ -239,6 +291,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Logout function
     function logout() {
         chrome.runtime.sendMessage({ action: 'logout' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error('Logout connection error:', chrome.runtime.lastError);
+                // Still show auth section even if logout fails
+                showAuthSection();
+                return;
+            }
+            
             if (response && response.success) {
 
                 showAuthSection();
@@ -422,6 +481,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize extension state
     checkExtensionState();
+    
+    // CRITICAL FIX: Ensure background script is ready before any operations
+    await ensureBackgroundScriptReady();
     
     // Listen for count updates from background script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
