@@ -1,7 +1,7 @@
 // 🔐 SUPER SIMPLE BACKGROUND SCRIPT - JUST WORKS
 
 // Global error handler to suppress non-critical OAuth errors
-window.addEventListener('error', (event) => {
+self.addEventListener('error', (event) => {
     if (event.error && event.error.message && event.error.message.includes('bad client id')) {
         console.warn('⚠️ OAuth client ID warning suppressed (auth functionality not affected)');
         event.preventDefault(); // Prevent the error from showing in console
