@@ -158,6 +158,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const { apiUrl, prompt, targetModel, userEmail, platform, idempotencyKey } = request;
                 const tabId = sender?.tab?.id || 0;
 
+                // CRITICAL SAFETY: Verify this is the currently logged-in user
+                const currentUserData = await new Promise((resolve) => {
+                    chrome.storage.local.get(['user_info'], resolve);
+                });
+                
+                const currentUserEmail = currentUserData.user_info?.email;
+                if (currentUserEmail && currentUserEmail !== userEmail) {
+                    console.warn('🚨 SECURITY: Attempted to enhance prompt for different user!', {
+                        requested: userEmail,
+                        current: currentUserEmail
+                    });
+                    
+                    // Send security violation message to content script
+                    chrome.tabs.sendMessage(tabId, {
+                        action: 'stream_chunk',
+                        chunk: { type: 'error', data: 'Security violation: User mismatch detected' }
+                    });
+                    return;
+                }
+
                 // Store the requesting tab ID globally so we can respond to it later
                 // This fixes cross-tab switching issues
                 globalThis.activeEnhancementTabId = tabId;
@@ -212,7 +232,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-User-ID': userEmail || '',
+                        'X-User-Email': userEmail || '',
                         'X-Idempotency-Key': idempotencyKey || `${Date.now()}-${Math.random()}`,
                         'X-Platform': (platform || '').toLowerCase(),
                         'Accept': 'text/event-stream',
@@ -373,6 +393,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         (async () => {
             try {
+                // CRITICAL SAFETY: Verify this is the currently logged-in user
+                const currentUserData = await new Promise((resolve) => {
+                    chrome.storage.local.get(['user_info'], resolve);
+                });
+                
+                const currentUserEmail = currentUserData.user_info?.email;
+                if (currentUserEmail && currentUserEmail !== request.userEmail) {
+                    console.warn('🚨 SECURITY: Attempted to increment count for different user!', {
+                        requested: request.userEmail,
+                        current: currentUserEmail
+                    });
+                    sendResponse({ success: false, error: 'User mismatch - security violation' });
+                    return;
+                }
+
                 const apiUrl = 'https://prompter-production-76a3.up.railway.app'; // Production Railway URL
 
                 // FIRST: Check current user status to avoid unnecessary API calls
@@ -436,7 +471,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-User-ID': userEmail || '',
+                        'X-User-Email': userEmail || '',
                         'X-Idempotency-Key': idempotencyKey || `${Date.now()}-${Math.random()}`,
                         'X-Platform': (platform || '').toLowerCase()
                     },
