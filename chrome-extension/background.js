@@ -3,7 +3,6 @@
 // Global error handler to suppress non-critical OAuth errors
 self.addEventListener('error', (event) => {
     if (event.error && event.error.message && event.error.message.includes('bad client id')) {
-        console.warn('⚠️ OAuth client ID warning suppressed (auth functionality not affected)');
         event.preventDefault(); // Prevent the error from showing in console
     }
 });
@@ -148,10 +147,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             // Then proceed with logout
             chrome.identity.getAuthToken({ interactive: false }, (token) => {
                 if (token) {
-                    chrome.identity.removeCachedAuthToken({ token }, () => console.log(' Revoked OAuth token'));
+                    chrome.identity.removeCachedAuthToken({ token }, () => {});
                 }
                 chrome.storage.local.clear(() => {
-                    console.log('✅ Logout complete - extension deactivated on all tabs');
+                    // Logout complete - extension deactivated on all tabs
                     sendResponse({ success: true });
                 });
             });
