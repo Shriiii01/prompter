@@ -483,7 +483,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkExtensionState();
     
     // CRITICAL FIX: Ensure background script is ready before any operations
-    await ensureBackgroundScriptReady();
+    ensureBackgroundScriptReady().then(() => {
+        console.log('✅ Background script ready, popup initialized');
+    }).catch((error) => {
+        console.warn('⚠️ Background script not ready:', error);
+    });
     
     // Listen for count updates from background script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
