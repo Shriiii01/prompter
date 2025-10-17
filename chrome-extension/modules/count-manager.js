@@ -10,7 +10,7 @@ class CountManager {
     //  Simplified optimistic increment
     async incrementCount(userEmail) {
         try {
-            console.log(' Starting count increment for:', userEmail);
+            // Starting count increment
             
             // Get current count from display
             const currentCount = this.getCurrentDisplayCount();
@@ -21,7 +21,7 @@ class CountManager {
             
             //  OPTIMISTIC UPDATE: Immediately update display
             this.updateDisplay(newCount);
-            console.log(` Optimistic update: ${currentCount} → ${newCount}`);
+            // Optimistic update applied
             
             // Store pending update for potential rollback
             this.pendingUpdates.set(updateId, {
@@ -44,7 +44,7 @@ class CountManager {
     // 🔄 Perform backend update
     async performBackendUpdate(updateId, userEmail) {
         try {
-            console.log(`🔄 Performing backend update for ${updateId}`);
+            // Performing backend update
             
             const response = await fetch(`${this.apiBaseUrl}${this.endpoints.incrementCount}`, {
                 method: 'POST',
@@ -54,7 +54,7 @@ class CountManager {
             
             if (response.ok) {
                 const result = await response.json();
-                console.log(` Backend update successful: ${result.new_count}`);
+                // Backend update successful
                 
                 // Update display with actual backend count
                 this.updateDisplay(result.new_count);
@@ -130,7 +130,7 @@ class CountManager {
     //  Load count from backend
     async loadCount(userEmail) {
         try {
-            console.log('🔄 Loading count from backend...');
+            // Loading count from backend
             
             // Quick health check
             const healthCheck = await fetch(`${this.apiBaseUrl}${this.endpoints.health}`, {

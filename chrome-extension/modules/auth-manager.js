@@ -30,7 +30,7 @@ class AuthManager {
                 return { status: 'not_logged_in' };
             }
         } catch (error) {
-            console.error(' Error checking login status:', error);
+            // Error checking login status
             return { status: 'error', error: error.message };
         }
     }
@@ -41,7 +41,7 @@ class AuthManager {
             // Check if we have an expired token that can be refreshed
             const tokenStatus = await this.checkTokenExpiry();
             if (tokenStatus.reason === 'expired') {
-                console.log('🔄 Attempting to refresh expired token...');
+                // Attempting to refresh expired token
                 const refreshedToken = await this.refreshToken();
                 
                 if (refreshedToken) {
@@ -62,7 +62,7 @@ class AuthManager {
                 throw new Error('Login cancelled or failed');
             }
         } catch (error) {
-            console.error(' Login error:', error);
+            // Login error
             let errorMessage = 'Please try signing in again';
             
             if (error.message.includes('OAuth flow was cancelled')) {
@@ -87,39 +87,37 @@ class AuthManager {
             
             // Clear local storage
             chrome.storage.local.remove(['enhanced_count', 'cached_prompt_count'], () => {
-                console.log('Cleared local data on logout');
+                // Cleared local data on logout
             });
             
             return { status: 'logged_out' };
         } catch (error) {
-            console.error('Logout error:', error);
+            // Logout error
             throw error;
         }
     }
 
     async launchOAuthFlow() {
         return new Promise((resolve, reject) => {
-            console.log('🔑 Client ID:', this.clientId);
-            console.log('📋 Scopes:', this.scopes);
+            // Client ID and scopes initialized
             
             // First try the simpler getAuthToken method
             chrome.identity.getAuthToken({
                 interactive: true
             }, (token) => {
-                console.log('🔄 OAuth callback received');
+                // OAuth callback received
                 
                 if (chrome.runtime.lastError) {
                     // Check if it's the common "bad client id" error that doesn't affect functionality
                     const errorMessage = chrome.runtime.lastError.message || '';
                     if (errorMessage.includes('bad client id')) {
-                        console.warn('⚠️ OAuth client ID warning (auth may still work):', errorMessage);
+                        // OAuth client ID warning (auth may still work)
                     } else {
-                        console.error('❌ Chrome runtime error:', chrome.runtime.lastError);
-                        console.error('❌ Error details:', errorMessage);
+                        // Chrome runtime error
                     }
                     
                     // If getAuthToken fails, try launchWebAuthFlow as fallback
-                    console.log('🔄 Trying launchWebAuthFlow as fallback...');
+                    // Trying launchWebAuthFlow as fallback
                     this.launchWebAuthFlowFallback(resolve, reject);
                     return;
                 }
@@ -144,7 +142,7 @@ class AuthManager {
             `state=${this.generateState()}&` +
             `nonce=${this.generateNonce()}`;
 
-        console.log('🔗 Launching WebAuthFlow with URL:', authURL);
+        // Launching WebAuthFlow
 
         chrome.identity.launchWebAuthFlow({
             url: authURL,
@@ -153,9 +151,9 @@ class AuthManager {
             if (chrome.runtime.lastError) {
                 const errorMessage = chrome.runtime.lastError.message || '';
                 if (errorMessage.includes('bad client id')) {
-                    console.warn('⚠️ WebAuthFlow client ID warning (auth may still work):', errorMessage);
+                    // WebAuthFlow client ID warning (auth may still work)
                 } else {
-                    console.error('❌ WebAuthFlow error:', chrome.runtime.lastError);
+                    // WebAuthFlow error
                 }
                 reject(new Error(`WebAuthFlow failed: ${errorMessage}`));
                 return;
@@ -174,7 +172,7 @@ class AuthManager {
             if (token) {
                 resolve(token);
             } else {
-                console.error(' No token found in WebAuthFlow response');
+                // No token found in WebAuthFlow response
                 reject(new Error('No token received from WebAuthFlow'));
             }
         });
@@ -205,7 +203,7 @@ class AuthManager {
                 email_verified: userInfo.verified_email
             };
         } catch (error) {
-            console.error(' Error fetching user info:', error);
+            // Error fetching user info
             throw new Error('Failed to fetch user information');
         }
     }
@@ -244,14 +242,14 @@ class AuthManager {
 
             return { valid: true, reason: 'valid', timeUntilExpiry };
         } catch (error) {
-            console.error(' Error checking token expiry:', error);
+            // Error checking token expiry
             return { valid: false, reason: 'error' };
         }
     }
 
     async refreshToken() {
         try {
-            console.log('🔄 Starting token refresh...');
+            // Starting token refresh
             
             const userInfo = await this.getStoredUserInfo();
             if (!userInfo || !userInfo.email) {
@@ -273,7 +271,7 @@ class AuthManager {
             
             return newToken;
         } catch (error) {
-            console.error(' Token refresh failed:', error);
+            // Token refresh failed
             return null;
         }
     }
@@ -297,10 +295,10 @@ class AuthManager {
         try {
             const token = await this.getStoredToken();
             if (token) {
-                console.log('Token will expire naturally');
+                // Token will expire naturally
             }
         } catch (error) {
-            console.error('Error revoking token:', error);
+            // Error revoking token
         }
     }
 
@@ -317,7 +315,7 @@ class AuthManager {
             
             // If switching users, clear ALL cached user data
             if (oldEmail && oldEmail !== newEmail) {
-                console.log('🔄 Different user detected, clearing cached data...');
+                // Different user detected, clearing cached data
                 await new Promise(resolve => {
                     chrome.storage.local.remove([
                         'last_known_prompt_count',
@@ -325,15 +323,14 @@ class AuthManager {
                         'cached_subscription_status'
                     ], resolve);
                 });
-                console.log('✅ Cached data cleared for new user');
+                // Cached data cleared for new user
             }
             
-            console.log('🔐 Attempting to store user data securely...');
+            // Attempting to store user data securely
             const tokenStored = await this.secureStorage.setEncrypted('google_token', token);
             const userInfoStored = await this.secureStorage.setEncrypted('user_info', userInfo);
             
-            console.log('🔐 Token stored securely:', tokenStored);
-            console.log('🔐 User info stored securely:', userInfoStored);
+            // Token and user info stored securely
             
             return new Promise((resolve) => {
                 chrome.storage.local.set({
@@ -341,8 +338,7 @@ class AuthManager {
                 }, resolve);
             });
         } catch (error) {
-            console.error(' Failed to store user data securely:', error);
-            console.log('🔄 Falling back to plain storage...');
+            // Failed to store user data securely, falling back to plain storage
             
             // CRITICAL FIX: Also clear cache in fallback mode
             const existingData = await new Promise(resolve => {
@@ -353,7 +349,7 @@ class AuthManager {
             const newEmail = userInfo.email;
             
             if (oldEmail && oldEmail !== newEmail) {
-                console.log('🔄 Different user detected in fallback, clearing cached data...');
+                // Different user detected in fallback, clearing cached data
                 await new Promise(resolve => {
                     chrome.storage.local.remove([
                         'last_known_prompt_count',
@@ -375,9 +371,9 @@ class AuthManager {
 
     async storeTokenOnly(token) {
         try {
-            console.log('🔐 Attempting to store token securely...');
+            // Attempting to store token securely
             const stored = await this.secureStorage.setEncrypted('google_token', token);
-            console.log('🔐 Token stored securely:', stored);
+            // Token stored securely
             
             return new Promise((resolve) => {
                 chrome.storage.local.set({
@@ -385,8 +381,7 @@ class AuthManager {
                 }, resolve);
             });
         } catch (error) {
-            console.error(' Failed to store token securely:', error);
-            console.log('🔄 Falling back to plain storage...');
+            // Failed to store token securely, falling back to plain storage
             return new Promise((resolve) => {
                 chrome.storage.local.set({
                     'google_token': token,
@@ -398,13 +393,12 @@ class AuthManager {
 
     async getStoredToken() {
         try {
-            console.log('🔐 Attempting to get encrypted token...');
+            // Attempting to get encrypted token
             const token = await this.secureStorage.getEncrypted('google_token');
-            console.log('🔐 Token retrieved securely:', !!token);
+            // Token retrieved securely
             return token;
         } catch (error) {
-            console.error(' Failed to get encrypted token:', error);
-            console.log('🔄 Falling back to plain storage...');
+            // Failed to get encrypted token, falling back to plain storage
             return new Promise((resolve) => {
                 chrome.storage.local.get(['google_token'], (result) => {
                     resolve(result.google_token || null);
@@ -415,13 +409,12 @@ class AuthManager {
 
     async getStoredUserInfo() {
         try {
-            console.log('🔐 Attempting to get encrypted user info...');
+            // Attempting to get encrypted user info
             const userInfo = await this.secureStorage.getEncrypted('user_info');
-            console.log('🔐 User info retrieved securely:', !!userInfo);
+            // User info retrieved securely
             return userInfo;
         } catch (error) {
-            console.error(' Failed to get encrypted user info:', error);
-            console.log('🔄 Falling back to plain storage...');
+            // Failed to get encrypted user info, falling back to plain storage
             return new Promise((resolve) => {
                 chrome.storage.local.get(['user_info'], (result) => {
                     resolve(result.user_info || null);
@@ -432,9 +425,9 @@ class AuthManager {
 
     async storeUserInfo(userInfo) {
         try {
-            console.log('🔐 Storing user info:', userInfo);
+            // Storing user info securely
             const stored = await this.secureStorage.setEncrypted('user_info', userInfo);
-            console.log('🔐 User info stored securely:', stored);
+            // User info stored securely
             
             return new Promise((resolve) => {
                 chrome.storage.local.set({
@@ -443,8 +436,7 @@ class AuthManager {
                 }, resolve);
             });
         } catch (error) {
-            console.error(' Failed to store user info securely:', error);
-            console.log('🔄 Falling back to plain storage...');
+            // Failed to store user info securely, falling back to plain storage
             return new Promise((resolve) => {
                 chrome.storage.local.set({
                     'user_info': userInfo,
@@ -456,17 +448,16 @@ class AuthManager {
 
     async clearStoredData() {
         try {
-            console.log('🔐 Attempting to clear encrypted data...');
+            // Attempting to clear encrypted data
             await this.secureStorage.removeEncrypted('google_token');
             await this.secureStorage.removeEncrypted('user_info');
-            console.log('🔐 Encrypted data cleared successfully');
+            // Encrypted data cleared successfully
             
             return new Promise((resolve) => {
                 chrome.storage.local.remove(['login_time'], resolve);
             });
         } catch (error) {
-            console.error(' Failed to clear encrypted data:', error);
-            console.log('🔄 Falling back to plain storage clearing...');
+            // Failed to clear encrypted data, falling back to plain storage clearing
             return new Promise((resolve) => {
                 chrome.storage.local.remove(['google_token', 'user_info', 'login_time'], resolve);
             });
@@ -489,7 +480,7 @@ class AuthManager {
                     window.dispatchEvent(new CustomEvent('tokenExpired'));
                 }
             } catch (error) {
-                console.error(' Error in token refresh monitoring:', error);
+                // Error in token refresh monitoring
             }
         }, 120000); // Check every 2 minutes
     }

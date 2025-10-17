@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptGrammerly Marquee Promo Tile Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        
+        .tile-container {
+            width: 1400px;
+            height: 560px;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #333;
+            margin: 20px auto;
+            position: relative;
+        }
+        
+        .letter-p {
+            color: #ffffff;
+            font-size: 400px;
+            font-weight: 900;
+            font-family: 'Arial Black', Arial, sans-serif;
+            letter-spacing: -10px;
+        }
+        
+        .download-section {
+            text-align: center;
+            margin: 20px;
+        }
+        
+        .download-btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        
+        .download-btn:hover {
+            background: #0056b3;
+        }
+        
+        .preview-text {
+            text-align: center;
+            margin: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-text">
+        <h2>PromptGrammerly Marquee Promo Tile - 1400x560</h2>
+        <p>Clean, minimalist design with bold "P" on 1400x560 black background</p>
+    </div>
+    
+    <div class="tile-container" id="tileCanvas">
+        <div class="letter-p">P</div>
+    </div>
+    
+    <div class="download-section">
+        <button class="download-btn" onclick="downloadAsPNG()">Download as PNG</button>
+        <button class="download-btn" onclick="downloadAsJPEG()">Download as JPEG</button>
+    </div>
+
+    <script>
+        function downloadAsPNG() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size to 1400x560
+            canvas.width = 1400;
+            canvas.height = 560;
+            
+            // Fill black background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, 1400, 560);
+            
+            // Draw white P (no circle, just like icon128.png)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 400px Arial Black, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('P', 700, 280);
+            
+            // Download
+            const link = document.createElement('a');
+            link.download = 'promptgrammerly-marquee-promo-tile-1400x560.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        function downloadAsJPEG() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size to 1400x560
+            canvas.width = 1400;
+            canvas.height = 560;
+            
+            // Fill black background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, 1400, 560);
+            
+            // Draw white P (no circle, just like icon128.png)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 400px Arial Black, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('P', 700, 280);
+            
+            // Download as JPEG
+            const link = document.createElement('a');
+            link.download = 'promptgrammerly-marquee-promo-tile-1400x560.jpg';
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.click();
+        }
+    </script>
+</body>
+</html>

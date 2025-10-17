@@ -1,7 +1,8 @@
 """
 UNIFIED Model-Specific Prompt Enhancer
-This system uses Llama-4-Maverick-17B-128E-Instruct-FP8 as the single LLM for all prompt enhancements,
-but applies model-specific system prompts based on the target model.
+This system uses a multi-provider architecture with OpenAI, Gemini, and Together API providers
+for prompt enhancements, applying model-specific system prompts based on the target model.
+Features a 3-layer fallback system: OpenAI → Gemini → Together API with circuit breaker patterns.
 """
 
 import time

@@ -1,6 +1,58 @@
 // 🪄 PromptGrammerly - Prompt Enhancer Content Script
 //  FIXED: Extension context invalidated error with safe storage handling
 
+// Global error handler to suppress non-critical extension errors
+window.addEventListener('error', (event) => {
+    if (event.error && event.error.message) {
+        const message = event.error.message;
+        // Suppress common extension errors that are not critical
+        if (message.includes('Extension context invalidated') ||
+            message.includes('Receiving end does not exist') ||
+            message.includes('Could not establish connection')) {
+            event.preventDefault(); // Prevent the error from showing in console
+            event.stopPropagation(); // Stop the error from bubbling up
+            return false; // Return false to prevent default behavior
+        }
+    }
+});
+
+// Also suppress unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason && event.reason.message) {
+        const message = event.reason.message;
+        if (message.includes('Receiving end does not exist') ||
+            message.includes('Could not establish connection') ||
+            message.includes('Extension context invalidated')) {
+            event.preventDefault(); // Prevent the error from showing in console
+        }
+    }
+});
+
+// Override console.error to filter out extension errors
+const originalConsoleError = console.error;
+console.error = function(...args) {
+    const message = args.join(' ');
+    if (message.includes('Receiving end does not exist') ||
+        message.includes('Could not establish connection') ||
+        message.includes('Extension context invalidated') ||
+        message.includes('runtime.lastError') ||
+        message.includes('Uncaught (in promise) Error: Extension context invalidated')) {
+        return; // Don't show these errors
+    }
+    originalConsoleError.apply(console, args);
+};
+
+// Also override console.warn to catch any warnings
+const originalConsoleWarn = console.warn;
+console.warn = function(...args) {
+    const message = args.join(' ');
+    if (message.includes('Extension context invalidated') ||
+        message.includes('Receiving end does not exist')) {
+        return; // Don't show these warnings
+    }
+    originalConsoleWarn.apply(console, args);
+};
+
 class MagicalEnhancer {
     constructor() {
         this.isActive = false;
@@ -1111,7 +1163,7 @@ class MagicalEnhancer {
 
             // CRITICAL FIX: Always use fresh backend data for current user's email
             // Don't rely on cached data that might be from a different user
-            console.log('🔍 Checking limits for user:', userEmail);
+            // Check user limits
 
             // For FREE users, ALWAYS check real daily usage from backend
             if (userTier === 'free' && userEmail) {
@@ -1215,25 +1267,24 @@ class MagicalEnhancer {
                 this.insertText(finalText, inputElement);
                     this.closePopup();
                 
-                // Increment count by making a simple API call
-                try {
-
-                    // Get user email
-                    const userData = await new Promise((resolve) => {
-                        chrome.storage.local.get(['user_info'], resolve);
-                    });
-                    const userEmail = userData.user_info?.email || '';
-                    
-                    if (userEmail) {
-                        // Send message to background to increment count
-                        chrome.runtime.sendMessage({
-                            action: 'increment_count',
-                            userEmail: userEmail
-                        });
-                    }
-                } catch (e) {
-
-                }
+                 // Increment count by making a simple API call
+                 try {
+                     // Get user email
+                     const userData = await new Promise((resolve) => {
+                         chrome.storage.local.get(['user_info'], resolve);
+                     });
+                     const userEmail = userData.user_info?.email || '';
+                     
+                     if (userEmail) {
+                         // Send message to background to increment count
+                         chrome.runtime.sendMessage({
+                             action: 'increment_count',
+                             userEmail: userEmail
+                         });
+                     }
+                 } catch (e) {
+                     // Ignore count increment errors
+                 }
             };
 
         }
@@ -1346,7 +1397,7 @@ class MagicalEnhancer {
 
             // CRITICAL FIX: Verify we're checking the SAME user who's currently logged in
             if (cachedEmail && cachedEmail !== userEmail) {
-                console.log('🔄 Email mismatch detected, forcing fresh backend check for current user');
+                // Email mismatch detected, forcing fresh backend check
                 // Don't use cached data - force fresh backend check
             }
 
@@ -1384,7 +1435,7 @@ class MagicalEnhancer {
                     streamText.textContent = 'Error: Extension not responding. Please reload the extension and refresh the page.';
                     return;
                 }
-                console.log('Background script is running');
+                // Background script is running
             });
 
             const messageData = {
@@ -1397,16 +1448,11 @@ class MagicalEnhancer {
                 idempotencyKey: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
             };
 
-            console.log(' P BUTTON - Sending API call to background script:', {
-                action: messageData.action,
-                targetModel: messageData.targetModel,
-                userEmail: messageData.userEmail,
-                promptLength: inputText.length
-            });
+            // Sending API call to background script
 
             // Add timeout for message sending
             const messageTimeout = setTimeout(() => {
-                console.log('⏰ P BUTTON - API call timeout, background script not responding');
+                // API call timeout, background script not responding
                 streamText.textContent = 'Error: Background script not responding. Please refresh the page.';
             }, 5000);
 
@@ -1774,24 +1820,24 @@ class MagicalEnhancer {
                 this.insertText(finalText, inputElement);
                 this.closePopup();
                 
-                // Increment count by making a simple API call
-                try {
-                    // Get user email
-                    const userData = await new Promise((resolve) => {
-                        chrome.storage.local.get(['user_info'], resolve);
-                    });
-                    const userEmail = userData.user_info?.email || '';
-                    
-                    if (userEmail) {
-                        // Send message to background to increment count
-                        chrome.runtime.sendMessage({
-                            action: 'increment_count',
-                            userEmail: userEmail
-                        });
-                    }
-                } catch (e) {
-                    // Ignore count increment errors
-                }
+                 // Increment count by making a simple API call
+                 try {
+                     // Get user email
+                     const userData = await new Promise((resolve) => {
+                         chrome.storage.local.get(['user_info'], resolve);
+                     });
+                     const userEmail = userData.user_info?.email || '';
+                     
+                     if (userEmail) {
+                         // Send message to background to increment count
+                         chrome.runtime.sendMessage({
+                             action: 'increment_count',
+                             userEmail: userEmail
+                         });
+                     }
+                 } catch (e) {
+                     // Ignore count increment errors
+                 }
             };
 
         }
@@ -1933,21 +1979,41 @@ Additional context: Please structure your response in a clear, organized manner 
         // Focus the element first
         inputElement.focus();
         
-        // UNIVERSAL FIX: Use paste event for ALL platforms to preserve structure
-        const dataTransfer = new DataTransfer();
-        dataTransfer.setData('text/plain', text); // Use original text with ALL line breaks intact
+        // CRITICAL FIX: Select all existing text first, then replace with paste
+        // This works better than clearing, especially for Gemini
+        if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
+            // For textarea/input, select all
+            inputElement.select();
+            inputElement.setSelectionRange(0, inputElement.value.length);
+        } else if (inputElement.contentEditable === 'true') {
+            // For contenteditable divs (ChatGPT, Claude, Gemini, Perplexity)
+            // Select all content using Selection API
+            const range = document.createRange();
+            range.selectNodeContents(inputElement);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
         
-        const pasteEvent = new ClipboardEvent('paste', {
-            clipboardData: dataTransfer,
-            bubbles: true,
-            cancelable: true
-        });
-        
-        inputElement.dispatchEvent(pasteEvent);
-        
-        // Also trigger input event to ensure the platform recognizes the change
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+        // Small delay to ensure selection is registered
+        setTimeout(() => {
+            // UNIVERSAL FIX: Use paste event for ALL platforms to preserve structure
+            // This will REPLACE the selected text (old prompt) with new enhanced prompt
+            const dataTransfer = new DataTransfer();
+            dataTransfer.setData('text/plain', text); // Use original text with ALL line breaks intact
+            
+            const pasteEvent = new ClipboardEvent('paste', {
+                clipboardData: dataTransfer,
+                bubbles: true,
+                cancelable: true
+            });
+            
+            inputElement.dispatchEvent(pasteEvent);
+            
+            // Also trigger input event to ensure the platform recognizes the change
+            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+            inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+        }, 10); // Small delay to ensure selection is complete
     }
 
     closePopup() {
@@ -2142,21 +2208,30 @@ Additional context: Please structure your response in a clear, organized manner 
 
     async checkLoginStatus() {
         try {
+            // Check if extension context is still valid
+            if (!chrome.storage || !chrome.storage.local) {
+                // Extension context invalidated, skipping login check
+                return;
+            }
+            
             const result = await new Promise((resolve) => {
                 chrome.storage.local.get(['user_info'], resolve);
             });
             
             this.userInfo = result.user_info;
             if (this.userInfo && this.userInfo.email) {
-                console.log('✅ User is logged in:', this.userInfo.email);
+                // User is logged in
                 // User is logged in, extension can be active if toggled
             } else {
-                console.log('❌ User is not logged in, deactivating extension');
+                // User is not logged in, deactivating extension
                 // CRITICAL FIX: If user is not logged in, force deactivation
                 this.deactivate();
             }
         } catch (error) {
-            console.error('Error checking login status:', error);
+            // Don't log extension context errors - they're normal
+            if (!error.message || !error.message.includes('Extension context invalidated')) {
+                console.error('Error checking login status:', error);
+            }
             // On error, assume not logged in and deactivate
             this.deactivate();
         }
@@ -2172,7 +2247,7 @@ Additional context: Please structure your response in a clear, organized manner 
                 });
                 
                 if (!result.user_info || !result.user_info.email) {
-                    console.log('🚨 User logged out detected, deactivating extension');
+                    // User logged out detected, deactivating extension
                     this.deactivate();
                 }
             }
@@ -2224,5 +2299,7 @@ Additional context: Please structure your response in a clear, organized manner 
 if (!window.magicalEnhancer) {
     window.magicalEnhancer = new MagicalEnhancer();
 }
+
+
 
 
