@@ -1,11 +1,45 @@
 // 🔐 SUPER SIMPLE POPUP SCRIPT - JUST WORKS
 
-// Global error handler to suppress non-critical OAuth errors
+// Global error handler to suppress non-critical extension errors
 window.addEventListener('error', (event) => {
-    if (event.error && event.error.message && event.error.message.includes('bad client id')) {
-        event.preventDefault(); // Prevent the error from showing in console
+    if (event.error && event.error.message) {
+        const message = event.error.message;
+        // Suppress common extension errors that are not critical
+        if (message.includes('bad client id') || 
+            message.includes('Extension context invalidated') ||
+            message.includes('Receiving end does not exist') ||
+            message.includes('Could not establish connection')) {
+            event.preventDefault(); // Prevent the error from showing in console
+            event.stopPropagation(); // Stop the error from bubbling up
+            return false; // Return false to prevent default behavior
+        }
     }
 });
+
+// Also suppress unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason && event.reason.message) {
+        const message = event.reason.message;
+        if (message.includes('Receiving end does not exist') ||
+            message.includes('Could not establish connection') ||
+            message.includes('Extension context invalidated')) {
+            event.preventDefault(); // Prevent the error from showing in console
+        }
+    }
+});
+
+// Override console.error to filter out extension errors
+const originalConsoleError = console.error;
+console.error = function(...args) {
+    const message = args.join(' ');
+    if (message.includes('Receiving end does not exist') ||
+        message.includes('Could not establish connection') ||
+        message.includes('Extension context invalidated') ||
+        message.includes('runtime.lastError')) {
+        return; // Don't show these errors
+    }
+    originalConsoleError.apply(console, args);
+};
 
 // CRITICAL FIX: Ensure background script is ready before any operations
 async function ensureBackgroundScriptReady() {
@@ -41,8 +75,25 @@ async function ensureBackgroundScriptReady() {
 
 // CRITICAL FIX: Safe message sending with proper error handling
 function safeSendMessage(message, callback) {
+    // Check if extension context is still valid
+    if (!chrome.runtime || !chrome.runtime.sendMessage) {
+        if (callback) callback({ success: false, error: 'Extension context invalidated' });
+        return;
+    }
+    
+    // Add timeout to prevent hanging
+    const timeout = setTimeout(() => {
+        if (callback) callback({ success: false, error: 'Message timeout - background script not responding' });
+    }, 5000); // 5 second timeout
+    
     chrome.runtime.sendMessage(message, (response) => {
+        clearTimeout(timeout);
+        
         if (chrome.runtime.lastError) {
+            // Don't show "receiving end does not exist" errors - they're normal
+            if (!chrome.runtime.lastError.message.includes('Receiving end does not exist')) {
+                // Extension message error
+            }
             if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
             return;
         }
@@ -486,7 +537,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listen for count updates from background script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.action === 'count_updated') {
-
             updateEnhancedCount(request.count);
             // Also update local storage to prevent future mismatches
             chrome.storage.local.set({ last_known_prompt_count: request.count });

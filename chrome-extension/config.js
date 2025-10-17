@@ -93,7 +93,7 @@ const ensureConfigAvailable = () => {
   return new Promise((resolve, reject) => {
     // Check if CONFIG is already available
     if (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.healthCheck && window.CONFIG.healthCheck()) {
-      console.log(' CONFIG already available and healthy');
+      // CONFIG already available and healthy
       configLoadResolved = true;
       resolve(window.CONFIG);
       return;
@@ -115,7 +115,7 @@ const ensureConfigAvailable = () => {
         if (typeof window !== 'undefined') {
           window.CONFIG = config;
         }
-        console.log(' CONFIG loaded successfully');
+        // CONFIG loaded successfully
         configLoadResolved = true;
         clearTimeout(configLoadTimeout);
         resolve(config);
@@ -136,12 +136,7 @@ const ensureConfigAvailable = () => {
 const initializeConfig = async () => {
   try {
     const config = await ensureConfigAvailable();
-    console.log(' Configuration loaded successfully:', {
-      isProduction: config.isProduction(),
-      apiUrl: config.getApiUrl(),
-      productionUrl: config.API_BASE_URL,
-      configHealthy: config.healthCheck()
-    });
+    // Configuration loaded successfully
     return config;
   } catch (error) {
     console.error(' CONFIG initialization failed:', error.message);
@@ -169,4 +164,4 @@ if (typeof window !== 'undefined') {
   window.CONFIG = window.CONFIG || createConfig();
 }
 
-console.log(' Configuration module loaded'); 
+// Configuration module loaded 

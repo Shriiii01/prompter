@@ -7,17 +7,31 @@ self.addEventListener('error', (event) => {
     }
 });
 
+// CRITICAL FIX: Keep service worker alive
+let keepAliveInterval;
+
+function keepAlive() {
+    if (keepAliveInterval) {
+        clearInterval(keepAliveInterval);
+    }
+    keepAliveInterval = setInterval(() => {
+        // Ping ourselves to keep the service worker alive
+        chrome.runtime.getPlatformInfo(() => {});
+    }, 20000); // Every 20 seconds
+}
+
 // Ensure background script is running
 chrome.runtime.onStartup.addListener(() => {
-
+    keepAlive();
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-
+    keepAlive();
 });
 
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    keepAlive(); // Reset keep-alive timer
 
     // Ping test for background script
     if (request.action === 'ping') {
@@ -174,10 +188,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 
                 const currentUserEmail = currentUserData.user_info?.email;
                 if (currentUserEmail && currentUserEmail !== userEmail) {
-                    console.warn('🚨 SECURITY: Attempted to enhance prompt for different user!', {
-                        requested: userEmail,
-                        current: currentUserEmail
-                    });
+                    // Security: Attempted to enhance prompt for different user
                     
                     // Send security violation message to content script
                     chrome.tabs.sendMessage(tabId, {
@@ -210,7 +221,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                             //  EMERGENCY BACKEND BLOCK: If user has used 9+ of 10 prompts, block API call
                             if (userTier === 'free' && dailyUsed >= 9) {
-                                console.error(` BACKEND BLOCK: Free user ${userEmail} at ${dailyUsed}/${dailyLimit} prompts - BLOCKING API CALL!`);
+                                // Backend block: Free user at limit - blocking API call
 
                                 const targetTabId = globalThis.activeEnhancementTabId || tabId;
                                 chrome.tabs.sendMessage(targetTabId, {
@@ -228,7 +239,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         } else {
                         }
                     } catch (statusError) {
-                        console.error('Backend status check failed:', statusError);
+                        // Backend status check failed
                         // Continue with request even if check fails (don't block due to network issues)
                     }
                 }
@@ -362,7 +373,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Open popup for login when user needs to authenticate
     if (request.action === 'open_popup_for_login') {
         chrome.action.openPopup().catch((error) => {
-            console.error('Failed to open popup:', error);
+            // Failed to open popup
         });
         sendResponse({ success: true });
         return true;
@@ -409,10 +420,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 
                 const currentUserEmail = currentUserData.user_info?.email;
                 if (currentUserEmail && currentUserEmail !== request.userEmail) {
-                    console.warn('🚨 SECURITY: Attempted to increment count for different user!', {
-                        requested: request.userEmail,
-                        current: currentUserEmail
-                    });
+                    // Security: Attempted to increment count for different user
                     sendResponse({ success: false, error: 'User mismatch - security violation' });
                     return;
                 }
@@ -435,7 +443,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                     // If free user has already reached limit, don't increment
                     if (userTier === 'free' && currentCount >= 10) {
-
+                        sendResponse({ success: false, error: 'Free user limit reached' });
                         return; // Don't make the increment call
                     }
                 } else {
@@ -458,9 +466,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         action: 'count_updated',
                         count: data.enhanced_prompts
                     }).catch(() => {});
+                    
+                    sendResponse({ success: true, count: data.enhanced_prompts });
+                } else {
+                    sendResponse({ success: false, error: 'Failed to increment count' });
                 }
             } catch (e) {
-
+                sendResponse({ success: false, error: e.message });
             }
         })();
         
