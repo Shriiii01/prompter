@@ -154,7 +154,7 @@ class AIService:
             raise ValueError(f"Unknown provider: {provider}")
     
     async def _enhance_with_openai(self, prompt: str, target_model: str) -> str:
-        """Enhance prompt using OpenAI API."""
+        """Enhance prompt using OpenAI API with GPT-5 Mini fallback to GPT-4o Mini."""
         headers = {
             "Authorization": f"Bearer {config.settings.openai_api_key}",
             "Content-Type": "application/json"
@@ -163,31 +163,66 @@ class AIService:
         # Use centralized system prompts for consistency across providers
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
-        data = {
-            "model": "gpt-5-mini",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            "max_tokens": 500,
-            "temperature": 0.3
-        }
+        # Try GPT-5 Mini first, then fallback to GPT-4o Mini
+        models_to_try = ["gpt-5-mini", "gpt-4o-mini"]
+        last_error = None
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers=headers,
-                json=data,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as response:
-                if response.status != 200:
-                    raise Exception(f"OpenAI API error: {response.status}")
+        for model in models_to_try:
+            data = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 500,
+                "temperature": 0.3
+            }
+            
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers=headers,
+                        json=data,
+                        timeout=aiohttp.ClientTimeout(total=30)
+                    ) as response:
+                        if response.status == 200:
+                            result = await response.json()
+                            # Log which model was used successfully
+                            print(f"✅ OpenAI enhancement successful with {model}")
+                            return result["choices"][0]["message"]["content"]
+                        else:
+                            # Log the error for debugging
+                            error_text = await response.text()
+                            print(f"❌ OpenAI {model} failed: {response.status} - {error_text[:200]}")
+                            last_error = f"OpenAI API error: {response.status} - {error_text[:200]}"
+                            
+                            # If it's a 400/403 error and we have another model to try, continue
+                            if response.status in [400, 403] and model != models_to_try[-1]:
+                                print(f"🔄 Falling back from {model} to {models_to_try[models_to_try.index(model) + 1]}")
+                                continue
+                            else:
+                                # If it's the last model or not a fallback-able error, raise
+                                raise Exception(f"OpenAI API error: {response.status}")
+                                
+            except Exception as e:
+                last_error = str(e)
+                print(f"❌ OpenAI {model} exception: {e}")
                 
-                result = await response.json()
-                return result["choices"][0]["message"]["content"]
+                # If it's the last model, raise the error
+                if model == models_to_try[-1]:
+                    raise Exception(f"All OpenAI models failed. Last error: {last_error}")
+                else:
+                    # Try next model
+                    next_model = models_to_try[models_to_try.index(model) + 1]
+                    print(f"🔄 Falling back from {model} to {next_model}")
+                    continue
+        
+        # This should never be reached, but just in case
+        raise Exception(f"All OpenAI models failed. Last error: {last_error}")
     
     async def _enhance_with_openai_streaming(self, prompt: str, target_model: str):
-        """Enhance prompt using OpenAI API with REAL streaming."""
+        """Enhance prompt using OpenAI API with REAL streaming and GPT-5 Mini fallback."""
         headers = {
             "Authorization": f"Bearer {config.settings.openai_api_key}",
             "Content-Type": "application/json"
@@ -196,42 +231,79 @@ class AIService:
         # Use centralized system prompts for consistency across providers
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
-        data = {
-            "model": "gpt-5-mini",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            "max_tokens": 500,
-            "temperature": 0.3,
-            "stream": True
-        }
+        # Try GPT-5 Mini first, then fallback to GPT-4o Mini
+        models_to_try = ["gpt-5-mini", "gpt-4o-mini"]
+        last_error = None
         
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers=headers,
-                json=data,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as response:
-                if response.status != 200:
-                    raise Exception(f"OpenAI API error: {response.status}")
+        for model in models_to_try:
+            data = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 500,
+                "temperature": 0.3,
+                "stream": True
+            }
+            
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers=headers,
+                        json=data,
+                        timeout=aiohttp.ClientTimeout(total=30)
+                    ) as response:
+                        if response.status == 200:
+                            # Log which model was used successfully
+                            print(f"✅ OpenAI streaming enhancement successful with {model}")
+                            
+                            # Stream the response
+                            async for line in response.content:
+                                line = line.decode('utf-8').strip()
+                                if line.startswith('data: '):
+                                    data_str = line[6:]
+                                    if data_str == '[DONE]':
+                                        break
+                                    try:
+                                        chunk = json.loads(data_str)
+                                        if 'choices' in chunk and len(chunk['choices']) > 0:
+                                            delta = chunk['choices'][0].get('delta', {})
+                                            if 'content' in delta:
+                                                yield delta['content']
+                                    except json.JSONDecodeError:
+                                        continue
+                            return  # Success, exit the function
+                        else:
+                            # Log the error for debugging
+                            error_text = await response.text()
+                            print(f"❌ OpenAI streaming {model} failed: {response.status} - {error_text[:200]}")
+                            last_error = f"OpenAI API error: {response.status} - {error_text[:200]}"
+                            
+                            # If it's a 400/403 error and we have another model to try, continue
+                            if response.status in [400, 403] and model != models_to_try[-1]:
+                                print(f"🔄 Streaming fallback from {model} to {models_to_try[models_to_try.index(model) + 1]}")
+                                continue
+                            else:
+                                # If it's the last model or not a fallback-able error, raise
+                                raise Exception(f"OpenAI API error: {response.status}")
+                                
+            except Exception as e:
+                last_error = str(e)
+                print(f"❌ OpenAI streaming {model} exception: {e}")
                 
-                # Stream the response
-                async for line in response.content:
-                    line = line.decode('utf-8').strip()
-                    if line.startswith('data: '):
-                        data_str = line[6:]
-                        if data_str == '[DONE]':
-                            break
-                        try:
-                            chunk = json.loads(data_str)
-                            if 'choices' in chunk and len(chunk['choices']) > 0:
-                                delta = chunk['choices'][0].get('delta', {})
-                                if 'content' in delta:
-                                    yield delta['content']
-                        except json.JSONDecodeError:
-                            continue
+                # If it's the last model, raise the error
+                if model == models_to_try[-1]:
+                    raise Exception(f"All OpenAI streaming models failed. Last error: {last_error}")
+                else:
+                    # Try next model
+                    next_model = models_to_try[models_to_try.index(model) + 1]
+                    print(f"🔄 Streaming fallback from {model} to {next_model}")
+                    continue
+        
+        # This should never be reached, but just in case
+        raise Exception(f"All OpenAI streaming models failed. Last error: {last_error}")
     
     async def _enhance_with_gemini(self, prompt: str, target_model: str) -> str:
         """Enhance prompt using Gemini API with system prompts from prompts.py."""
