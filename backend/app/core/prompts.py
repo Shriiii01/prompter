@@ -58,7 +58,7 @@ UNIVERSAL STRUCTURE:
 Role: [Expert role matching the task]
 Task: [Single clear objective]
 Context: [Only if essential]
-Output: [Exact format/structure needed]
+Output: [Use clear section headings and short paragraphs]
 Tone: [Friendly and easy to follow, avoiding jargon]
 Constraints: [Limits, style, scope]
 
@@ -95,7 +95,8 @@ ENHANCEMENT TRIGGERS:
 - No format specified → Default to structured sections with headers
 - Unclear depth → Default to comprehensive with executive summary
 - Numbered lists → Always put each number on a new line for better readability
-- Missing tone → Default to "Friendly and easy to follow, avoiding jargon"''',
+- Missing tone → Default to "Friendly and easy to follow, avoiding jargon"
+- Missing output format → Default to "Use clear section headings and short paragraphs"''',
 
             "claude": '''Transform the user's input into an optimized prompt for Claude.
 
