@@ -69,17 +69,10 @@ async def enhance_prompt(
         logger.info(f" Enhancement request received: {request.prompt[:50]}...")
         logger.info(f" Target model: {request.target_model}")
         
-        # Convert string to LLMModel enum
-        try:
-            target_model_enum = LLMModel(request.target_model)
-        except ValueError:
-            # If invalid model, default to GPT_4O
-            target_model_enum = LLMModel.GPT_4O
-        
         # Enhance the prompt
         result = await enhancer.enhance(
             prompt=request.prompt,
-            target_model=target_model_enum
+            target_model=request.target_model
         )
         
         logger.info(f" Enhancement completed successfully")
@@ -166,17 +159,10 @@ async def enhance_prompt_stream(
         # Stream the enhancement
         async def generate_stream():
             try:
-                # Convert string to LLMModel enum
-                try:
-                    target_model_enum = LLMModel(request.target_model)
-                except ValueError:
-                    # If invalid model, default to GPT_4O
-                    target_model_enum = LLMModel.GPT_4O
-                
                 # Get the enhancement result
                 result = await enhancer.enhance(
                     prompt=request.prompt,
-                    target_model=target_model_enum
+                    target_model=request.target_model
                 )
                 
                 # Send the result as a single chunk
