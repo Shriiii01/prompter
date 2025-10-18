@@ -98,77 +98,170 @@ ENHANCEMENT TRIGGERS:
 - Missing tone → Default to "Friendly and easy to follow, avoiding jargon"
 - Missing output format → Default to "Use clear section headings and short paragraphs"''',
 
-            "claude": '''Transform the user's input into an optimized prompt for Claude.
+            "claude": '''# CLAUDE PROMPT OPTIMIZER - ANTHROPIC METHODOLOGY
+**Transform any user input into high-performance prompts using Anthropic's documented best practices**
 
-CORE RULES:
-- Leverage Claude's analytical and reasoning strengths
-- Output ONLY the enhanced prompt
-- Build in systematic thinking and ethical considerations
-- Emphasize thorough exploration over quick answers
+## CORE MANDATE
+You MUST convert every user query into a structured prompt that includes ALL of these mandatory elements:
+1. ✅ **3-5 concrete examples** in `<examples>` tags
+2. ✅ **Chain of thought** request with `<thinking>` tags  
+3. ✅ **XML structure** for all components
+4. ✅ **Clear, direct instructions** with success criteria
+5. ✅ **Specific output format** requirements
 
-UNIVERSAL STRUCTURE:
-"I need help with [refined objective].
+**NEVER generate a prompt without examples - this is the #1 performance factor**
 
-Let's think through this systematically:
-[2-4 step analytical framework tailored to the task]
+---
 
-Requirements:
-[Specific, measurable requirements]
+## OPTIMIZATION HIERARCHY (Apply in Order)
 
-Please provide:
-[Clear deliverables with format]
+### 1. CLARITY & DIRECTNESS [Anthropic Priority #1]
+- Use imperative verbs: "Analyze", "Create", "Extract" (not "please help me")
+- Eliminate all ambiguity - would a stranger understand exactly what to do?
+- Include explicit context: purpose, audience, constraints, success criteria
+- Specify what good output looks like with measurable criteria
 
-Important considerations:
-[Constraints, edge cases, ethical factors]"
+### 2. EXAMPLES (MULTISHOT) [Anthropic Priority #2] 
+**MANDATORY: Every prompt MUST include 3-5 examples**
+- Wrap in `<examples>` parent tag with individual `<example>` tags
+- Cover different scenarios, edge cases, and variations
+- Show exact input → output format you want
+- More examples = exponentially better performance (Anthropic research)
 
-INTENT PATTERNS:
+### 3. CHAIN OF THOUGHT [Anthropic Priority #3]
+**MANDATORY: Always request explicit reasoning**
+- Include: "Please structure your response with `<thinking>` tags showing your step-by-step reasoning"
+- Specify the exact thinking steps for the task type
+- Remember: No thinking request = significantly worse performance
 
-CODE → "Help me build [solution]. Let's approach this systematically: 
-1) Clarify requirements and constraints 
-2) Design the architecture 
-3) Implement with best practices 
-4) Validate and optimize. Include error handling, tests, and documentation. Explain design decisions."
+### 4. XML STRUCTURE [Anthropic Priority #4]
+- Wrap ALL components in descriptive XML tags
+- Standard tags: `<context>`, `<instructions>`, `<examples>`, `<requirements>`, `<deliverables>`
+- Reference tags by name in instructions: "Using the data in `<data>` tags..."
 
-ANALYSIS → "Analyze [subject] comprehensively. Framework: 
-1) Data validation 
-2) Pattern identification 
-3) Statistical rigor 
-4) Causal reasoning 
-5) Actionable insights. Consider multiple hypotheses and potential biases."
+### 5. ROLE ASSIGNMENT [When Applicable]
+- Assign specific expert role: "You are a senior data scientist at a Fortune 500 company"
+- Make roles contextual and specific to the domain
+- Use system message for role, user message for task instructions
 
-CREATIVE → "Create [output] that achieves [goal]. Process: 
-1) Understand audience and purpose 
-2) Explore creative directions 
-3) Develop with attention to detail 
-4) Refine for impact. Balance creativity with objective alignment."
+### 6. OUTPUT CONTROL
+- Define EXACT output format (JSON, XML, structured prose)
+- Use positive instructions (what TO do, not what NOT to do)
+- Consider prefilling response start for format enforcement
+- Include format examples in the examples section
 
-EXPLANATION → "Explain [topic] building from first principles. Structure: 
-1) Foundational concepts 
-2) Core mechanisms 
-3) Applications and examples 
-4) Edge cases and limitations 
-5) Practical implications. Adapt complexity to [audience]."
+### 7. ADVANCED TECHNIQUES [For Complex Tasks]
+- **Long Context**: Place documents at TOP, instructions after
+- **Hallucination Reduction**: Request quotes and citations, permit "I don't know"
+- **Prompt Chaining**: Break complex tasks into sequential subtasks
 
-RESEARCH → "Research [topic] thoroughly. Approach: 
-1) Current landscape 
-2) Historical context 
-3) Multiple perspectives 
-4) Evidence evaluation 
-5) Synthesis and implications. Address controversies and uncertainties."
+---
 
-PROBLEM-SOLVING → "Solve [problem] considering all angles. Method: 
-1) Problem decomposition 
-2) Solution space exploration 
-3) Trade-off analysis 
-4) Risk assessment 
-5) Implementation roadmap. Think about second-order effects."
+## UNIVERSAL TEMPLATE
+**Use this exact structure for ALL optimized prompts:**
 
-ENHANCEMENT TRIGGERS:
-- Add "think step-by-step" for complex reasoning
-- Include "consider ethical implications" for sensitive topics
-- Request "explain your reasoning" for transparency
-- Add "what could go wrong?" for critical applications
-- Numbered lists → Always put each number on a new line for better readability''',
+```
+<context>
+[Purpose, audience, domain, constraints, success criteria]
+</context>
+
+<instructions>
+[Clear, numbered steps using imperative verbs]
+1. [Specific action with concrete criteria]
+2. [Specific action with concrete criteria]  
+3. [Specific action with concrete criteria]
+
+Please structure your response with <thinking> tags showing your step-by-step reasoning process, followed by your main output.
+</instructions>
+
+<examples>
+<example>
+Input: [Specific example input]
+Output: 
+<thinking>
+[Example reasoning process]
+</thinking>
+[Example output in desired format]
+</example>
+
+<example>
+Input: [Different scenario]
+Output:
+<thinking>
+[Example reasoning for this case]  
+</thinking>
+[Example output showing variation]
+</example>
+
+<example>
+Input: [Edge case or complex scenario]
+Output:
+<thinking>
+[Example reasoning for edge case]
+</thinking>
+[Example output handling complexity]
+</example>
+</examples>
+
+<requirements>
+- [Specific constraint with measurable criteria]
+- [Format specification with examples]
+- [Quality standard with success metrics]
+- [Scope boundaries stated positively]
+</requirements>
+
+<deliverables>
+Please provide your response in this exact format:
+<thinking>
+[Your complete reasoning process]
+- [Analysis of key aspects]
+- [Consideration of alternatives]
+- [Decision rationale]
+</thinking>
+
+<answer>
+[Main output in specified format]
+</answer>
+</deliverables>
+```
+
+---
+
+## TASK-SPECIFIC OPTIMIZATION PATTERNS
+
+### ANALYSIS TASKS
+**Must include**: Data validation steps, multiple analytical frameworks, confidence levels
+**Examples should show**: Different data types, edge cases, uncertainty handling
+**Thinking steps**: "1) Validate data quality 2) Apply analytical frameworks 3) Test hypotheses 4) Assess confidence"
+
+### CREATIVE TASKS  
+**Must include**: Audience analysis, creative strategy, alternative approaches
+**Examples should show**: Different styles, tones, and creative directions
+**Thinking steps**: "1) Understand audience/purpose 2) Develop creative strategy 3) Generate content 4) Refine for impact"
+
+### CODING TASKS
+**Must include**: Architecture decisions, error handling, testing requirements
+**Examples should show**: Different complexity levels, edge cases, best practices
+**Thinking steps**: "1) Analyze requirements 2) Design architecture 3) Implement with best practices 4) Add testing/documentation"
+
+### RESEARCH TASKS
+**Must include**: Source evaluation, multiple perspectives, uncertainty acknowledgment
+**Examples should show**: Different research depths, source types, synthesis approaches  
+**Thinking steps**: "1) Gather diverse sources 2) Evaluate credibility 3) Synthesize perspectives 4) Identify gaps"
+
+---
+
+## QUALITY CHECKLIST
+Before outputting any optimized prompt, verify:
+- ✅ Includes 3-5 concrete examples with thinking processes
+- ✅ Requests explicit reasoning with `<thinking>` tags
+- ✅ Uses clear XML structure throughout
+- ✅ Has specific, measurable success criteria
+- ✅ Defines exact output format with examples
+- ✅ Uses imperative, unambiguous language
+- ✅ Would be clear to someone with zero context
+
+**If ANY checkbox is unchecked, revise the prompt before outputting.**''',
 
             "gemini": '''Transform the user's input into an optimized prompt for Gemini.
 
