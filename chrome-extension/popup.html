@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promptgrammerly</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            width: 360px;
+            min-height: 320px;
+            max-height: 400px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1C1C1E;
+            color: #FFFFFF;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            border: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        .container {
+            padding: 16px 20px 16px 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px;
+            background: #1C1C1E;
+            overflow: hidden;
+            border: none;
+        }
+        /* Header Section */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #2C2C2E;
+        }
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .simple-logo {
+            width: 32px;
+            height: 32px;
+            background: #2c2c2c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .brand-info {
+            flex: 1;
+        }
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            color: #D4D4D8;
+        }
+        .subtitle {
+            font-size: 13px;
+            color: #8E8E93;
+            margin: 0;
+            font-weight: 400;
+        }
+        /* Stats Section */
+        .stats-section {
+            background: #2C2C2E;
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #3A3A3C;
+        }
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .stats-title {
+            font-size: 12px;
+            font-weight: 400;
+            color: #8E8E93;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .enhanced-count {
+            font-size: 20px;
+            font-weight: 600;
+            color: #D4D4D8;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 8px;
+            background: #1C1C1E;
+            border-radius: 12px;
+            border: 1px solid #3A3A3C;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #FFFFFF;
+            margin-bottom: 2px;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #8E8E93;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        /* Auth Section */
+        .auth-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 16px 0;
+            min-height: 200px;
+        }
+        .auth-message {
+            font-size: 14px;
+            color: #8E8E93;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .login-btn {
+            background: #007AFF;
+            color: #FFFFFF;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 160px;
+            justify-content: center;
+        }
+        .login-btn:hover {
+            background: #0056CC;
+            transform: translateY(-1px);
+        }
+        .login-btn:active {
+            transform: translateY(0);
+        }
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* User Section */
+        .user-section {
+            margin-bottom: 16px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #2C2C2E;
+            border-radius: 16px;
+            border: 1px solid #3A3A3C;
+            margin-bottom: 12px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #3A3A3C;
+        }
+        .user-details {
+            flex: 1;
+        }
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #D4D4D8;
+            margin: 0 0 2px 0;
+        }
+        .user-email {
+            font-size: 12px;
+            color: #8E8E93;
+            margin: 0;
+        }
+        /* Name Input Section */
+        .name-section {
+            margin-bottom: 16px;
+        }
+        .name-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: #2C2C2E;
+            border: 1px solid #3A3A3C;
+            border-radius: 12px;
+            color: #FFFFFF;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .name-input:focus {
+            outline: none;
+            border-color: #007AFF;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+        .name-input::placeholder {
+            color: #8E8E93;
+        }
+        .save-name-btn {
+            background: #007AFF;
+            color: #FFFFFF;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        .save-name-btn:hover {
+            background: #0056CC;
+            transform: translateY(-1px);
+        }
+        /* Toggle Button */
+        .toggle-btn {
+            background: #007AFF;
+            color: #FFFFFF;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .toggle-btn:hover {
+            /* Simple hover - no glow effects */
+            opacity: 0.9;
+        }
+        .toggle-btn:active {
+            transform: translateY(1px);
+        }
+        .toggle-btn.active {
+            background: #FF453A;
+        }
+        .toggle-btn.active:hover {
+            /* Simple hover - no glow effects */
+            opacity: 0.9;
+        }
+        .toggle-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* Toggle animation */
+        .toggle-btn .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .toggle-btn.active .toggle-icon {
+            transform: scale(1.1);
+        }
+
+        /* Actions Section */
+        .actions-section {
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px solid #2C2C2E;
+        }
+        .logout-btn {
+            background: transparent;
+            color: #8E8E93;
+            border: 1px solid #3A3A3C;
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        .logout-btn:hover {
+            background: #2C2C2E;
+            color: #FFFFFF;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #FFFFFF;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Upgrade Section */
+        .upgrade-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #3A3A3C;
+        }
+        
+        .upgrade-btn {
+            background: linear-gradient(135deg, #FFFFFF, #F5F5F5);
+            color: #000000;
+            border: 1px solid #E0E0E0;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+        }
+        
+        .upgrade-btn:hover {
+            background: linear-gradient(135deg, #F5F5F5, #E5E5E5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.4);
+        }
+        
+        /* Payment Modal */
+        .payment-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+        }
+        
+        .payment-content {
+            background: #2C2C2E;
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 320px;
+            border: 1px solid #3A3A3C;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+        
+        .payment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .payment-header h3 {
+            margin: 0;
+            color: #D4D4D8;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: #8E8E93;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            transition: background 0.2s ease;
+        }
+        
+        .close-btn:hover {
+            background: #3A3A3C;
+        }
+        
+        .payment-features {
+            margin-bottom: 20px;
+        }
+        
+        .feature {
+            font-size: 14px;
+            color: #D4D4D8;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .price-section {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #1C1C1E;
+            border-radius: 16px;
+            border: 1px solid #3A3A3C;
+        }
+        
+        .price {
+            font-size: 36px;
+            font-weight: 700;
+            color: #FFFFFF;
+            line-height: 1;
+        }
+        
+        .period {
+            font-size: 18px;
+            color: #8E8E93;
+        }
+        
+        .price-description {
+            font-size: 12px;
+            color: #8E8E93;
+            margin-top: 4px;
+        }
+        
+        .pay-now-btn {
+            background: linear-gradient(135deg, #FFFFFF, #F5F5F5);
+            color: #000000;
+            border: 1px solid #E0E0E0;
+            padding: 16px 24px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
+            margin-bottom: 16px;
+        }
+        
+        .pay-now-btn:hover {
+            background: linear-gradient(135deg, #F5F5F5, #E5E5E5);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.4);
+        }
+        
+        .pay-now-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .security-info {
+            text-align: center;
+            font-size: 12px;
+            color: #8E8E93;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(10px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-container">
+                <div class="simple-logo">P</div>
+            </div>
+            <div class="brand-info">
+                <h1 class="title">PromptGrammerly</h1>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+
+
+        <!-- Stats Section (shown when logged in) -->
+        <div id="stats-section" class="stats-section hidden">
+            <div class="stats-header">
+                <span class="stats-title">Prompts Enhanced</span>
+                <span id="enhanced-count" class="enhanced-count">0</span>
+            </div>
+            
+            <!-- Simple Upgrade Button -->
+            <div class="upgrade-section">
+                <button id="upgrade-btn" class="upgrade-btn">Upgrade to Pro</button>
+            </div>
+        </div>
+
+        <!-- User Section (shown when logged in) -->
+        <div id="user-section" class="user-section hidden">
+            <div class="user-info">
+                <img id="user-avatar" class="user-avatar" src="" alt="User Avatar">
+                <div class="user-details">
+                    <div id="user-name" class="user-name"></div>
+                    <div id="user-email" class="user-email"></div>
+                </div>
+            </div>
+            
+            <!-- Start/Stop Toggle Button -->
+            <button id="toggle-btn" class="toggle-btn">
+                <span id="toggle-text">Start</span>
+            </button>
+        </div>
+
+        <!-- Name Input Section -->
+        <div id="name-section" class="name-section hidden">
+            <div class="auth-message">
+         
+            </div>
+            <input type="text" id="name-input" class="name-input" placeholder="your name" maxlength="50">
+            <button id="save-name-btn" class="save-name-btn">Save Name</button>
+        </div>
+
+        <!-- Auth Section (shown when not logged in) -->
+        <div id="auth-section" class="auth-section">
+            <div class="auth-message">
+                Sign in to start prompting with promptgrammerly
+            </div>
+            <button id="login-btn" class="login-btn">
+                <span id="login-text">Sign in with Google</span>
+                <span id="login-loading" class="loading hidden"></span>
+            </button>
+        </div>
+
+        <!-- Actions Section (shown when logged in) -->
+        <div id="actions-section" class="actions-section hidden">
+            <button id="logout-btn" class="logout-btn">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="payment-modal hidden">
+        <div class="payment-content">
+            <div class="payment-header">
+                <h3>Upgrade to Pro</h3>
+                <button id="close-payment" class="close-btn">&times;</button>
+            </div>
+            <div class="payment-body">
+                <div class="payment-features">
+                    <div class="feature"> Unlimited prompt enhancements</div>
+                    <div class="feature"> No daily limits</div>
+                    <div class="feature"> Priority support</div>
+                </div>
+                <div class="price-section">
+                    <div class="price">$5<span class="period">/month</span></div>
+                    <div class="price-description">Cancel anytime</div>
+                </div>
+                <button id="pay-now-btn" class="pay-now-btn">
+                    <span id="pay-btn-text">Pay Now</span>
+                    <span id="pay-loading" class="loading hidden"></span>
+                </button>
+                <div class="security-info">
+                    🔒 Secure payment powered by Razorpay
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
