@@ -65,22 +65,35 @@ INTENT PATTERNS:
 
 CODE → "Write [specific solution] in [language]. Requirements: [list]. Include: error handling, type hints, docstrings, tests. Explain implementation choices."
 
-ANALYSIS → "Analyze [data/situation]. Provide: 1) Key findings 2) Statistical insights 3) Actionable recommendations 4) Risk factors. Support with evidence."
+ANALYSIS → "Analyze [data/situation]. Provide: 
+1) Key findings 
+2) Statistical insights 
+3) Actionable recommendations 
+4) Risk factors. Support with evidence."
 
 CREATIVE → "Create [output] for [audience]. Tone: [specify]. Include: [elements]. Length: [specify]. Ensure: originality, engagement, purpose alignment."
 
-EXPLANATION → "Explain [concept] for [audience level]. Create a complete structured explanation with numbered sections covering: fundamentals, how it works, real-world applications, common misconceptions, and summary. Use simple language, short paragraphs, and clear analogies. Format as a full article with headers and detailed content, not just a prompt template."
+EXPLANATION → "Explain [concept] for [audience level]. Cover: 
+1) Fundamentals 
+2) Applications 
+3) Examples 
+4) Common mistakes. Format: structured progression from simple to complex."
 
 RESEARCH → "Research [topic]. Provide: current state, key players, trends, implications, gaps. Depth: [specify]. Include contradicting viewpoints."
 
-PROBLEM-SOLVING → "Solve [problem]. Show: 1) Problem analysis 2) Solution options 3) Trade-offs 4) Recommended approach 5) Implementation steps."
+PROBLEM-SOLVING → "Solve [problem]. Show: 
+1) Problem analysis 
+2) Solution options 
+3) Trade-offs 
+4) Recommended approach 
+5) Implementation steps."
 
 ENHANCEMENT TRIGGERS:
-1. Vague input → Add specific deliverables and success criteria
-2. Missing context → Infer from domain and add reasonable constraints
-3. No format specified → Default to structured sections with headers
-4. Unclear depth → Default to comprehensive with executive summary
-5. Explanation tasks → Generate complete structured content with numbered sections, not just prompt templates''',
+- Vague input → Add specific deliverables and success criteria
+- Missing context → Infer from domain and add reasonable constraints
+- No format specified → Default to structured sections with headers
+- Unclear depth → Default to comprehensive with executive summary
+- Numbered lists → Always put each number on a new line for better readability''',
 
             "claude": '''Transform the user's input into an optimized prompt for Claude.
 
@@ -107,23 +120,52 @@ Important considerations:
 
 INTENT PATTERNS:
 
-CODE → "Help me build [solution]. Let's approach this systematically: 1) Clarify requirements and constraints 2) Design the architecture 3) Implement with best practices 4) Validate and optimize. Include error handling, tests, and documentation. Explain design decisions."
+CODE → "Help me build [solution]. Let's approach this systematically: 
+1) Clarify requirements and constraints 
+2) Design the architecture 
+3) Implement with best practices 
+4) Validate and optimize. Include error handling, tests, and documentation. Explain design decisions."
 
-ANALYSIS → "Analyze [subject] comprehensively. Framework: 1) Data validation 2) Pattern identification 3) Statistical rigor 4) Causal reasoning 5) Actionable insights. Consider multiple hypotheses and potential biases."
+ANALYSIS → "Analyze [subject] comprehensively. Framework: 
+1) Data validation 
+2) Pattern identification 
+3) Statistical rigor 
+4) Causal reasoning 
+5) Actionable insights. Consider multiple hypotheses and potential biases."
 
-CREATIVE → "Create [output] that achieves [goal]. Process: 1) Understand audience and purpose 2) Explore creative directions 3) Develop with attention to detail 4) Refine for impact. Balance creativity with objective alignment."
+CREATIVE → "Create [output] that achieves [goal]. Process: 
+1) Understand audience and purpose 
+2) Explore creative directions 
+3) Develop with attention to detail 
+4) Refine for impact. Balance creativity with objective alignment."
 
-EXPLANATION → "Explain [topic] building from first principles. Structure: 1) Foundational concepts 2) Core mechanisms 3) Applications and examples 4) Edge cases and limitations 5) Practical implications. Adapt complexity to [audience]."
+EXPLANATION → "Explain [topic] building from first principles. Structure: 
+1) Foundational concepts 
+2) Core mechanisms 
+3) Applications and examples 
+4) Edge cases and limitations 
+5) Practical implications. Adapt complexity to [audience]."
 
-RESEARCH → "Research [topic] thoroughly. Approach: 1) Current landscape 2) Historical context 3) Multiple perspectives 4) Evidence evaluation 5) Synthesis and implications. Address controversies and uncertainties."
+RESEARCH → "Research [topic] thoroughly. Approach: 
+1) Current landscape 
+2) Historical context 
+3) Multiple perspectives 
+4) Evidence evaluation 
+5) Synthesis and implications. Address controversies and uncertainties."
 
-PROBLEM-SOLVING → "Solve [problem] considering all angles. Method: 1) Problem decomposition 2) Solution space exploration 3) Trade-off analysis 4) Risk assessment 5) Implementation roadmap. Think about second-order effects."
+PROBLEM-SOLVING → "Solve [problem] considering all angles. Method: 
+1) Problem decomposition 
+2) Solution space exploration 
+3) Trade-off analysis 
+4) Risk assessment 
+5) Implementation roadmap. Think about second-order effects."
 
 ENHANCEMENT TRIGGERS:
 - Add "think step-by-step" for complex reasoning
 - Include "consider ethical implications" for sensitive topics
 - Request "explain your reasoning" for transparency
-- Add "what could go wrong?" for critical applications''',
+- Add "what could go wrong?" for critical applications
+- Numbered lists → Always put each number on a new line for better readability''',
 
             "gemini": '''Transform the user's input into an optimized prompt for Gemini.
 
@@ -149,21 +191,34 @@ INTENT PATTERNS:
 
 CODE → "Build [solution] in [language]. Specs: [list]. Output: working code with comments, tests, usage examples. Optimize for: performance, readability, maintainability."
 
-ANALYSIS → "Analyze [data] and output: 1) Executive findings 2) Key metrics 3) Trends/patterns 4) Recommendations. Format: dashboard-ready insights with supporting data."
+ANALYSIS → "Analyze [data] and output: 
+1) Executive findings 
+2) Key metrics 
+3) Trends/patterns 
+4) Recommendations. Format: dashboard-ready insights with supporting data."
 
 CREATIVE → "Generate [output] targeting [audience]. Requirements: [specific elements]. Tone: [exact]. Length: [exact]. Success metric: [engagement/conversion/impact]."
 
 EXPLANATION → "Explain [topic] in [X words/paragraphs]. Structure: concept → examples → applications → quiz. Audience: [level]. Include: diagrams/analogies where helpful."
 
-RESEARCH → "Research [topic]. Output: 1) 5 key findings 2) Current developments 3) Market/industry data 4) Future outlook. Sources: recent, authoritative. Format: briefing document."
+RESEARCH → "Research [topic]. Output: 
+1) 5 key findings 
+2) Current developments 
+3) Market/industry data 
+4) Future outlook. Sources: recent, authoritative. Format: briefing document."
 
-PROBLEM-SOLVING → "Solve [problem]. Deliver: 1) Root cause 2) Top 3 solutions 3) Recommendation with rationale 4) Action plan. Timeline: [specify]. Resources: [specify]."
+PROBLEM-SOLVING → "Solve [problem]. Deliver: 
+1) Root cause 
+2) Top 3 solutions 
+3) Recommendation with rationale 
+4) Action plan. Timeline: [specify]. Resources: [specify]."
 
 ENHANCEMENT TRIGGERS:
 - Weak input → Add concrete success metrics
 - No format → Default to numbered sections with word counts
 - Missing scope → Add specific boundaries and exclusions
-- Vague output → Specify exact deliverable format''',
+- Vague output → Specify exact deliverable format
+- Numbered lists → Always put each number on a new line for better readability''',
 
             "perplexity": '''Transform the user's input into an optimized prompt for Perplexity's research capabilities.
 
@@ -203,7 +258,8 @@ ENHANCEMENT TRIGGERS:
 - Add "last 30 days" for breaking topics
 - Request "compare X sources" for controversial topics
 - Include "with data/statistics" for quantifiable topics
-- Add "global perspective" for international topics'''
+- Add "global perspective" for international topics
+- Numbered lists → Always put each number on a new line for better readability'''
         }
 
 
