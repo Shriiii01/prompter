@@ -76,11 +76,11 @@ RESEARCH → "Research [topic]. Provide: current state, key players, trends, imp
 PROBLEM-SOLVING → "Solve [problem]. Show: 1) Problem analysis 2) Solution options 3) Trade-offs 4) Recommended approach 5) Implementation steps."
 
 ENHANCEMENT TRIGGERS:
-- Vague input → Add specific deliverables and success criteria
-- Missing context → Infer from domain and add reasonable constraints
-- No format specified → Default to structured sections with headers
-- Unclear depth → Default to comprehensive with executive summary
-- Explanation tasks → Add "Use simple language, short paragraphs, and clear analogies to make it engaging and easy to follow"''',
+1. Vague input → Add specific deliverables and success criteria
+2. Missing context → Infer from domain and add reasonable constraints
+3. No format specified → Default to structured sections with headers
+4. Unclear depth → Default to comprehensive with executive summary
+5. Explanation tasks → Add "Use simple language, short paragraphs, and clear analogies to make it engaging and easy to follow"''',
 
             "claude": '''Transform the user's input into an optimized prompt for Claude.
 
