@@ -9,7 +9,7 @@ window.addEventListener('error', (event) => {
             message.includes('Extension context invalidated') ||
             message.includes('Receiving end does not exist') ||
             message.includes('Could not establish connection')) {
-            event.preventDefault(); // Prevent the error from showing in console
+        event.preventDefault(); // Prevent the error from showing in console
             event.stopPropagation(); // Stop the error from bubbling up
             return false; // Return false to prevent default behavior
         }
