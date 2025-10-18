@@ -69,7 +69,7 @@ ANALYSIS → "Analyze [data/situation]. Provide: 1) Key findings 2) Statistical 
 
 CREATIVE → "Create [output] for [audience]. Tone: [specify]. Include: [elements]. Length: [specify]. Ensure: originality, engagement, purpose alignment."
 
-EXPLANATION → "Explain [concept] for [audience level]. Cover: fundamentals, applications, examples, common mistakes. Format: structured progression from simple to complex."
+EXPLANATION → "Explain [concept] for [audience level]. Cover: fundamentals, applications, examples, common mistakes. Format: structured progression from simple to complex. Use simple language, short paragraphs, and clear analogies to make it engaging and easy to follow."
 
 RESEARCH → "Research [topic]. Provide: current state, key players, trends, implications, gaps. Depth: [specify]. Include contradicting viewpoints."
 
@@ -79,7 +79,8 @@ ENHANCEMENT TRIGGERS:
 - Vague input → Add specific deliverables and success criteria
 - Missing context → Infer from domain and add reasonable constraints
 - No format specified → Default to structured sections with headers
-- Unclear depth → Default to comprehensive with executive summary''',
+- Unclear depth → Default to comprehensive with executive summary
+- Explanation tasks → Add "Use simple language, short paragraphs, and clear analogies to make it engaging and easy to follow"''',
 
             "claude": '''Transform the user's input into an optimized prompt for Claude.
 
