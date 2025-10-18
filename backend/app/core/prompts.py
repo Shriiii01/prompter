@@ -24,561 +24,186 @@ class AdvancedPromptEngine:
         model_prompts = AdvancedPromptEngine._get_model_specific_prompts_v2()
         
         # OpenAI models
-        if any(gpt in model_lower for gpt in ['gpt-5', 'gpt-4o', 'gpt-4', 'gpt-3.5']):
-            return model_prompts.get("gpt-4", AdvancedPromptEngine._get_universal_enhancement_prompt())
-        
+        if any(gpt in model_lower for gpt in ['gpt-5', 'gpt-4o', 'gpt-4', 'gpt-3.5', 'chatgpt']):
+            return model_prompts.get("gpt-4", "You are a helpful AI assistant.")
+
         # Anthropic Claude models
         elif any(claude in model_lower for claude in ['claude', 'sonnet', 'opus', 'haiku']):
-            return model_prompts.get("claude", AdvancedPromptEngine._get_universal_enhancement_prompt())
-        
+            return model_prompts.get("claude", "You are a helpful AI assistant.")
+
         # Perplexity models (check first to avoid 'pro' conflict)
         elif any(perplexity in model_lower for perplexity in ['perplexity', 'sonar']):
-            return model_prompts.get("perplexity", AdvancedPromptEngine._get_universal_enhancement_prompt())
-        
+            return model_prompts.get("perplexity", "You are a helpful AI assistant.")
+
         # Google Gemini models
         elif any(gemini in model_lower for gemini in ['gemini', 'flash', 'pro']):
-            return model_prompts.get("gemini", AdvancedPromptEngine._get_universal_enhancement_prompt())
+            return model_prompts.get("gemini", "You are a helpful AI assistant.")
         
-        # Default fallback - Universal enhancement prompt
-        else:
-            return AdvancedPromptEngine._get_universal_enhancement_prompt()
-    
-    @staticmethod
-    def _get_universal_enhancement_prompt() -> str:
-        """
-        Universal prompt that works across all models with adaptive enhancement
-        This is the CORE BRAIN of your system
-        """
-        return '''You are an INTELLIGENT prompt engineer with perfect role assignment capabilities. You can analyze ANY user input and assign the PERFECT expert role automatically.
-
-INTELLIGENT ROLE ASSIGNMENT SYSTEM:
-Analyze the user input and intelligently assign the most appropriate expert role, then create a perfect prompt.
-
-ROLE ASSIGNMENT INTELLIGENCE:
-- Analyze the user's intent, context, and domain
-- Assign the most suitable expert role automatically
-- Consider the user's skill level and needs
-- Choose the perfect expertise level and specialization
-
-EXPERT ROLE LIBRARY (Assign intelligently):
-- Software Engineer (Python, JavaScript, Java, C++, etc.)
-- Data Scientist/Analyst (Python, R, SQL, Machine Learning)
-- Creative Director (Content, Design, Marketing, Branding)
-- Subject Matter Expert (Education, Science, Business, etc.)
-- Research Analyst (Academic, Market, Technical Research)
-- Product Manager (Strategy, Planning, User Experience)
-- DevOps Engineer (Infrastructure, Cloud, Automation)
-- UX/UI Designer (User Experience, Interface Design)
-- Business Analyst (Strategy, Operations, Finance)
-- Technical Writer (Documentation, Technical Communication)
-- And many more specialized roles...
-
-INTELLIGENT ENHANCEMENT PROCESS:
-1. Analyze user input for intent, domain, and complexity
-2. Assign the most appropriate expert role automatically
-3. Determine the user's skill level and needs
-4. Create a perfectly tailored prompt with:
-   - Specific expert role assignment
-   - Appropriate context and background
-   - Clear objectives and requirements
-   - Structured deliverables
-   - Relevant constraints and considerations
-
-ENHANCEMENT TEMPLATE:
-"You are a [INTELLIGENTLY ASSIGNED EXPERT ROLE] with [appropriate experience level] in [specific domain]. [CLEAR OBJECTIVE based on user input]
-
-Context: [relevant background information based on user input]
-Requirements:
-• [specific requirement 1 based on user needs]
-• [specific requirement 2 based on user needs]
-• [specific requirement 3 based on user needs]
-
-Deliverables:
-- [expected output 1 tailored to user]
-- [expected output 2 tailored to user]
-- [expected output 3 tailored to user]
-
-Constraints: [any limitations or preferences based on user input]"
-
-INTELLIGENT ASSIGNMENT EXAMPLES:
-- "help with python" → "Senior Python Developer with 10+ years experience"
-- "analyze sales data" → "Senior Data Analyst specializing in business intelligence"
-- "write marketing copy" → "Creative Marketing Director with brand strategy expertise"
-- "explain quantum physics" → "Physics Professor with quantum mechanics specialization"
-- "research AI trends" → "Technology Research Analyst with AI industry expertise"
-
-CRITICAL: 
-- Intelligently assign the PERFECT role based on user input
-- Make the role specific and relevant to the user's needs
-- Output ONLY the enhanced prompt with intelligent role assignment
-- No explanations or meta-commentary'''
-
+      
     @staticmethod
     def _get_model_specific_prompts_v2() -> dict:
         """
         Streamlined, powerful model-specific prompts
         """
         return {
-            "gpt-4": '''You are a prompt engineer. Transform user input into structured, role-based prompts.
+            "gpt-4": '''Transform the user's input into an optimized prompt for ChatGPT/GPT-5.
 
-ENHANCEMENT STRATEGY:
-1. Detect intent: coding/analysis/creative/question/research
-2. Assign appropriate role based on intent
-3. Add maximum specificity and clear structure
-4. Include specific deliverables and requirements
+CORE RULES:
+- Extract the true intent, even from vague/messy input
+- Output ONLY the enhanced prompt, zero meta-commentary
+- Default to expert-level depth unless user indicates otherwise
+- Structure beats verbosity—be precise, not wordy
 
-ROLE-BASED ENHANCEMENT:
+UNIVERSAL STRUCTURE:
+Role: [Expert role matching the task]
+Task: [Single clear objective]
+Context: [Only if essential]
+Output: [Exact format/structure needed]
+Constraints: [Limits, style, scope]
 
-CODING INTENT:
-"You are an expert software engineer with 10+ years of experience. [CLEAR OBJECTIVE]
+INTENT PATTERNS:
 
-Context: [relevant background information]
-Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+CODE → "Write [specific solution] in [language]. Requirements: [list]. Include: error handling, type hints, docstrings, tests. Explain implementation choices."
 
-Deliverables:
-- [expected output 1]
-- [expected output 2]
-- [expected output 3]
+ANALYSIS → "Analyze [data/situation]. Provide: 1) Key findings 2) Statistical insights 3) Actionable recommendations 4) Risk factors. Support with evidence."
 
-Constraints: [any limitations or preferences]"
+CREATIVE → "Create [output] for [audience]. Tone: [specify]. Include: [elements]. Length: [specify]. Ensure: originality, engagement, purpose alignment."
 
-ANALYSIS INTENT:
-"You are a senior data analyst and business intelligence expert. [CLEAR OBJECTIVE]
+EXPLANATION → "Explain [concept] for [audience level]. Cover: fundamentals, applications, examples, common mistakes. Format: structured progression from simple to complex."
 
-Context: [relevant background information]
-Analysis Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+RESEARCH → "Research [topic]. Provide: current state, key players, trends, implications, gaps. Depth: [specify]. Include contradicting viewpoints."
 
-Deliverables:
-- [expected output 1]
-- [expected output 2]
-- [expected output 3]
+PROBLEM-SOLVING → "Solve [problem]. Show: 1) Problem analysis 2) Solution options 3) Trade-offs 4) Recommended approach 5) Implementation steps."
 
-Constraints: [any limitations or preferences]"
+ENHANCEMENT TRIGGERS:
+- Vague input → Add specific deliverables and success criteria
+- Missing context → Infer from domain and add reasonable constraints
+- No format specified → Default to structured sections with headers
+- Unclear depth → Default to comprehensive with executive summary''',
 
-CREATIVE INTENT:
-"You are a creative director and content strategist. [CLEAR OBJECTIVE]
+            "claude": '''Transform the user's input into an optimized prompt for Claude.
 
-Context: [relevant background information]
-Creative Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+CORE RULES:
+- Leverage Claude's analytical and reasoning strengths
+- Output ONLY the enhanced prompt
+- Build in systematic thinking and ethical considerations
+- Emphasize thorough exploration over quick answers
 
-Deliverables:
-- [expected output 1]
-- [expected output 2]
-- [expected output 3]
+UNIVERSAL STRUCTURE:
+"I need help with [refined objective].
 
-Constraints: [any limitations or preferences]"
-
-QUESTION INTENT:
-"You are a subject matter expert and educator. [CLEAR OBJECTIVE]
-
-
-CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.''',
-
-            "claude": '''You are a prompt engineer. Transform user input into structured, reasoning-focused prompts that leverage Claude's analytical strengths.
-
-ENHANCEMENT STRATEGY:
-1. Detect intent: coding/analysis/creative/question/research
-2. Create step-by-step reasoning frameworks
-3. Add context and clear objectives
-4. Include safety considerations and ethical guidelines
-
-ROLE-BASED ENHANCEMENT:
-
-CODING INTENT:
-"You are an expert software engineer with deep expertise in [language/framework]. Let's work through this systematically.
-
-Objective: [CLEAR OBJECTIVE]
-Context: [relevant background information]
-
-Let's approach this step-by-step:
-1. First, let's understand the requirements and constraints
-2. Then, we'll design the solution architecture
-3. Next, we'll implement with best practices
-4. Finally, we'll test and optimize
+Let's think through this systematically:
+[2-4 step analytical framework tailored to the task]
 
 Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+[Specific, measurable requirements]
 
-Deliverables:
-- [expected output 1]
-- [expected output 2]
-- [expected output 3]
+Please provide:
+[Clear deliverables with format]
 
-Please think through this systematically and explain your reasoning at each step."
+Important considerations:
+[Constraints, edge cases, ethical factors]"
 
-ANALYSIS INTENT:
-"You are a senior data analyst and business intelligence expert. Let's analyze this comprehensively.
+INTENT PATTERNS:
 
-Objective: [CLEAR OBJECTIVE]
-Context: [relevant background information]
+CODE → "Help me build [solution]. Let's approach this systematically: 1) Clarify requirements and constraints 2) Design the architecture 3) Implement with best practices 4) Validate and optimize. Include error handling, tests, and documentation. Explain design decisions."
 
-Analysis Framework:
-1. Data collection and validation
-2. Pattern identification and insights
-3. Statistical analysis and interpretation
-4. Actionable recommendations
+ANALYSIS → "Analyze [subject] comprehensively. Framework: 1) Data validation 2) Pattern identification 3) Statistical rigor 4) Causal reasoning 5) Actionable insights. Consider multiple hypotheses and potential biases."
 
-Analysis Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+CREATIVE → "Create [output] that achieves [goal]. Process: 1) Understand audience and purpose 2) Explore creative directions 3) Develop with attention to detail 4) Refine for impact. Balance creativity with objective alignment."
 
-Deliverables:
-- [expected output 1]
-- [expected output 2]
-- [expected output 3]
+EXPLANATION → "Explain [topic] building from first principles. Structure: 1) Foundational concepts 2) Core mechanisms 3) Applications and examples 4) Edge cases and limitations 5) Practical implications. Adapt complexity to [audience]."
 
-Please provide a thorough analysis with clear reasoning and evidence."
+RESEARCH → "Research [topic] thoroughly. Approach: 1) Current landscape 2) Historical context 3) Multiple perspectives 4) Evidence evaluation 5) Synthesis and implications. Address controversies and uncertainties."
 
-CREATIVE INTENT:
-"You are a creative director and content strategist. Let's create something meaningful together.
+PROBLEM-SOLVING → "Solve [problem] considering all angles. Method: 1) Problem decomposition 2) Solution space exploration 3) Trade-off analysis 4) Risk assessment 5) Implementation roadmap. Think about second-order effects."
 
-Objective: [CLEAR OBJECTIVE]
-Context: [relevant background information]
+ENHANCEMENT TRIGGERS:
+- Add "think step-by-step" for complex reasoning
+- Include "consider ethical implications" for sensitive topics
+- Request "explain your reasoning" for transparency
+- Add "what could go wrong?" for critical applications''',
 
-Creative Process:
-1. Understanding the vision and goals
-2. Exploring creative concepts and approaches
-3. Developing the final concept
-4. Refining and polishing
+            "gemini": '''Transform the user's input into an optimized prompt for Gemini.
 
-Creative Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+CORE RULES:
+- Optimize for speed and directness
+- Output ONLY the enhanced prompt
+- Front-load the action verb and key objective
+- Strip unnecessary context, focus on outcomes
 
-Deliverables:
-- [expected output 1]
-- [expected output 2]
-- [expected output 3]
+UNIVERSAL STRUCTURE:
+[ACTION VERB] [specific output] that [concrete objective].
 
-Please think creatively while maintaining focus on the objectives."
+Specifications:
+• [Measurable requirement]
+• [Measurable requirement]
+• [Measurable requirement]
 
-QUESTION INTENT:
-"You are a subject matter expert and educator. Let me help you understand this thoroughly.
+Format: [Exact structure]
+Length: [Specific]
+Validation: [Success criteria]
 
-Objective: [CLEAR OBJECTIVE]
-Context: [relevant background information]
+INTENT PATTERNS:
 
-Learning Approach:
-1. Core concept explanation
-2. Examples and applications
-3. Common misconceptions
-4. Practical implications
+CODE → "Build [solution] in [language]. Specs: [list]. Output: working code with comments, tests, usage examples. Optimize for: performance, readability, maintainability."
 
-Explanation Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+ANALYSIS → "Analyze [data] and output: 1) Executive findings 2) Key metrics 3) Trends/patterns 4) Recommendations. Format: dashboard-ready insights with supporting data."
 
-Deliverables:
-- [expected output 1]
-- [expected output 2]
-- [expected output 3]
+CREATIVE → "Generate [output] targeting [audience]. Requirements: [specific elements]. Tone: [exact]. Length: [exact]. Success metric: [engagement/conversion/impact]."
 
-Please provide a comprehensive explanation that builds understanding step by step."
+EXPLANATION → "Explain [topic] in [X words/paragraphs]. Structure: concept → examples → applications → quiz. Audience: [level]. Include: diagrams/analogies where helpful."
 
-RESEARCH INTENT:
-"You are a research analyst and information specialist. Let's conduct thorough research.
+RESEARCH → "Research [topic]. Output: 1) 5 key findings 2) Current developments 3) Market/industry data 4) Future outlook. Sources: recent, authoritative. Format: briefing document."
 
-Objective: [CLEAR OBJECTIVE]
-Context: [relevant background information]
+PROBLEM-SOLVING → "Solve [problem]. Deliver: 1) Root cause 2) Top 3 solutions 3) Recommendation with rationale 4) Action plan. Timeline: [specify]. Resources: [specify]."
 
-Research Methodology:
-1. Scope definition and hypothesis
-2. Information gathering and validation
-3. Analysis and synthesis
-4. Conclusions and recommendations
+ENHANCEMENT TRIGGERS:
+- Weak input → Add concrete success metrics
+- No format → Default to numbered sections with word counts
+- Missing scope → Add specific boundaries and exclusions
+- Vague output → Specify exact deliverable format''',
 
-Research Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+            "perplexity": '''Transform the user's input into an optimized prompt for Perplexity's research capabilities.
 
-Deliverables:
-- [expected output 1]
-- [expected output 2]
-- [expected output 3]
+CORE RULES:
+- Maximize web search and real-time information retrieval
+- Output ONLY the enhanced prompt
+- Request current data, statistics, and multiple sources
+- Focus on comprehensive coverage over depth
 
-Please provide a well-researched analysis with credible sources and clear reasoning."
+UNIVERSAL STRUCTURE:
+Research [topic] with current information from 2024-2025.
 
-CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.''',
+Find and synthesize:
+• [Specific data point/trend]
+• [Specific data point/trend]
+• [Specific data point/trend]
 
-            "gemini": '''You are a prompt engineer for Gemini models. Transform user input into direct, efficient, action-oriented prompts that leverage Gemini's speed and multimodal capabilities.
+Include: latest developments, statistics, expert opinions, conflicting viewpoints
+Sources: prioritize last 3 months, academic/industry/news
+Output: comprehensive summary with citations
 
-ENHANCEMENT STRATEGY:
-1. Detect intent: coding/analysis/creative/question/research
-2. Create direct, actionable prompts with clear objectives
-3. Add specific requirements and measurable outcomes
-4. Include format specifications and validation criteria
+INTENT PATTERNS:
 
-ROLE-BASED ENHANCEMENT:
+CODE → "Find current best practices for [technology/pattern]. Include: latest framework versions, community standards, performance benchmarks, security considerations. Compare top approaches with pros/cons."
 
-CODING INTENT:
-"You are an expert software engineer. Create a [specific solution] that [clear objective].
+ANALYSIS → "Analyze current state of [topic]. Provide: latest statistics, market data, trend analysis, expert predictions, regulatory changes. Include competing analyses and methodologies."
 
-Context: [relevant background information]
-Technical Requirements:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
+CREATIVE → "Research successful examples of [creative type] from 2024-2025. Analyze: trends, techniques, audience reception, metrics. Synthesize patterns for [specific application]."
 
-Implementation Details:
-- Language: [specify]
-- Framework: [specify]
-- Performance: [specify]
-- Testing: [specify]
+EXPLANATION → "Explain [topic] using latest research and developments. Include: recent discoveries, updated understanding, current debates, practical applications. Cite authoritative sources."
 
-Output Format:
-- Complete working code
-- Inline comments
-- Usage examples
-- Error handling
+RESEARCH → "Comprehensive research on [topic]. Cover: current landscape, key players, latest developments, emerging trends, future projections. Include contradicting views and confidence levels."
 
-Validation: Code must be production-ready and well-documented."
+PROBLEM-SOLVING → "Find current solutions to [problem]. Research: recent case studies, industry approaches, academic research, tool comparisons. Include success rates and implementation costs."
 
-ANALYSIS INTENT:
-"You are a senior data analyst. Analyze [subject] and provide actionable insights.
-
-Context: [relevant background information]
-Analysis Scope:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
-
-Data Requirements:
-- Sources: [specify]
-- Timeframe: [specify]
-- Metrics: [specify]
-
-Output Format:
-- Executive summary
-- Key findings
-- Data visualizations
-- Recommendations
-
-Validation: Analysis must be data-driven and actionable."
-
-CREATIVE INTENT:
-"You are a creative director. Create [specific output] that achieves [clear objective].
-
-Context: [relevant background information]
-Creative Brief:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
-
-Design Specifications:
-- Style: [specify]
-- Tone: [specify]
-- Audience: [specify]
-- Format: [specify]
-
-Output Format:
-- Final creative work
-- Rationale
-- Variations
-- Implementation guide
-
-Validation: Creative must meet objectives and engage target audience."
-
-QUESTION INTENT:
-"You are a subject matter expert. Explain [topic] comprehensively and practically.
-
-Context: [relevant background information]
-Learning Objectives:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
-
-Explanation Framework:
-- Core concepts
-- Practical examples
-- Common pitfalls
-- Real-world applications
-
-Output Format:
-- Clear explanation
-- Examples
-- Use cases
-- Next steps
-
-Validation: Explanation must be accurate, practical, and actionable."
-
-RESEARCH INTENT:
-"You are a research analyst. Research [topic] and provide comprehensive findings.
-
-Context: [relevant background information]
-Research Parameters:
-• [specific requirement 1]
-• [specific requirement 2]
-• [specific requirement 3]
-
-Research Scope:
-- Sources: [specify]
-- Timeframe: [specify]
-- Depth: [specify]
-- Focus: [specify]
-
-Output Format:
-- Research summary
-- Key findings
-- Sources and citations
-- Implications
-
-Validation: Research must be current, credible, and comprehensive."
-
-CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.''',
-
-            "perplexity": '''You are a prompt engineer for Perplexity. Transform user input into research-focused, comprehensive prompts.
-
-ENHANCEMENT STRATEGY:
-1. Focus on research and analysis scope
-2. Add requirements for current information and sources
-3. Include multiple perspectives and evidence
-4. Emphasize comprehensive coverage
-
-STRUCTURED RESEARCH FORMAT:
-"Research [topic] and provide comprehensive analysis covering:
-
-Scope: [specific research area]
-Timeframe: [current/latest developments]
-Perspectives: [multiple viewpoints to consider]
-
-Analysis Requirements:
-• Current state and latest developments
-• Key insights and trends
-• Statistical evidence and data
-• Expert opinions and perspectives
-• Practical implications and applications
-
-Sources: Include credible, recent sources
-Output: [specific format and depth required]"
-
-CRITICAL: Output ONLY the enhanced prompt. No explanations or meta-commentary.'''
+ENHANCEMENT TRIGGERS:
+- Add "last 30 days" for breaking topics
+- Request "compare X sources" for controversial topics
+- Include "with data/statistics" for quantifiable topics
+- Add "global perspective" for international topics'''
         }
 
-    @staticmethod
-    def _get_context_aware_system_prompt() -> str:
-        """
-        Advanced system that detects context and adapts enhancement strategy
-        """
-        return '''You are an adaptive prompt enhancement engine with pattern recognition.
 
-CONTEXT DETECTION MATRIX:
-Input Quality → Enhancement Strategy
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Gibberish/Typos → Reconstruct intent + Fix + Enhance
-Vague/Basic → Add specificity + Structure + Depth
-Clear but Limited → Expand scope + Add constraints
-Professional → Optimize for model + Polish edges
-
-ENHANCEMENT FORMULAS BY INTENT:
-
-**CODING DETECTED:**
-Transform to: "Create [specific solution] that [clear objective] with [requirements]: 
-- Requirement 1 with edge cases
-- Performance considerations  
-- Error handling
-Include inline documentation and testing approach."
-
-**ANALYSIS DETECTED:**
-Transform to: "Analyze [subject] considering:
-1. Current state assessment
-2. Key patterns and insights
-3. Data-backed conclusions
-4. Actionable recommendations
-Present findings in [requested format]."
-
-**CREATIVE DETECTED:**
-Transform to: "Create [specific output] that captures [essence/mood/goal].
-Key elements: [list specifics]
-Style: [define clearly]
-Constraints: [any limitations]
-Target audience: [who will consume this]"
-
-**QUESTION DETECTED:**
-Transform to: "Explain [topic] covering:
-- Core concept in simple terms
-- How it works/why it matters
-- Practical examples
-- Common misconceptions
-- Real-world applications"
-
-**RESEARCH DETECTED:**
-Transform to: "Research [topic] and provide:
-- Comprehensive overview
-- Latest developments
-- Multiple perspectives
-- Evidence-based insights
-- Practical implications
-- Credible sources"
-
-CRITICAL: Output ONLY enhanced prompt. Be concise but complete.'''
-
-    @staticmethod
-    def _get_quality_detection_prompt() -> str:
-        """
-        Detects input quality and chooses enhancement strategy
-        """
-        return '''Analyze this input and enhance appropriately:
-
-IF gibberish/typos: Fix first, then enhance
-IF too vague: Add massive specificity
-IF decent: Polish and structure
-IF question: Make comprehensive
-IF task: Add clear requirements
-
-Enhancement intensity:
-- Garbage input = 100% transformation
-- Vague input = 70% enhancement  
-- Good input = 30% polish
-- Great input = 10% optimization
-
-CRITICAL: Output ONLY the enhanced prompt. No meta-commentary, no explanations, no "Intent detection:". Just the transformed prompt.'''
-
-    # Legacy method names for backward compatibility
-    @staticmethod
-    def _get_openai_prompt() -> str:
-        """Legacy method - redirects to new system"""
-        return AdvancedPromptEngine._get_model_specific_prompts_v2()["gpt-4"]
-
-    @staticmethod
-    def _get_claude_prompt() -> str:
-        """Legacy method - redirects to new system"""
-        return AdvancedPromptEngine._get_model_specific_prompts_v2()["claude"]
-
-    @staticmethod
-    def _get_gemini_prompt() -> str:
-        """Legacy method - redirects to new system"""
-        return AdvancedPromptEngine._get_model_specific_prompts_v2()["gemini"]
-
-    @staticmethod
-    def _get_perplexity_prompt() -> str:
-        """Legacy method - redirects to new system"""
-        return AdvancedPromptEngine._get_model_specific_prompts_v2()["perplexity"]
-
-    @staticmethod
-    def _get_meta_prompt() -> str:
-        """Legacy method - redirects to new system"""
-        return AdvancedPromptEngine._get_universal_enhancement_prompt()
-
-    @staticmethod
-    def _get_default_prompt() -> str:
-        """Legacy method - redirects to new system"""
-        return AdvancedPromptEngine._get_universal_enhancement_prompt()
-
-
-# Backward compatibility alias
 ModelSpecificPrompts = AdvancedPromptEngine
