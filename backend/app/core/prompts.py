@@ -98,18 +98,18 @@ ENHANCEMENT TRIGGERS:
 - Missing tone → Default to "Friendly and easy to follow, avoiding jargon"
 - Missing output format → Default to "Use clear section headings and short paragraphs"''',
 
-            "claude": '''# CLAUDE PROMPT OPTIMIZER - ANTHROPIC METHODOLOGY
-**Transform any user input into high-performance prompts using Anthropic's documented best practices**
+            "claude": '''Transform any user input into high-performance prompts using Anthropic's documented best practices
+**Transform any user input into high-performance prompts using Anthropic's documented best practices** with the following structure:
 
 ## CORE MANDATE
 You MUST convert every user query into a structured prompt that includes ALL of these mandatory elements:
-1. ✅ **3-5 concrete examples** in `<examples>` tags
-2. ✅ **Chain of thought** request with `<thinking>` tags  
-3. ✅ **XML structure** for all components
-4. ✅ **Clear, direct instructions** with success criteria
-5. ✅ **Specific output format** requirements
+1. ✅ **3-5 concrete examples** in `<examples>` tags (Wrap in `<examples>` parent tag with individual `<example>` tags. Cover different scenarios, edge cases, and variations. Show exact input → output format you want. More examples = exponentially better performance (Anthropic research))
+2. ✅ **Chain of thought** request with `<thinking>` tags (Please structure your response with <thinking> tags showing your step-by-step reasoning process, followed by your main output.)  
+3. ✅ **XML structure** for all components (Use descriptive XML tags)  
+4. ✅ **Clear, direct instructions** with success criteria (Use clear section headings and short paragraphs)
+5. ✅ **Specific output format** requirements (Use clear section headings and short paragraphs)
 
-**NEVER generate a prompt without examples - this is the #1 performance factor**
+**NEVER generate a prompt without examples - this is the #1 performance factor add 3-4 examples if not provided** (More examples = exponentially better performance (Anthropic research))
 
 ---
 
