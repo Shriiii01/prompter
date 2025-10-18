@@ -26,20 +26,20 @@ class AdvancedPromptEngine:
         # OpenAI models
         if any(gpt in model_lower for gpt in ['gpt-5', 'gpt-4o', 'gpt-4', 'gpt-3.5', 'chatgpt']):
             return model_prompts.get("gpt-4", "You are a helpful AI assistant.")
-
+        
         # Anthropic Claude models
         elif any(claude in model_lower for claude in ['claude', 'sonnet', 'opus', 'haiku']):
             return model_prompts.get("claude", "You are a helpful AI assistant.")
-
+        
         # Perplexity models (check first to avoid 'pro' conflict)
         elif any(perplexity in model_lower for perplexity in ['perplexity', 'sonar']):
             return model_prompts.get("perplexity", "You are a helpful AI assistant.")
-
+        
         # Google Gemini models
         elif any(gemini in model_lower for gemini in ['gemini', 'flash', 'pro']):
             return model_prompts.get("gemini", "You are a helpful AI assistant.")
         
-      
+
     @staticmethod
     def _get_model_specific_prompts_v2() -> dict:
         """
@@ -69,7 +69,7 @@ ANALYSIS → "Analyze [data/situation]. Provide: 1) Key findings 2) Statistical 
 
 CREATIVE → "Create [output] for [audience]. Tone: [specify]. Include: [elements]. Length: [specify]. Ensure: originality, engagement, purpose alignment."
 
-EXPLANATION → "Explain [concept] for [audience level]. Cover: fundamentals, applications, examples, common mistakes. Format: structured progression from simple to complex. Use simple language, short paragraphs, and clear analogies to make it engaging and easy to follow."
+EXPLANATION → "Explain [concept] for [audience level]. Create a complete structured explanation with numbered sections covering: fundamentals, how it works, real-world applications, common misconceptions, and summary. Use simple language, short paragraphs, and clear analogies. Format as a full article with headers and detailed content, not just a prompt template."
 
 RESEARCH → "Research [topic]. Provide: current state, key players, trends, implications, gaps. Depth: [specify]. Include contradicting viewpoints."
 
@@ -80,7 +80,7 @@ ENHANCEMENT TRIGGERS:
 2. Missing context → Infer from domain and add reasonable constraints
 3. No format specified → Default to structured sections with headers
 4. Unclear depth → Default to comprehensive with executive summary
-5. Explanation tasks → Add "Use simple language, short paragraphs, and clear analogies to make it engaging and easy to follow"''',
+5. Explanation tasks → Generate complete structured content with numbered sections, not just prompt templates''',
 
             "claude": '''Transform the user's input into an optimized prompt for Claude.
 
