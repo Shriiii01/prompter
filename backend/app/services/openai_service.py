@@ -34,7 +34,7 @@ class OpenAIService:
             # Use max_completion_tokens for newer models like gpt-4o
             if "gpt-4o" in target_model:
                 response = await self.client.chat.completions.create(
-                    model="gpt-4o-mini",  # Use GPT-4o-mini for enhancement
+                    model="gpt-5",  # Use GPT-5 for enhancement
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"Please enhance this prompt:\n\n{prompt}"}
