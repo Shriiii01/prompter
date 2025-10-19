@@ -401,11 +401,11 @@ class AIService:
         try:
             # Check if we have at least one provider configured
             configured_providers = []
-            if self.openai_api_key and self.openai_api_key != "your_openai_api_key_here":
+            if config.settings.openai_api_key and config.settings.openai_api_key != "your_openai_api_key_here":
                 configured_providers.append("openai")
-            if self.gemini_api_key and self.gemini_api_key != "your_gemini_api_key_here":
+            if config.settings.gemini_api_key and config.settings.gemini_api_key != "your_gemini_api_key_here":
                 configured_providers.append("gemini")
-            if self.together_api_key and self.together_api_key != "your_together_api_key_here":
+            if config.settings.together_api_key and config.settings.together_api_key != "your_together_api_key_here":
                 configured_providers.append("together")
             
             return len(configured_providers) > 0
