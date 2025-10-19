@@ -1964,7 +1964,7 @@ class MagicalEnhancer {
         
         if (hostname.includes('openai.com') || hostname.includes('chatgpt.com')) {
             console.log('🔍 CLAUDE DEBUG: Detected GPT model');
-            return 'gpt-4o-mini';
+            return 'gpt-5';
         } else if (hostname.includes('claude.ai')) {
             console.log('🔍 CLAUDE DEBUG: Detected Claude model');
             return 'claude-3-5-sonnet';
@@ -1979,11 +1979,11 @@ class MagicalEnhancer {
             return 'meta-llama-3';
         } else if (hostname.includes('poe.com')) {
             console.log('🔍 CLAUDE DEBUG: Detected Poe model');
-            return 'gpt-4o-mini';
+            return 'gpt-5';
         }
         
         console.log('🔍 CLAUDE DEBUG: Using default fallback model');
-        return 'gpt-4o-mini'; // Default fallback for ChatGPT
+        return 'gpt-5'; // Default fallback for ChatGPT
     }
 
     getFallbackEnhancement(text) {

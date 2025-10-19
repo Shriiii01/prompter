@@ -422,8 +422,8 @@ async def get_available_models():
             "recommended_for": ["complex prompts", "best quality"],
             "enhancement_llm": "gemini-2.5-pro"
         },
-        "gpt-4o-mini": {
-            "name": "GPT-4o Mini",
+        "gpt-5": {
+            "name": "GPT-5",
             "provider": "OpenAI",
             "available": is_openai_available,
             "description": "Fast and cost-effective",
@@ -439,7 +439,7 @@ async def get_available_models():
             "enhancement_llm": "gemini-2.5-pro"
         },
         "gpt-5-mini": {
-            "name": "GPT-4o Mini",
+            "name": "GPT-5 Mini",
             "provider": "OpenAI",
             "available": is_openai_available,
             "description": "Latest OpenAI mini model with improved capabilities",
