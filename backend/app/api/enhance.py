@@ -274,7 +274,7 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
             "description": "Uses Gemini 2.5 Pro for all model enhancements with model-specific prompts",
             "enhancement_llm": "gemini/gemini-2.5-pro",
             "supported_models": [
-                "gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
+                "gpt-5", "gpt-4o", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
                 "gemini-1.0-pro", "gemini-1.5-flash"
             ],
@@ -422,8 +422,8 @@ async def get_available_models():
             "recommended_for": ["complex prompts", "best quality"],
             "enhancement_llm": "gemini-2.5-pro"
         },
-        "gpt-4o-mini": {
-            "name": "GPT-4o Mini",
+        "gpt-5": {
+            "name": "GPT-5",
             "provider": "OpenAI",
             "available": is_openai_available,
             "description": "Fast and cost-effective",
@@ -553,9 +553,9 @@ async def get_service_stats(enhancer: PromptEnhancer = Depends(get_enhancer)):
             "service": "PromptGrammarly",
                             "version": config.settings.app_version,
             "status": "operational",
-            "enhancement_engine": "GPT-4o mini with model-specific prompts",
+            "enhancement_engine": "GPT-5 with model-specific prompts",
             "supported_models": [
-                "gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo",
+                "gpt-5", "gpt-4o", "gpt-4", "gpt-3.5-turbo",
                 "claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku",
                 "gemini-1.0-pro", "gemini-1.5-flash"
             ],
