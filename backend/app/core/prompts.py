@@ -25,7 +25,7 @@ class AdvancedPromptEngine:
         
         # OpenAI models
         if any(gpt in model_lower for gpt in ['gpt-5', 'gpt-4o', 'gpt-4', 'gpt-3.5', 'chatgpt']):
-            return model_prompts.get("gpt-4", "You are a helpful AI assistant.")
+            return model_prompts.get("gpt-5", "You are a helpful AI assistant.")
         
         # Anthropic Claude models
         elif any(claude in model_lower for claude in ['claude', 'sonnet', 'opus', 'haiku']):
@@ -46,7 +46,7 @@ class AdvancedPromptEngine:
         Streamlined, powerful model-specific prompts
         """
         return {
-            "gpt-4": '''Transform the user's input into an optimized prompt for ChatGPT/GPT-5.
+            "gpt-5": '''Transform the user's input into an optimized prompt for ChatGPT/GPT-5.
 
 CORE RULES:
 - Extract the true intent, even from vague/messy input
