@@ -167,6 +167,8 @@ Success criteria: [Measurable outcomes]
 2. [Specific action with measurable outcome]
 3. [Specific action with quality standard]
 
+4. Include relevant framework names (asyncio, FastAPI, Flask) and code snippets where helpful.
+
 Please structure your response with <thinking> tags showing your step-by-step reasoning process, followed by your main output.
 </instructions>
 
@@ -175,7 +177,10 @@ Please structure your response with <thinking> tags showing your step-by-step re
 Input: [Main use case scenario]
 Output:
 <thinking>
-[Concise 3-4 step reasoning]
+1. Choose a pragmatic baseline: expose an HTTP endpoint with FastAPI; keep I/O non-blocking using asyncio to avoid thread-per-request overhead.
+2. Identify the dominant cost: DB round-trips. Current path performs 3 sequential queries averaging ~50 ms each; expected baseline ~150 ms before serialization.
+3. Optimize concretely: batch reads into a single JOIN where appropriate, add an index on (user_id, created_at), and cache hot keys (e.g., user profile) in an in-memory LRU; expect 30–60% latency reduction under read-heavy load.
+4. Verify with measurement: add simple timing middleware and a pytest-benchmark case; target p95 < 200 ms on 100 RPS with uvicorn workers tuned to CPU cores.
 </thinking>
 [Complete formatted output]
 </example>
@@ -200,9 +205,10 @@ Output:
 </examples>
 
 <requirements>
-- [Format specification with example snippet]
-- [Quality standard with measurable criteria]
-- [Scope boundary stated positively]
+- Format specification: Use clear headings for each section (Comparison, Efficiency Scenarios, Rule of Thumb)
+- Quality standard: Include code snippets or framework names, provide performance metrics where relevant
+- Technical depth: Basic-to-intermediate level with concrete examples
+- Length: 500-700 words
 </requirements>
 ```
 
