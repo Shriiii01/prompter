@@ -548,6 +548,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             sendResponse({ email: email });
         }
     });
+
+    // NEW: React to storage changes when popup is open (real-time count updates)
+    chrome.storage.onChanged.addListener((changes, area) => {
+        try {
+            if (area === 'local' && changes.last_known_prompt_count) {
+                const newVal = changes.last_known_prompt_count.newValue;
+                if (typeof newVal === 'number') {
+                    updateEnhancedCount(newVal);
+                }
+            }
+        } catch (_) { /* ignore */ }
+    });
     
         // Show cached count first to avoid blink
         if (enhancedCountSpan) {
@@ -600,6 +612,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 100); // Faster refresh
 }
+
+    // Fallback: periodic refresh while popup is open (every 5s)
+    try {
+        const periodicRefresh = setInterval(() => {
+            try {
+                chrome.storage.local.get(['last_known_prompt_count'], (data) => {
+                    if (typeof data.last_known_prompt_count === 'number') {
+                        updateEnhancedCount(data.last_known_prompt_count);
+                    }
+                });
+            } catch (_) { /* ignore */ }
+        }, 5000);
+
+        // Clean up on unload
+        window.addEventListener('unload', () => clearInterval(periodicRefresh));
+    } catch (_) { /* ignore */ }
 
     // Update enhanced count
     function updateEnhancedCount(count) {
