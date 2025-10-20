@@ -410,7 +410,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Simple count increment
     if (request.action === 'increment_count') {
-        console.log('🔥 BACKGROUND: increment_count request received:', request);
 
         (async () => {
             try {
@@ -419,50 +418,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     chrome.storage.local.get(['user_info'], resolve);
                 });
                 
-                console.log('🔥 BACKGROUND: Current user data:', currentUserData);
-                
                 const currentUserEmail = currentUserData.user_info?.email;
                 if (currentUserEmail && currentUserEmail !== request.userEmail) {
-                    console.log('🔥 BACKGROUND: Security violation - user mismatch');
+                    // Security: Attempted to increment count for different user
                     sendResponse({ success: false, error: 'User mismatch - security violation' });
                     return;
                 }
 
                 const apiUrl = 'https://prompter-production-76a3.up.railway.app'; // Production Railway URL
-                console.log('🔥 BACKGROUND: Using API URL:', apiUrl);
 
-                // FIRST: Check current user status to avoid unnecessary API calls
-                console.log('🔥 BACKGROUND: Checking current user status...');
-
-                const userCheckRes = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-
-                console.log('🔥 BACKGROUND: User check response status:', userCheckRes.status);
-
-                if (userCheckRes.ok) {
-                    const userData = await userCheckRes.json();
-                    console.log('🔥 BACKGROUND: Current user data from API:', userData);
-                    
-                    const currentCount = userData.enhanced_prompts || 0;
-                    const userTier = userData.subscription_tier || 'free';
-
-                    console.log(`🔥 BACKGROUND: Current count: ${currentCount}, tier: ${userTier}`);
-
-                    // If free user has already reached limit, don't increment
-                    if (userTier === 'free' && currentCount >= 10) {
-                        console.log('🔥 BACKGROUND: Free user limit reached, blocking increment');
-                        sendResponse({ success: false, error: 'Free user limit reached' });
-                        return; // Don't make the increment call
-                    }
-                } else {
-                    console.log('🔥 BACKGROUND: User check failed, continuing anyway');
-                }
-
-                console.log('🔥 BACKGROUND: Making increment API call...');
+                // Backend handles all limit checks (daily limits, subscription tier, etc.)
+                // Just call the increment endpoint and let backend decide
                 const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
                     method: 'POST',
                     headers: {
@@ -470,11 +436,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
                 });
                 
-                console.log('🔥 BACKGROUND: Increment API response status:', res.status);
-                
                 if (res.ok) {
                     const data = await res.json();
-                    console.log('🔥 BACKGROUND: Increment API response data:', data);
 
                     // Update storage and notify popup
                     chrome.storage.local.set({ last_known_prompt_count: data.enhanced_prompts });
@@ -483,15 +446,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         count: data.enhanced_prompts
                     }).catch(() => {});
                     
-                    console.log('🔥 BACKGROUND: SUCCESS! New count:', data.enhanced_prompts);
                     sendResponse({ success: true, count: data.enhanced_prompts });
                 } else {
-                    const errorText = await res.text();
-                    console.log('🔥 BACKGROUND: Increment API failed:', res.status, errorText);
                     sendResponse({ success: false, error: 'Failed to increment count' });
                 }
             } catch (e) {
-                console.log('🔥 BACKGROUND: Exception in increment_count:', e);
                 sendResponse({ success: false, error: e.message });
             }
         })();
