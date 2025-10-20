@@ -458,7 +458,10 @@ class DatabaseService:
 
     async def record_enhancement_atomic(self, email: str, idempotency_key: str, platform: str = 'chatgpt') -> Dict:
         """Record enhancement with idempotency using RPC function."""
+        logger.info(f"🔥 RPC: Starting record_enhancement_atomic for email={email}, key={idempotency_key}, platform={platform}")
+        
         if not self._is_configured():
+            logger.error("🔥 RPC: Database not configured!")
             return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
         
         try:
@@ -474,6 +477,9 @@ class DatabaseService:
                 "p_platform": platform
             }
             
+            logger.info(f"🔥 RPC: Calling Supabase RPC with data: {data}")
+            logger.info(f"🔥 RPC: URL: {self.supabase_url}/rest/v1/rpc/record_enhancement_v3")
+            
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.supabase_url}/rest/v1/rpc/record_enhancement_v3",
@@ -481,24 +487,43 @@ class DatabaseService:
                     json=data,
                     timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
+                    logger.info(f"🔥 RPC: Response status: {response.status}")
+                    response_text = await response.text()
+                    logger.info(f"🔥 RPC: Response body: {response_text}")
+                    
                     if response.status == 200:
-                        result = await response.json()
-                        if result and len(result) > 0:
-                            # Map the new column names to the expected format
-                            rpc_result = result[0]
-                            return {
-                                "enhanced_prompts": rpc_result.get("total_prompts", 0),
-                                "daily_prompts_used": rpc_result.get("daily_used", 0),
-                                "subscription_tier": rpc_result.get("user_tier", "free"),
-                                "limit_reached": rpc_result.get("limit_reached", False)
-                            }
-                        else:
+                        try:
+                            result = await response.json()
+                            logger.info(f"🔥 RPC: Parsed JSON result: {result}")
+                            
+                            if result and len(result) > 0:
+                                # Map the new column names to the expected format
+                                rpc_result = result[0]
+                                logger.info(f"🔥 RPC: First result item: {rpc_result}")
+                                
+                                mapped_result = {
+                                    "enhanced_prompts": rpc_result.get("total_prompts", 0),
+                                    "daily_prompts_used": rpc_result.get("daily_used", 0),
+                                    "subscription_tier": rpc_result.get("user_tier", "free"),
+                                    "limit_reached": rpc_result.get("limit_reached", False)
+                                }
+                                logger.info(f"🔥 RPC: SUCCESS! Mapped result: {mapped_result}")
+                                return mapped_result
+                            else:
+                                logger.warning(f"🔥 RPC: Empty result array: {result}")
+                                return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
+                        except Exception as json_error:
+                            logger.error(f"🔥 RPC: JSON parsing error: {json_error}")
+                            logger.error(f"🔥 RPC: Raw response was: {response_text}")
                             return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
                     else:
-                        logger.error(f"RPC call failed: {response.status}")
+                        logger.error(f"🔥 RPC: HTTP error {response.status}: {response_text}")
                         return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
         except Exception as e:
-            logger.error(f"Error in record_enhancement_atomic: {str(e)}")
+            logger.error(f"🔥 RPC: Exception in record_enhancement_atomic: {str(e)}")
+            logger.error(f"🔥 RPC: Exception type: {type(e)}")
+            import traceback
+            logger.error(f"🔥 RPC: Traceback: {traceback.format_exc()}")
             return {"enhanced_prompts": 0, "daily_prompts_used": 0, "subscription_tier": "free", "limit_reached": False}
 
     # Platform usage is now tracked in users table via platform_*_count columns
@@ -664,7 +689,10 @@ class DatabaseService:
 
     async def _increment_user_prompts_fallback(self, email: str) -> int:
         """Fallback method to increment user prompts using direct database operations."""
+        logger.info(f"🔥 FALLBACK: Starting fallback increment for email={email}")
+        
         if not self._is_configured():
+            logger.error("🔥 FALLBACK: Database not configured!")
             return 0
 
         try:
@@ -674,6 +702,7 @@ class DatabaseService:
                 "Content-Type": "application/json"
             }
 
+            logger.info(f"🔥 FALLBACK: Getting current user data for {email}")
             # First, get current user data
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -681,8 +710,14 @@ class DatabaseService:
                     headers=headers,
                     timeout=aiohttp.ClientTimeout(total=5)
                 ) as response:
+                    logger.info(f"🔥 FALLBACK: GET response status: {response.status}")
+                    response_text = await response.text()
+                    logger.info(f"🔥 FALLBACK: GET response body: {response_text}")
+                    
                     if response.status == 200:
                         user_data = await response.json()
+                        logger.info(f"🔥 FALLBACK: Parsed user data: {user_data}")
+                        
                         if not user_data:
                             # User doesn't exist, create them
                             user_payload = {

@@ -1269,21 +1269,28 @@ class MagicalEnhancer {
                 
                  // Increment count by making a simple API call
                  try {
+                     console.log('🔥 CONTENT: Starting count increment...');
                      // Get user email
                      const userData = await new Promise((resolve) => {
                          chrome.storage.local.get(['user_info'], resolve);
                      });
                      const userEmail = userData.user_info?.email || '';
+                     console.log('🔥 CONTENT: User email for increment:', userEmail);
                      
                      if (userEmail) {
+                         console.log('🔥 CONTENT: Sending increment_count message to background...');
                          // Send message to background to increment count
                          chrome.runtime.sendMessage({
                              action: 'increment_count',
                              userEmail: userEmail
+                         }, (response) => {
+                             console.log('🔥 CONTENT: Increment response:', response);
                          });
+                     } else {
+                         console.log('🔥 CONTENT: No user email found, skipping increment');
                      }
                  } catch (e) {
-                     // Ignore count increment errors
+                     console.log('🔥 CONTENT: Error in count increment:', e);
                  }
             };
 
@@ -1822,21 +1829,28 @@ class MagicalEnhancer {
                 
                  // Increment count by making a simple API call
                  try {
+                     console.log('🔥 CONTENT: Starting count increment...');
                      // Get user email
                      const userData = await new Promise((resolve) => {
                          chrome.storage.local.get(['user_info'], resolve);
                      });
                      const userEmail = userData.user_info?.email || '';
+                     console.log('🔥 CONTENT: User email for increment:', userEmail);
                      
                      if (userEmail) {
+                         console.log('🔥 CONTENT: Sending increment_count message to background...');
                          // Send message to background to increment count
                          chrome.runtime.sendMessage({
                              action: 'increment_count',
                              userEmail: userEmail
+                         }, (response) => {
+                             console.log('🔥 CONTENT: Increment response:', response);
                          });
+                     } else {
+                         console.log('🔥 CONTENT: No user email found, skipping increment');
                      }
                  } catch (e) {
-                     // Ignore count increment errors
+                     console.log('🔥 CONTENT: Error in count increment:', e);
                  }
             };
 

@@ -536,15 +536,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Listen for count updates from background script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        console.log('🔥 POPUP: Message received:', request);
         if (request.action === 'count_updated') {
+            console.log('🔥 POPUP: count_updated message with count:', request.count);
             updateEnhancedCount(request.count);
             // Also update local storage to prevent future mismatches
             chrome.storage.local.set({ last_known_prompt_count: request.count });
+            console.log('🔥 POPUP: Updated local storage with count:', request.count);
         } else if (request.action === 'get_displayed_email') {
             // Get the displayed email from the popup
             const userEmailSpan = document.getElementById('user-email');
             const email = userEmailSpan ? userEmailSpan.textContent : '';
-
+            console.log('🔥 POPUP: Returning displayed email:', email);
             sendResponse({ email: email });
         }
     });
@@ -552,13 +555,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // NEW: React to storage changes when popup is open (real-time count updates)
     chrome.storage.onChanged.addListener((changes, area) => {
         try {
+            console.log('🔥 POPUP: Storage changed:', area, changes);
             if (area === 'local' && changes.last_known_prompt_count) {
                 const newVal = changes.last_known_prompt_count.newValue;
+                const oldVal = changes.last_known_prompt_count.oldValue;
+                console.log('🔥 POPUP: last_known_prompt_count changed from', oldVal, 'to', newVal);
                 if (typeof newVal === 'number') {
+                    console.log('🔥 POPUP: Updating count via storage change listener');
                     updateEnhancedCount(newVal);
                 }
             }
-        } catch (_) { /* ignore */ }
+        } catch (e) { 
+            console.log('🔥 POPUP: Error in storage change listener:', e);
+        }
     });
     
         // Show cached count first to avoid blink
@@ -631,12 +640,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Update enhanced count
     function updateEnhancedCount(count) {
+        console.log('🔥 POPUP: updateEnhancedCount called with:', count);
         if (enhancedCountSpan) {
+            const currentText = enhancedCountSpan.textContent;
+            console.log('🔥 POPUP: Current display count:', currentText);
             // Smooth transition - only update if different
-            if (enhancedCountSpan.textContent !== count.toString()) {
+            if (currentText !== count.toString()) {
+                console.log('🔥 POPUP: Updating display from', currentText, 'to', count);
                 enhancedCountSpan.textContent = count || 0;
                 enhancedCountSpan.style.color = ''; // Reset to default
+            } else {
+                console.log('🔥 POPUP: Count unchanged, no update needed');
             }
+        } else {
+            console.log('🔥 POPUP: enhancedCountSpan not found!');
         }
     }
 
