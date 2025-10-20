@@ -642,12 +642,17 @@ class DatabaseService:
             logger.info(f" DATABASE: RPC result: {result}")
             logger.info(f" DATABASE: New count from RPC: {new_count}")
 
-            # If RPC failed (returns 0), use fallback direct update
-            if new_count == 0:
-                logger.warning("RPC function failed, using direct database update as fallback")
+            # Check if RPC actually succeeded - it should return a valid result dict
+            # with a count >= 0 (even 0 is valid for new users)
+            if result and "enhanced_prompts" in result:
+                # RPC succeeded, return the count
+                logger.info(f" DATABASE: RPC succeeded, returning count: {new_count}")
+                return new_count
+            else:
+                # RPC returned empty/invalid result, use fallback
+                logger.warning("RPC function returned invalid result, using direct database update as fallback")
                 return await self._increment_user_prompts_fallback(email)
 
-            return new_count
         except Exception as e:
             logger.error(f"Error incrementing user prompts: {str(e)}")
             # Fallback to direct database update
