@@ -28,18 +28,33 @@ window.addEventListener('unhandledrejection', (event) => {
     }
 });
 
-// Override console.error to filter out extension errors
-const originalConsoleError = console.error;
+// Override console.error to filter out extension errors (fail-safe)
+const originalConsoleError = console.error.bind(console);
 console.error = function(...args) {
-    const message = args.join(' ');
-    if (message.includes('Receiving end does not exist') ||
-        message.includes('Could not establish connection') ||
-        message.includes('Extension context invalidated') ||
-        message.includes('runtime.lastError') ||
-        message.includes('Uncaught (in promise) Error: Extension context invalidated')) {
-        return; // Don't show these errors
+    try {
+        // Normalize args to strings to avoid [object Object] noise in UX error surfaces
+        const normalized = args.map((a) => {
+            if (a instanceof Error) return a.stack || a.message;
+            if (typeof a === 'object') {
+                try { return JSON.stringify(a); } catch { return String(a); }
+            }
+            return String(a);
+        });
+
+        const message = normalized.join(' ');
+        if (message.includes('Receiving end does not exist') ||
+            message.includes('Could not establish connection') ||
+            message.includes('Extension context invalidated') ||
+            message.includes('runtime.lastError') ||
+            message.includes('Uncaught (in promise) Error: Extension context invalidated')) {
+            return; // Suppress noisy extension lifecycle errors
+        }
+
+        originalConsoleError(...args);
+    } catch (_) {
+        // Never let logging crash the content script
+        try { originalConsoleError('Suppressed console.error due to logging failure'); } catch {}
     }
-    originalConsoleError.apply(console, args);
 };
 
 // Also override console.warn to catch any warnings
