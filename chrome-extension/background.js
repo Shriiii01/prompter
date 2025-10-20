@@ -248,8 +248,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const timeout = setTimeout(() => controller.abort(), 45000); // Longer timeout for streaming
 
 
-                let gotCountUpdate = false; // Track if backend streamed a count update
-
                 const res = await fetch(`${apiUrl}/api/stream-enhance`, {
                     method: 'POST',
                     headers: {
@@ -315,7 +313,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                                     // Handle count update separately
                                     if (chunk.type === 'count_update') {
-                                        gotCountUpdate = true;
 
                                         // Update local storage with new count
                                         chrome.storage.local.set({ last_known_prompt_count: chunk.data });
@@ -361,27 +358,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 } finally {
                     reader.releaseLock();
                     clearTimeout(timeout);
-                }
-
-                try {
-                    // If no count update was streamed, increment now to keep UI in sync
-                    if (!gotCountUpdate && userEmail) {
-                        const incRes = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(userEmail)}/increment`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        if (incRes.ok) {
-                            const incData = await incRes.json();
-                            // Update storage and notify popup
-                            chrome.storage.local.set({ last_known_prompt_count: incData.enhanced_prompts });
-                            chrome.runtime.sendMessage({
-                                action: 'count_updated',
-                                count: incData.enhanced_prompts
-                            }).catch(() => {});
-                        }
-                    }
-                } catch (postErr) {
-                    // Best-effort; ignore failures here
                 }
 
                 sendResponse({ success: true, message: 'Stream completed' });
