@@ -43,19 +43,55 @@ app.add_middleware(
     allowed_hosts=["*"]  # Configure this properly for production
 )
 
-# CORS middleware
+# CORS middleware - Enhanced for Chrome extension compatibility
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this properly for production
+    allow_origins=[
+        "*",  # Allow all origins for development
+        "chrome-extension://*",  # Explicitly allow Chrome extensions
+        "https://prompter-production-76a3.up.railway.app",  # Production backend
+        "http://localhost:8000",  # Local development
+        "http://localhost:3000",  # Local frontend
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "*",
+        "Content-Type",
+        "Authorization", 
+        "X-User-Email",
+        "X-User-ID",
+        "Cache-Control",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers"
+    ],
+    expose_headers=["*"],
+    max_age=3600,  # Cache preflight for 1 hour
 )
 
 # Rate limiting middleware - 30 requests/month per user
 app.middleware("http")(rate_limiter)
 
-# Request logging middlewar
+# CORS headers middleware
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    """Add CORS headers to all responses"""
+    response = await call_next(request)
+    
+    # Add CORS headers to all responses
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Expose-Headers"] = "*"
+    response.headers["Access-Control-Max-Age"] = "3600"
+    
+    return response
+
+# Request logging middleware
 @app.middleware("http")
 async def log_requests(request, call_next):
     start_time = time.time()
@@ -117,6 +153,22 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 app.include_router(websocket.router)
+
+# Explicit OPTIONS handler for CORS preflight requests
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    """Handle CORS preflight requests for all endpoints"""
+    return JSONResponse(
+        status_code=200,
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Max-Age": "3600"
+        }
+    )
 
 @app.get("/")
 async def root():
