@@ -777,6 +777,9 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                 "Connection": "keep-alive",
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Expose-Headers": "*"
             }
         )
         
@@ -795,6 +798,10 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Expose-Headers": "*"
             }
         )
 
