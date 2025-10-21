@@ -219,8 +219,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             const dailyLimit = userStatus.daily_limit || 10;
                             const userTier = userStatus.subscription_tier || 'free';
 
-                            //  EMERGENCY BACKEND BLOCK: If user has used 9+ of 10 prompts, block API call
-                            if (userTier === 'free' && dailyUsed >= 9) {
+                            //  EMERGENCY BACKEND BLOCK: If user has used 10+ of 10 prompts, block API call
+                            if (userTier === 'free' && dailyUsed >= 10) {
                                 // Backend block: Free user at limit - blocking API call
 
                                 const targetTabId = globalThis.activeEnhancementTabId || tabId;
