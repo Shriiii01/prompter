@@ -1999,41 +1999,116 @@ Additional context: Please structure your response in a clear, organized manner 
         // Focus the element first
         inputElement.focus();
         
-        // CRITICAL FIX: Select all existing text first, then replace with paste
-        // This works better than clearing, especially for Gemini
-        if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
-            // For textarea/input, select all
-            inputElement.select();
-            inputElement.setSelectionRange(0, inputElement.value.length);
-        } else if (inputElement.contentEditable === 'true') {
-            // For contenteditable divs (ChatGPT, Claude, Gemini, Perplexity)
-            // Select all content using Selection API
-            const range = document.createRange();
-            range.selectNodeContents(inputElement);
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
+        // GEMINI-SPECIFIC FIX: Detect if we're on Gemini and use special handling
+        const isGemini = window.location.hostname.includes('gemini.google.com');
         
-        // Small delay to ensure selection is registered
-        setTimeout(() => {
-            // UNIVERSAL FIX: Use paste event for ALL platforms to preserve structure
-            // This will REPLACE the selected text (old prompt) with new enhanced prompt
-            const dataTransfer = new DataTransfer();
-            dataTransfer.setData('text/plain', text); // Use original text with ALL line breaks intact
+        if (isGemini) {
+            // GEMINI SPECIAL HANDLING: More aggressive approach to prevent interference
+            console.log('🔧 Using Gemini-specific insertion method');
             
-            const pasteEvent = new ClipboardEvent('paste', {
-                clipboardData: dataTransfer,
-                bubbles: true,
-                cancelable: true
-            });
+            // Store original value to prevent reversion
+            const originalValue = inputElement.value || inputElement.textContent || '';
             
-            inputElement.dispatchEvent(pasteEvent);
+            // Method 1: Direct value setting for textarea
+            if (inputElement.tagName === 'TEXTAREA') {
+                inputElement.value = text;
+                
+                // Trigger multiple events to ensure Gemini recognizes the change
+                inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+                inputElement.dispatchEvent(new Event('keyup', { bubbles: true }));
+                
+                // Set cursor to end
+                inputElement.setSelectionRange(text.length, text.length);
+                
+            } else if (inputElement.contentEditable === 'true') {
+                // Method 2: Direct textContent for contenteditable
+                inputElement.textContent = text;
+                
+                // Trigger events
+                inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                // Set cursor to end
+                const range = document.createRange();
+                const selection = window.getSelection();
+                range.selectNodeContents(inputElement);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
             
-            // Also trigger input event to ensure the platform recognizes the change
-            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-            inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-        }, 10); // Small delay to ensure selection is complete
+            // GEMINI ANTI-REVERSION: Monitor for any attempts to revert the text
+            let revertAttempts = 0;
+            const maxRevertAttempts = 5;
+            
+            const preventReversion = () => {
+                const currentValue = inputElement.value || inputElement.textContent || '';
+                
+                // If the text has been reverted to original or cleared, restore it
+                if (currentValue !== text && (currentValue === originalValue || currentValue === '')) {
+                    revertAttempts++;
+                    console.log(`🔧 Gemini reversion detected (attempt ${revertAttempts}), restoring text`);
+                    
+                    if (revertAttempts <= maxRevertAttempts) {
+                        if (inputElement.tagName === 'TEXTAREA') {
+                            inputElement.value = text;
+                        } else {
+                            inputElement.textContent = text;
+                        }
+                        
+                        // Re-trigger events
+                        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            };
+            
+            // Monitor for reversions for 3 seconds
+            const monitorInterval = setInterval(preventReversion, 100);
+            setTimeout(() => {
+                clearInterval(monitorInterval);
+                console.log('🔧 Gemini insertion monitoring complete');
+            }, 3000);
+            
+        } else {
+            // STANDARD INSERTION for other platforms (ChatGPT, Claude, Perplexity, etc.)
+            
+            // CRITICAL FIX: Select all existing text first, then replace with paste
+            if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
+                // For textarea/input, select all
+                inputElement.select();
+                inputElement.setSelectionRange(0, inputElement.value.length);
+            } else if (inputElement.contentEditable === 'true') {
+                // For contenteditable divs (ChatGPT, Claude, Perplexity)
+                // Select all content using Selection API
+                const range = document.createRange();
+                range.selectNodeContents(inputElement);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+            
+            // Small delay to ensure selection is registered
+            setTimeout(() => {
+                // UNIVERSAL FIX: Use paste event for ALL platforms to preserve structure
+                // This will REPLACE the selected text (old prompt) with new enhanced prompt
+                const dataTransfer = new DataTransfer();
+                dataTransfer.setData('text/plain', text); // Use original text with ALL line breaks intact
+                
+                const pasteEvent = new ClipboardEvent('paste', {
+                    clipboardData: dataTransfer,
+                    bubbles: true,
+                    cancelable: true
+                });
+                
+                inputElement.dispatchEvent(pasteEvent);
+                
+                // Also trigger input event to ensure the platform recognizes the change
+                inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+            }, 10); // Small delay to ensure selection is complete
+        }
     }
 
     closePopup() {
