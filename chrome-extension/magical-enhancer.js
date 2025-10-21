@@ -1875,9 +1875,6 @@ class MagicalEnhancer {
             // Detect target model based on current site
             const targetModel = this.detectTargetModel();
             
-            // 🔍 DEBUG: Log target model detection
-            console.log('🔍 CLAUDE DEBUG: Target model detected:', targetModel);
-            console.log('🔍 CLAUDE DEBUG: Current hostname:', window.location.hostname);
 
             const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
             const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -1928,8 +1925,6 @@ class MagicalEnhancer {
                     idempotencyKey
                 };
                 
-                // 🔍 DEBUG: Log API request data
-                console.log('🔍 CLAUDE DEBUG: API request data:', messageData);
 
                 chrome.runtime.sendMessage(messageData, (resp) => {
                     if (chrome.runtime.lastError) {
@@ -1937,12 +1932,8 @@ class MagicalEnhancer {
                         return;
                     }
                     if (!resp || !resp.success) {
-                        // 🔍 DEBUG: Log API error response
-                        console.log('🔍 CLAUDE DEBUG: API error response:', resp);
                         reject(new Error(resp?.error || 'Enhance failed'));
                     } else {
-                        // 🔍 DEBUG: Log successful API response
-                        console.log('🔍 CLAUDE DEBUG: API success response:', resp.data);
                         resolve(resp.data);
                     }
                 });
@@ -1955,17 +1946,10 @@ class MagicalEnhancer {
                 } catch (e) { /* ignore */ }
             }
             
-            // 🔍 DEBUG: Log final enhanced prompt
-            console.log('🔍 CLAUDE DEBUG: Final enhanced prompt:', data.enhanced_prompt);
-            console.log('🔍 CLAUDE DEBUG: Enhanced prompt length:', data.enhanced_prompt?.length);
             
             return data.enhanced_prompt;
             
         } catch (error) {
-            // 🔍 DEBUG: Log error details
-            console.log('🔍 CLAUDE DEBUG: Enhancement error:', error);
-            console.log('🔍 CLAUDE DEBUG: Error message:', error.message);
-            console.log('🔍 CLAUDE DEBUG: Using fallback enhancement');
 
             return this.getFallbackEnhancement(text);
         }
@@ -1974,30 +1958,21 @@ class MagicalEnhancer {
     detectTargetModel() {
         const hostname = window.location.hostname;
         
-        // 🔍 DEBUG: Log model detection
-        console.log('🔍 CLAUDE DEBUG: Detecting model for hostname:', hostname);
         
         if (hostname.includes('openai.com') || hostname.includes('chatgpt.com')) {
-            console.log('🔍 CLAUDE DEBUG: Detected GPT model');
             return 'gpt-5';
         } else if (hostname.includes('claude.ai')) {
-            console.log('🔍 CLAUDE DEBUG: Detected Claude model');
             return 'claude-3-5-sonnet';
         } else if (hostname.includes('gemini.google.com')) {
-            console.log('🔍 CLAUDE DEBUG: Detected Gemini model');
             return 'gemini-1.5-pro';
         } else if (hostname.includes('perplexity.ai')) {
-            console.log('🔍 CLAUDE DEBUG: Detected Perplexity model');
             return 'perplexity-sonar';
         } else if (hostname.includes('meta.ai')) {
-            console.log('🔍 CLAUDE DEBUG: Detected Meta model');
             return 'meta-llama-3';
         } else if (hostname.includes('poe.com')) {
-            console.log('🔍 CLAUDE DEBUG: Detected Poe model');
             return 'gpt-5';
         }
         
-        console.log('🔍 CLAUDE DEBUG: Using default fallback model');
         return 'gpt-5'; // Default fallback for ChatGPT
     }
 

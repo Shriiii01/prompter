@@ -69,11 +69,6 @@ async def enhance_prompt(
         logger.info(f" Enhancement request received: {request.prompt[:50]}...")
         logger.info(f" Target model: {request.target_model}")
         
-        # 🔍 DEBUG: Log system prompt being used
-        from app.core.prompts import AdvancedPromptEngine
-        system_prompt = AdvancedPromptEngine.get_system_prompt(request.target_model)
-        logger.info(f"🔍 CLAUDE DEBUG: System prompt for {request.target_model}: {len(system_prompt)} chars")
-        logger.info(f"🔍 CLAUDE DEBUG: System prompt preview: {system_prompt[:200]}...")
         
         # Enhance the prompt
         result = await enhancer.enhance(

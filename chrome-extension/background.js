@@ -460,18 +460,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Fallback to old non-streaming method for compatibility
     if (request.action === 'enhance_prompt') {
-        // 🔍 DEBUG: Log enhance_prompt request
-        console.log('🔍 CLAUDE DEBUG: Background received enhance_prompt request');
-        console.log('🔍 CLAUDE DEBUG: Request data:', request);
 
         (async () => {
             try {
                 const { apiUrl, prompt, targetModel, userEmail, platform, idempotencyKey } = request;
                 
-                // 🔍 DEBUG: Log API call details
-                console.log('🔍 CLAUDE DEBUG: Making API call to:', `${apiUrl}/api/v1/enhance`);
-                console.log('🔍 CLAUDE DEBUG: Target model:', targetModel);
-                console.log('🔍 CLAUDE DEBUG: User email:', userEmail);
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -491,17 +484,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 if (!res.ok) {
                     const txt = await res.text().catch(() => '');
-                    // 🔍 DEBUG: Log API error
-                    console.log('🔍 CLAUDE DEBUG: API error response:', res.status, txt);
                     sendResponse({ success: false, error: `API ${res.status}: ${txt}` });
                     return;
                 }
 
                 const data = await res.json();
                 
-                // 🔍 DEBUG: Log successful API response
-                console.log('🔍 CLAUDE DEBUG: API success response:', data);
-                console.log('🔍 CLAUDE DEBUG: Enhanced prompt length:', data.enhanced_prompt?.length);
 
                 // Update count in storage and notify popup
                 try {
@@ -522,12 +510,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 }
 
-                // 🔍 DEBUG: Log final response
-                console.log('🔍 CLAUDE DEBUG: Sending success response to content script');
                 sendResponse({ success: true, enhanced_prompt: data.enhanced_prompt, data });
             } catch (e) {
-                // 🔍 DEBUG: Log error
-                console.log('🔍 CLAUDE DEBUG: Background script error:', e);
                 sendResponse({ success: false, error: e?.message || 'Enhance failed' });
             }
         })();
