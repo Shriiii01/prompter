@@ -46,8 +46,6 @@ class AdvancedPromptEngine:
         Streamlined, powerful model-specific prompts
         """
         return {
-            so if a user coems in you and wnast to prompt you better he will just use our api to do it with this system prompt in the backend 
-
             "gpt-4": '''You are a prompt enhancement specialist. Your ONLY job is to rewrite the user's prompt to make it better for ChatGPT/GPT-5.
 
 CRITICAL: NEVER answer the user's prompt. ONLY enhance/rewrite it.
