@@ -491,8 +491,24 @@ class MagicalEnhancer {
             } else if (message.action === 'deactivate') {
                     this.deactivate();
                     sendResponse({ success: true });
+            } else if (message.action === 'limit_reached') {
+                    // Handle limit reached from background script
+                    const inputElement = this.findActiveInput();
+                    if (inputElement) {
+                        this.showLimitNotification(inputElement);
+                    }
+                    sendResponse({ success: true });
             }
         });
+    }
+
+    findActiveInput() {
+        // Find the most recently focused input element
+        const inputs = document.querySelectorAll('textarea, input[type="text"], [contenteditable="true"]');
+        if (inputs.length > 0) {
+            return inputs[inputs.length - 1]; // Return the last one (most likely to be active)
+        }
+        return null;
     }
 
     activate() {
@@ -1196,8 +1212,8 @@ class MagicalEnhancer {
                         const dailyLimit = userStatus.daily_limit || 10;
 
 
-                        // Only block if actually at limit (9+ used = would exceed on 10th)
-                        if (dailyUsed >= 9) {
+                        // Only block if actually at limit (10+ used = limit reached)
+                        if (dailyUsed >= 10) {
                             this.showLimitNotification(inputElement);
                             icon.classList.remove('processing');
                             return;
@@ -1380,7 +1396,7 @@ class MagicalEnhancer {
                 console.error('No user email found in storage or popup');
                 // CRITICAL FIX: Instead of showing error, redirect to login flow
                 // This fixes the cross-tab switching issue by ensuring user is always logged in
-                streamText.textContent = '🔐 Please sign in first. Opening login...';
+                streamText.textContent = '🔐 Please reload your page first.';
 
                 // Open popup to trigger login
                 setTimeout(() => {
@@ -1430,8 +1446,8 @@ class MagicalEnhancer {
                         const finalStatus = await finalCheck.json();
                         const finalDailyUsed = finalStatus.daily_prompts_used || 0;
 
-                        // Only block if actually at 9+ prompts (would exceed limit)
-                        if (finalDailyUsed >= 9) {
+                        // Only block if actually at 10+ prompts (limit reached)
+                        if (finalDailyUsed >= 10) {
                             this.showLimitNotification(inputElement);
                             streamText.textContent = 'You\'ve used all 10 free prompts today. Your free prompts will reset tomorrow, or upgrade to Pro for unlimited access.';
                             return;
