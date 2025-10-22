@@ -1454,23 +1454,29 @@ class MagicalEnhancer {
             //  FINAL SAFETY CHECK: Only block if actually at limit
             if (finalUserTier === 'free' && userEmail) {
                 try {
-                    // Use background script to check limits (avoids CORS issues)
-                    const limitCheck = await new Promise((resolve) => {
-                        chrome.runtime.sendMessage({
-                            action: 'check_user_limits',
-                            userEmail: userEmail
-                        }, (response) => {
-                            resolve(response);
-                        });
+                    const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
+                    const finalCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: AbortSignal.timeout(5000) // Increased timeout from 2s to 5s
                     });
 
-                    if (limitCheck && limitCheck.success && limitCheck.isAtLimit) {
-                        this.showLimitNotification(inputElement);
-                        streamText.textContent = 'You\'ve used all 10 free prompts today. Your free prompts will reset tomorrow, or upgrade to Pro for unlimited access.';
-                        return;
+                    if (finalCheck.ok) {
+                        const finalStatus = await finalCheck.json();
+                        const finalDailyUsed = finalStatus.daily_prompts_used || 0;
+
+                        // Only block if actually at 10+ prompts (limit reached)
+                        if (finalDailyUsed >= 10) {
+                            this.showLimitNotification(inputElement);
+                            streamText.textContent = 'You\'ve used all 10 free prompts today. Your free prompts will reset tomorrow, or upgrade to Pro for unlimited access.';
+                            return;
+                        }
                     }
                 } catch (e) {
-                    console.warn(' Final limit check failed:', e.message);
+                    // Improved error handling - only log if it's not a timeout or network error
+                    if (e.name !== 'AbortError' && !e.message.includes('Failed to fetch')) {
+                        console.warn('Final limit check failed:', e.message);
+                    }
                     // Allow if check fails - backend will enforce
                 }
             }
