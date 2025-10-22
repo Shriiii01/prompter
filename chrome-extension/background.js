@@ -210,7 +210,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json'
-                            }
+                            },
+                            signal: AbortSignal.timeout(5000) // 5 second timeout for consistency
                         });
 
                         if (statusCheck.ok) {
