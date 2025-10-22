@@ -1196,8 +1196,8 @@ class MagicalEnhancer {
             // Don't rely on cached data that might be from a different user
             // Check user limits
 
-            // For FREE users, ALWAYS check real daily usage from backend
-            if (userTier === 'free' && userEmail) {
+            // Check user subscription status from backend for ALL users
+            if (userEmail) {
                 try {
                     const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
                     const statusCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
@@ -1208,21 +1208,55 @@ class MagicalEnhancer {
 
                     if (statusCheck.ok) {
                         const userStatus = await statusCheck.json();
+                        
+                        // DEBUG: Log the full API response to see what we're getting
+                        console.log('🔍 API Response:', userStatus);
+                        console.log('🔍 Raw subscription_tier:', userStatus.subscription_tier);
+                        console.log('🔍 Raw daily_prompts_used:', userStatus.daily_prompts_used);
+                        console.log('🔍 Raw daily_limit:', userStatus.daily_limit);
+                        
+                        const userTier = userStatus.subscription_tier || 'free';
                         const dailyUsed = userStatus.daily_prompts_used || 0;
                         const dailyLimit = userStatus.daily_limit || 10;
 
+                        console.log('🔍 Processed values - userTier:', userTier, 'dailyUsed:', dailyUsed, 'dailyLimit:', dailyLimit);
 
-                        // Only block if actually at limit (10+ used = limit reached)
-                        if (dailyUsed >= 10) {
+                        // UPDATE CHROME STORAGE with fresh subscription data
+                        try {
+                            chrome.storage.local.get(['user_info'], (result) => {
+                                if (result.user_info) {
+                                    result.user_info.subscription_tier = userTier;
+                                    result.user_info.daily_prompts_used = dailyUsed;
+                                    result.user_info.daily_limit = dailyLimit;
+                                    chrome.storage.local.set({ user_info: result.user_info });
+                                    console.log('🔄 Magical-enhancer: Updated Chrome storage with fresh subscription data');
+                                }
+                            });
+                        } catch (storageError) {
+                            console.log('⚠️ Magical-enhancer: Failed to update storage:', storageError);
+                        }
+
+                        // PRO USERS: No limits, allow all requests
+                        if (userTier === 'pro') {
+                            console.log('✅ Pro user - unlimited access granted');
+                            // Pro users can proceed without any limits
+                        }
+                        // FREE USERS: Check daily limit
+                        else if (userTier === 'free' && dailyUsed >= 10) {
+                            console.log('❌ Free user at daily limit - blocking request');
                             this.showLimitNotification(inputElement);
                             icon.classList.remove('processing');
                             return;
                         }
-
-                        // User has prompts remaining - allow
+                        // FREE USERS: Still have prompts remaining
+                        else {
+                            console.log(`✅ Free user has ${10 - dailyUsed} prompts remaining`);
+                        }
                     } else {
+                        console.log('⚠️ Could not check subscription status - allowing request');
                     }
                 } catch (backendError) {
+                    console.log('⚠️ Backend check failed - allowing request (backend will enforce limits)');
                     // Allow request if backend check fails - backend will still enforce limits
                 }
             }
@@ -1396,13 +1430,13 @@ class MagicalEnhancer {
                 console.error('No user email found in storage or popup');
                 // CRITICAL FIX: Instead of showing error, redirect to login flow
                 // This fixes the cross-tab switching issue by ensuring user is always logged in
-                streamText.textContent = '🔐 Please reload your page first.';
+                streamText.textContent = ' Please reload your page ';
 
                 // Open popup to trigger login
                 setTimeout(() => {
                     chrome.runtime.sendMessage({ action: 'open_popup_for_login' }, (response) => {
                         if (chrome.runtime.lastError) {
-                            streamText.textContent = ' Login failed. Please click the extension icon to sign in manually.';
+                            streamText.textContent = ' Reload your page ';
                         }
                     });
                 }, 1000);
@@ -1463,7 +1497,7 @@ class MagicalEnhancer {
             chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
                 if (chrome.runtime.lastError) {
                     console.error('Background script not available:', chrome.runtime.lastError);
-                    streamText.textContent = 'Error: Extension not responding. Please reload the extension and refresh the page.';
+                    streamText.textContent = 'Please reload your page.';
                     return;
                 }
                 // Background script is running
@@ -2410,6 +2444,8 @@ Additional context: Please structure your response in a clear, organized manner 
 if (!window.magicalEnhancer) {
     window.magicalEnhancer = new MagicalEnhancer();
 }
+
+
 
 
 
