@@ -1351,7 +1351,7 @@ class MagicalEnhancer {
         // Show loading
         streamText.textContent = 'Enhancing your prompt...';
 
-        // Set up simple message listener
+        // Set up simple message listener with timeout handling
         this.streamMessageListener = (message) => {
             if (message.action === 'stream_chunk') {
                 const aiText = message.chunk?.data || '';
@@ -1360,23 +1360,43 @@ class MagicalEnhancer {
                     streamText.innerHTML = aiText.replace(/\n/g, '<br>');
                 }
             } else if (message.action === 'stream_complete') {
+                // Clear timeout
+                clearTimeout(timeoutId);
                 // CRITICAL FIX: Get the original text with line breaks preserved
                 // Convert <br> tags back to \n for proper insertion
                 const originalText = streamText.innerHTML.replace(/<br\s*\/?>/gi, '\n');
                 this.showInsertButton(popup, originalText, inputElement);
+                // Clean up listener
+                chrome.runtime.onMessage.removeListener(this.streamMessageListener);
             } else if (message.action === 'limit_reached') {
+                // Clear timeout
+                clearTimeout(timeoutId);
                 // Backend detected limit reached during streaming
-
                 this.showLimitNotification(inputElement);
                 // Close popup since limit is reached
                 this.closePopup();
+                // Clean up listener
+                chrome.runtime.onMessage.removeListener(this.streamMessageListener);
             } else if (message.action === 'stream_error') {
+                // Clear timeout
+                clearTimeout(timeoutId);
                 streamText.textContent = `Error: ${message.error}`;
+                // Clean up listener
+                chrome.runtime.onMessage.removeListener(this.streamMessageListener);
             }
         };
 
         // Add listener and make API call
         chrome.runtime.onMessage.addListener(this.streamMessageListener);
+
+        // Set up timeout to prevent infinite hanging
+        const timeoutId = setTimeout(() => {
+            console.warn('Enhancement timeout - cleaning up');
+            streamText.textContent = 'Enhancement timed out. Please try again.';
+            chrome.runtime.onMessage.removeListener(this.streamMessageListener);
+            // Show fallback enhancement
+            this.showInsertButton(popup, this.getFallbackEnhancement(inputText), inputElement);
+        }, 30000); // 30 second timeout
 
         try {
             const targetModel = this.detectTargetModel();
@@ -1458,7 +1478,7 @@ class MagicalEnhancer {
                     const finalCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
-                        signal: AbortSignal.timeout(5000) // Increased timeout from 2s to 5s
+                        signal: AbortSignal.timeout(2000)
                     });
 
                     if (finalCheck.ok) {
@@ -1473,11 +1493,9 @@ class MagicalEnhancer {
                         }
                     }
                 } catch (e) {
-                    // Improved error handling - only log if it's not a timeout or network error
-                    if (e.name !== 'AbortError' && !e.message.includes('Failed to fetch')) {
-                        console.warn('Final limit check failed:', e.message);
-                    }
+                    console.warn(' Final limit check failed:', e.message);
                     // Allow if check fails - backend will enforce
+                    // Don't show this warning to user as it's not critical
                 }
             }
 

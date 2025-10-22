@@ -210,8 +210,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json'
-                            },
-                            signal: AbortSignal.timeout(5000) // 5 second timeout for consistency
+                            }
                         });
 
                         if (statusCheck.ok) {
@@ -288,7 +287,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 if (!res.ok) {
                     const txt = await res.text().catch(() => '');
-                    sendResponse({ success: false, error: `Stream API ${res.status}: ${txt}` });
+                    const errorMsg = `Stream API ${res.status}: ${txt}`;
+                    
+                    // Send error to content script
+                    const targetTabId = globalThis.activeEnhancementTabId || tabId;
+                    chrome.tabs.sendMessage(targetTabId, {
+                        action: 'stream_error',
+                        error: errorMsg
+                    }).catch(() => {}); // Ignore if content script not available
+                    
+                    sendResponse({ success: false, error: errorMsg });
                     return;
                 }
 
@@ -383,7 +391,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ success: true, message: 'Stream completed' });
 
             } catch (e) {
-
+                console.error('Stream enhancement error:', e);
+                
+                // Send error to content script
+                const targetTabId = globalThis.activeEnhancementTabId || tabId;
+                chrome.tabs.sendMessage(targetTabId, {
+                    action: 'stream_error',
+                    error: e?.message || 'Stream enhance failed'
+                }).catch(() => {}); // Ignore if content script not available
+                
                 sendResponse({ success: false, error: e?.message || 'Stream enhance failed' });
             }
         })();
