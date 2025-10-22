@@ -1077,8 +1077,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (upgradeBtn && tier === 'pro') {
                 upgradeBtn.style.display = 'none';
             }
-            
-            console.log(`✅ UI updated for ${tier} user`);
         }
 
         // Set payment button loading state
@@ -1119,22 +1117,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (response.ok) {
                     const status = await response.json();
                     
-                    // DEBUG: Log popup subscription status
-                    console.log('🔍 Popup API Response:', status);
-                    console.log('🔍 Popup subscription_tier:', status.subscription_tier);
-                    console.log('🔍 Popup stored status:', storedStatus);
-                    
                     // Update UI if status changed
                     if (status.subscription_tier !== storedStatus) {
-                        console.log('🔄 Popup: Subscription status changed, updating UI');
                         this.updateSubscriptionUI(status.subscription_tier);
                         
                         // Update stored status
                         chrome.storage.local.set({
                             subscription_tier: status.subscription_tier
                         });
-                    } else {
-                        console.log('✅ Popup: Subscription status unchanged');
                     }
 
                 }
