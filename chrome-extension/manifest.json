@@ -16,12 +16,7 @@
         "https://claude.ai/*",
         "https://gemini.google.com/*",
         "https://perplexity.ai/*",
-        "https://www.perplexity.ai/*",
-        "https://meta.ai/*",
-        "https://www.meta.ai/?utm_source=ai_meta_site&utm_medium=web&utm_content=AI_nav&utm_campaign=06112025_moment",
-        "https://www.meta.ai/prompt/a4caa29c-8c00-470c-a6b3-4faefe38f19a",
-        "https://poe.com/*",
-        "https://www.meta.ai/?utm_source=ai_meta_site&utm_medium=web&utm_content=AI_nav&utm_campaign=06112025_moment"
+        "https://www.perplexity.ai/*"
     ],
     "content_scripts": [
         {
@@ -30,13 +25,7 @@
                 "https://chatgpt.com/*",
                 "https://claude.ai/*",
                 "https://gemini.google.com/*",
-                "https://www.perplexity.ai/*",
-                "https://www.perplexity.ai/*", 
-                "https://www.meta.ai/prompt/a4caa29c-8c00-470c-a6b3-4faefe38f19a",
-                "https://meta.ai/*",
-                "https://www.meta.ai/?utm_source=ai_meta_site&utm_medium=web&utm_content=AI_nav&utm_campaign=06112025_moment",
-                "https://poe.com/*",
-                "https://www.meta.ai/?utm_source=ai_meta_site&utm_medium=web&utm_content=AI_nav&utm_campaign=06112025_moment"
+                "https://www.perplexity.ai/*"
             ],
             "js": ["config.js", "magical-enhancer.js"],
             "run_at": "document_end"
