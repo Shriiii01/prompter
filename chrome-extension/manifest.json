@@ -16,7 +16,9 @@
         "https://claude.ai/*",
         "https://gemini.google.com/*",
         "https://perplexity.ai/*",
-        "https://www.perplexity.ai/*"
+        "https://www.perplexity.ai/*",
+        "https://prompter-production-76a3.up.railway.app/*",
+        "http://localhost:8000/*"
     ],
     "content_scripts": [
         {
