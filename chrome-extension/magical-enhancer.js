@@ -1324,36 +1324,45 @@ class MagicalEnhancer {
             if (insertBtn) {
                 insertBtn.style.display = 'block';
                 insertBtn.disabled = false;
-            insertBtn.textContent = 'Insert';
+                insertBtn.textContent = 'Insert';
 
-             // Simple click handler - increment count when inserting (single source of truth)
-            insertBtn.onclick = async () => {
-                // Insert the text
-                this.insertText(finalText, inputElement);
+                // Guard against double-click increments
+                let isIncrementing = false;
+
+                // Simple click handler - increment count when inserting (single source of truth)
+                insertBtn.onclick = async () => {
+                    // Prevent double-click
+                    if (isIncrementing) return;
+                    isIncrementing = true;
+                    
+                    // Insert the text
+                    this.insertText(finalText, inputElement);
                     this.closePopup();
-                
-                 // Increment count by making a simple API call
-                 try {
-                     // Get user email
-                     const userData = await new Promise((resolve) => {
-                         chrome.storage.local.get(['user_info'], resolve);
-                     });
-                     const userEmail = userData.user_info?.email || '';
-                     
-                     if (userEmail) {
-                         // Send message to background to increment count
-                         chrome.runtime.sendMessage({
-                             action: 'increment_count',
-                             userEmail: userEmail
-                         });
-                     }
-                 } catch (e) {
-                     // Ignore count increment errors
-                 }
-            };
-
+                    
+                    // Increment count by making a simple API call
+                    try {
+                        // Get user email
+                        const userData = await new Promise((resolve) => {
+                            chrome.storage.local.get(['user_info'], resolve);
+                        });
+                        const userEmail = userData.user_info?.email || '';
+                        
+                        if (userEmail) {
+                            // Send message to background to increment count
+                            chrome.runtime.sendMessage({
+                                action: 'increment_count',
+                                userEmail: userEmail
+                            });
+                        }
+                    } catch (e) {
+                        // Ignore count increment errors
+                    } finally {
+                        // Reset flag after short delay
+                        setTimeout(() => { isIncrementing = false; }, 500);
+                    }
+                };
+            }
         }
-    }
 
     async startStreaming(inputElement, iconElement, inputText, popup) {
 
@@ -1876,34 +1885,8 @@ class MagicalEnhancer {
             insertBtn.disabled = false;
             insertBtn.textContent = 'Insert';
 
-            // Remove any existing click handler
-            const newInsertBtn = insertBtn.cloneNode(true);
-            insertBtn.parentNode.replaceChild(newInsertBtn, insertBtn);
-
-            newInsertBtn.onclick = async () => {
-                // Insert the text with proper structure preservation
-                this.insertText(finalText, inputElement);
-                this.closePopup();
-                
-                 // Increment count by making a simple API call
-                 try {
-                     // Get user email
-                     const userData = await new Promise((resolve) => {
-                         chrome.storage.local.get(['user_info'], resolve);
-                     });
-                     const userEmail = userData.user_info?.email || '';
-                     
-                     if (userEmail) {
-                         // Send message to background to increment count
-                         chrome.runtime.sendMessage({
-                             action: 'increment_count',
-                             userEmail: userEmail
-                         });
-                     }
-                 } catch (e) {
-                     // Ignore count increment errors
-                 }
-            };
+            // DUPLICATE INSERT HANDLER - REMOVED
+            // Count increment now only happens in showInsertButton() method above
 
         }
     }
