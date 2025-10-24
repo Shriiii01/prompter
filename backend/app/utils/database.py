@@ -627,6 +627,10 @@ class DatabaseService:
 
     async def increment_user_prompts(self, email: str) -> int:
         """Increment user's prompt count and return new count."""
+        import traceback
+        logger.error(f"🚨 INCREMENT CALLED FOR: {email}")
+        logger.error(f"🚨 CALL STACK:\n{''.join(traceback.format_stack())}")
+        
         logger.info(f" DATABASE: increment_user_prompts called with email: {email}")
         logger.info(f" DATABASE: email type: {type(email)}, length: {len(email) if email else 0}")
 
@@ -637,7 +641,9 @@ class DatabaseService:
         # Use ONLY the direct database update method to avoid double-increment bug
         # The RPC + fallback approach was causing +2 increments
         try:
-            return await self._increment_user_prompts_fallback(email)
+            result = await self._increment_user_prompts_fallback(email)
+            logger.error(f"🚨 INCREMENT RESULT: {result} for {email}")
+            return result
         except Exception as e:
             logger.error(f"Error incrementing user prompts: {str(e)}")
             return 0
