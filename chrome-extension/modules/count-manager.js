@@ -36,7 +36,6 @@ class CountManager {
             return { success: true, updateId };
             
         } catch (error) {
-            console.error(' Error in count increment:', error);
             return { success: false, error: error.message };
         }
     }
@@ -66,12 +65,10 @@ class CountManager {
                 this.showSuccessIndicator();
                 
             } else {
-                console.log(` Backend update failed: ${response.status}`);
                 this.handleBackendFailure(updateId);
             }
             
         } catch (error) {
-            console.error(` Backend update error:`, error);
             this.handleBackendFailure(updateId);
         }
     }
@@ -80,7 +77,6 @@ class CountManager {
     handleBackendFailure(updateId) {
         const pendingUpdate = this.pendingUpdates.get(updateId);
         if (!pendingUpdate) {
-            console.log(' No pending update found for rollback');
             return;
         }
         
@@ -111,16 +107,13 @@ class CountManager {
             
             if (response.ok) {
                 const result = await response.json();
-                console.log(` Retry successful: ${result.new_count}`);
                 this.updateDisplay(result.new_count);
                 this.showSuccessIndicator();
             } else {
-                console.log(` Retry failed: ${response.status}`);
                 this.showErrorIndicator();
             }
             
         } catch (error) {
-            console.error(` Retry error:`, error);
             this.showErrorIndicator();
         }
     }
@@ -154,14 +147,12 @@ class CountManager {
                 this.updateDisplay(count);
                 this.cacheCount(count);
                 
-                console.log(' Loaded count from backend:', count);
                 return count;
             } else {
                 throw new Error(`Backend returned ${response.status}`);
             }
             
         } catch (error) {
-            console.log(' Backend unavailable, using cached count');
             const cachedCount = this.getCachedCount();
             this.updateDisplay(cachedCount);
             return cachedCount;
@@ -172,7 +163,6 @@ class CountManager {
     getCurrentDisplayCount() {
         const element = document.getElementById('enhanced-count');
         if (!element) {
-            console.log(' Enhanced count element not found');
             return 0;
         }
         
@@ -184,12 +174,10 @@ class CountManager {
     updateDisplay(count) {
         const element = document.getElementById('enhanced-count');
         if (!element) {
-            console.log(' Enhanced count element not found');
             return;
         }
         
         element.textContent = count.toString();
-        console.log(` Updated display: ${count}`);
         
         // Show visual indicator for pending updates
         if (this.pendingUpdates.size > 0) {
@@ -207,7 +195,6 @@ class CountManager {
     //  Cache count locally
     cacheCount(count) {
         chrome.storage.local.set({ 'cached_prompt_count': count }, () => {
-            console.log(` Cached count: ${count}`);
         });
     }
 
@@ -249,7 +236,6 @@ class CountManager {
         
         for (const [updateId, update] of this.pendingUpdates.entries()) {
             if (now - update.timestamp > staleThreshold) {
-                console.log(`🧹 Cleaning up stale update: ${updateId}`);
                 this.pendingUpdates.delete(updateId);
             }
         }
@@ -265,17 +251,13 @@ class CountManager {
     // 🧹 Clear all pending updates (e.g., on logout)
     clearAllPendingUpdates() {
         this.pendingUpdates.clear();
-        console.log('🧹 Cleared all pending updates');
     }
 
     //  Debug pending updates
     debugPendingUpdates() {
-        console.log(' Pending Updates Status:');
-        console.log(`Total pending updates: ${this.pendingUpdates.size}`);
         
         for (const [updateId, update] of this.pendingUpdates.entries()) {
             const age = Date.now() - update.timestamp;
-            console.log(`- ${updateId}: ${update.originalCount} → ${update.originalCount + 1} (${age}ms old)`);
         }
     }
 } 

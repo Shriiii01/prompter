@@ -33,7 +33,6 @@ class ConfigManager {
         ConfigManager._cleanupCallbacks.add(this.destroy.bind(this));
         
         //  Log environment detection
-        console.log(` ConfigManager [${this._instanceId}] initialized in environment:`, this.environment);
     }
 
     //  Singleton getInstance with proper synchronization
@@ -42,14 +41,12 @@ class ConfigManager {
             try {
                 //  If instance exists and is valid, return it
                 if (ConfigManager._instance && ConfigManager._instance.isValid()) {
-                    console.log(` Using existing ConfigManager instance [${ConfigManager._instance._instanceId}]`);
                     resolve(ConfigManager._instance);
                     return;
                 }
                 
                 //  If initialization is in progress, wait for it
                 if (ConfigManager._initializing && ConfigManager._initializationPromise) {
-                    console.log('⏳ ConfigManager initialization in progress, waiting...');
                     try {
                         const instance = await ConfigManager._initializationPromise;
                         resolve(instance);
@@ -66,7 +63,6 @@ class ConfigManager {
                     try {
                         //  Clean up any existing invalid instance
                         if (ConfigManager._instance && !ConfigManager._instance.isValid()) {
-                            console.log('🧹 Cleaning up invalid ConfigManager instance');
                             await ConfigManager._instance.destroy();
                         }
                         
@@ -81,10 +77,8 @@ class ConfigManager {
                         //  Set as singleton instance
                         ConfigManager._instance = instance;
                         
-                        console.log(` ConfigManager [${instance._instanceId}] created successfully`);
                         initResolve(instance);
                     } catch (error) {
-                        console.error(' Failed to initialize ConfigManager:', error);
                         ConfigManager._initializing = false;
                         ConfigManager._initializationPromise = null;
                         initReject(error);
@@ -127,7 +121,6 @@ class ConfigManager {
             //  Validate configuration structure
             this._validateConfigStructure();
         } catch (error) {
-            console.error(' Failed to initialize configuration:', error);
             throw error;
         }
     }
@@ -172,7 +165,6 @@ class ConfigManager {
             }
         }
         
-        console.log(' Configuration structure validated successfully');
     }
 
     //  Check if instance is valid and not destroyed
@@ -185,12 +177,10 @@ class ConfigManager {
     //  Destroy instance and cleanup resources
     async destroy() {
         if (this._isDestroyed) {
-            console.log(` ConfigManager [${this._instanceId}] already destroyed`);
             return;
         }
         
         try {
-            console.log(`🧹 Destroying ConfigManager [${this._instanceId}]`);
             
             //  Mark as destroyed
             this._isDestroyed = true;
@@ -206,15 +196,13 @@ class ConfigManager {
             //  Remove from cleanup callbacks
             ConfigManager._cleanupCallbacks.delete(this.destroy);
             
-            console.log(` ConfigManager [${this._instanceId}] destroyed successfully`);
         } catch (error) {
-            console.error(` Error destroying ConfigManager [${this._instanceId}]:`, error);
+            // Error destroying ConfigManager
         }
     }
 
     //  Static cleanup method for all instances
     static async cleanup() {
-        console.log('🧹 Starting ConfigManager cleanup...');
         
         try {
             //  Destroy current instance
@@ -227,7 +215,6 @@ class ConfigManager {
                 try {
                     return callback();
                 } catch (error) {
-                    console.warn(' Error in cleanup callback:', error);
                     return Promise.resolve();
                 }
             });
@@ -241,9 +228,8 @@ class ConfigManager {
             ConfigManager._cleanupCallbacks.clear();
             ConfigManager._instanceId = 0;
             
-            console.log(' ConfigManager cleanup completed');
         } catch (error) {
-            console.error(' Error during ConfigManager cleanup:', error);
+            // Error during ConfigManager cleanup
         }
     }
 
@@ -268,7 +254,6 @@ class ConfigManager {
             // Fallback
             return 'unknown';
         } catch (error) {
-            console.warn(' Error detecting environment:', error);
             return 'unknown';
         }
     }
@@ -286,7 +271,6 @@ class ConfigManager {
             }
             return fallback;
         } catch (error) {
-            console.warn(' Error accessing window:', error);
             return fallback;
         }
     }
@@ -300,7 +284,6 @@ class ConfigManager {
         try {
             return this.isProduction() ? this.config.API_BASE_URL : this.config.DEV_API_BASE_URL;
         } catch (error) {
-            console.warn(' Error getting API URL, using fallback:', error);
             return this.config.DEV_API_BASE_URL;
         }
     }
@@ -316,7 +299,6 @@ class ConfigManager {
                 
                 case 'browser-no-location':
                     // Fallback for browser without location access
-                    console.warn(' Window location not available, assuming development');
                     return false;
                 
                 case 'nodejs':
@@ -325,7 +307,6 @@ class ConfigManager {
                 
                 case 'webworker':
                     // Web Worker environment - assume development
-                    console.warn(' Web Worker environment detected, assuming development');
                     return false;
                 
                 case 'globalThis':
@@ -339,11 +320,9 @@ class ConfigManager {
                 case 'unknown':
                 default:
                     // Unknown environment - assume development
-                    console.warn(' Unknown environment detected, assuming development');
                     return false;
             }
         } catch (error) {
-            console.warn(' Error detecting production environment:', error);
             return false;
         }
     }
@@ -379,7 +358,6 @@ class ConfigManager {
         const missingProps = requiredProps.filter(prop => !this.config.hasOwnProperty(prop));
         
         if (missingProps.length > 0) {
-            console.error(' Missing required config properties:', missingProps);
             return false;
         }
         
@@ -391,7 +369,6 @@ class ConfigManager {
         try {
             // Check if this ConfigManager instance is properly initialized
             if (!this.config) {
-                console.warn(' ConfigManager: Configuration object is missing');
                 return false;
             }
 
@@ -400,13 +377,11 @@ class ConfigManager {
             const missingProps = requiredProps.filter(prop => !this.config.hasOwnProperty(prop));
             
             if (missingProps.length > 0) {
-                console.warn(' ConfigManager: Missing required config properties:', missingProps);
                 return false;
             }
 
             // Validate endpoints object
             if (!this.config.endpoints || typeof this.config.endpoints !== 'object') {
-                console.warn(' ConfigManager: Endpoints configuration is invalid');
                 return false;
             }
 
@@ -417,18 +392,15 @@ class ConfigManager {
             );
             
             if (missingEndpoints.length > 0) {
-                console.warn(' ConfigManager: Missing required endpoints:', missingEndpoints);
                 return false;
             }
 
             // Validate API URLs are strings and not empty
             if (!this.config.API_BASE_URL || typeof this.config.API_BASE_URL !== 'string') {
-                console.warn(' ConfigManager: API_BASE_URL is invalid');
                 return false;
             }
 
             if (!this.config.DEV_API_BASE_URL || typeof this.config.DEV_API_BASE_URL !== 'string') {
-                console.warn(' ConfigManager: DEV_API_BASE_URL is invalid');
                 return false;
             }
 
@@ -436,11 +408,9 @@ class ConfigManager {
             try {
                 const apiUrl = this.getApiUrl();
                 if (!apiUrl || typeof apiUrl !== 'string') {
-                    console.warn(' ConfigManager: Failed to generate valid API URL');
                     return false;
                 }
             } catch (error) {
-                console.warn(' ConfigManager: Error generating API URL:', error);
                 return false;
             }
 
@@ -448,18 +418,15 @@ class ConfigManager {
             try {
                 const enhanceUrl = this.getEndpointUrl('enhance');
                 if (!enhanceUrl || typeof enhanceUrl !== 'string') {
-                    console.warn(' ConfigManager: Failed to generate valid endpoint URL');
                     return false;
                 }
             } catch (error) {
-                console.warn(' ConfigManager: Error generating endpoint URL:', error);
                 return false;
             }
 
             // All checks passed
             return true;
         } catch (error) {
-            console.error(' ConfigManager: Health check failed with error:', error);
             return false;
         }
     }
@@ -517,7 +484,6 @@ class ConfigManager {
     logStatus() {
         const healthCheckResult = this.healthCheck();
         const healthInfo = this.getHealthInfo();
-        console.log(' Configuration Status:', {
             instanceId: this._instanceId,
             environment: this.environment,
             environmentInfo: this.getEnvironmentInfo(),
@@ -537,7 +503,6 @@ class ConfigManager {
             if (this.isWindowAvailable() && window.CONFIG && 
                 window.CONFIG instanceof ConfigManager && 
                 window.CONFIG.isValid()) {
-                console.log(' CONFIG already available and healthy');
                 return window.CONFIG;
             }
             
@@ -547,15 +512,12 @@ class ConfigManager {
             // Attach to window if available
             if (this.isWindowAvailable()) {
                 window.CONFIG = configManager;
-                console.log(' CONFIG created and attached to window');
             } else {
-                console.log(' CONFIG created for non-browser environment');
             }
             
             configManager.logStatus();
             return configManager;
         } catch (error) {
-            console.error(' Error in ensureConfigAvailable:', error);
             throw error;
         }
     }
@@ -569,7 +531,6 @@ const initializeCONFIG = async () => {
     try {
         // Prevent multiple initializations
         if (CONFIG && CONFIG.isValid && CONFIG.isValid()) {
-            console.log(' CONFIG already initialized and valid');
             return CONFIG;
         }
 
@@ -582,20 +543,16 @@ const initializeCONFIG = async () => {
                 // Check if we're in a browser context with document
                 if (typeof document !== 'undefined') {
                     globalThis.CONFIG = CONFIG;
-                    console.log(' CONFIG (ConfigManager instance) attached to globalThis');
                 } else {
-                    console.log(' GlobalThis available but no document (service worker context)');
                 }
             } catch (error) {
-                console.warn(' Failed to attach CONFIG to globalThis:', error);
+                // Failed to attach CONFIG to globalThis
             }
         } else {
-            console.log(' GlobalThis not available, CONFIG available as module export only');
         }
         
         return CONFIG;
     } catch (error) {
-        console.error(' Error initializing CONFIG:', error);
         throw error;
     }
 };
@@ -608,24 +565,24 @@ if (typeof globalThis !== 'undefined') {
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 initializeCONFIG().catch(error => {
-                    console.error(' Failed to initialize CONFIG on DOMContentLoaded:', error);
+                    // Failed to initialize CONFIG on DOMContentLoaded
                 });
             });
         } else {
             initializeCONFIG().catch(error => {
-                console.error(' Failed to initialize CONFIG:', error);
+                // Failed to initialize CONFIG
             });
         }
     } else {
         // Service worker context - initialize immediately
         initializeCONFIG().catch(error => {
-            console.error(' Failed to initialize CONFIG in service worker:', error);
+            // Failed to initialize CONFIG in service worker
         });
     }
 } else {
     // Non-browser context - initialize immediately
     initializeCONFIG().catch(error => {
-        console.error(' Failed to initialize CONFIG in non-browser context:', error);
+        // Failed to initialize CONFIG in non-browser context
     });
 }
 

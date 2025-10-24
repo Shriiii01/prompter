@@ -28,18 +28,7 @@ window.addEventListener('unhandledrejection', (event) => {
     }
 });
 
-// Override console.error to filter out extension errors
-const originalConsoleError = console.error;
-console.error = function(...args) {
-    const message = args.join(' ');
-    if (message.includes('Receiving end does not exist') ||
-        message.includes('Could not establish connection') ||
-        message.includes('Extension context invalidated') ||
-        message.includes('runtime.lastError')) {
-        return; // Don't show these errors
-    }
-    originalConsoleError.apply(console, args);
-};
+// Console error filtering removed
 
 // CRITICAL FIX: Ensure background script is ready before any operations
 async function ensureBackgroundScriptReady() {
@@ -425,9 +414,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Error handling function
     function showError(message) {
-        // Error occurred
-        // You can add a toast notification or error display here
-        alert(message); // Simple error display for now
+        // Error occurred - silent handling
+        // Error handled silently
     }
 
     // Update functions for new UI

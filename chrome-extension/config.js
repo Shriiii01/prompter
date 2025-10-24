@@ -30,7 +30,6 @@ const isProduction = () => {
     // Fallback: treat real HTTPS web origins as production
     return (window.location.protocol === 'https:' && window.location.hostname !== 'localhost');
   } catch (error) {
-    console.warn(' Error detecting production environment:', error);
     return false; // Default to development
   }
 };
@@ -39,10 +38,8 @@ const isProduction = () => {
 const getApiUrl = () => {
   try {
     const url = isProduction() ? PRODUCTION_CONFIG.API_BASE_URL : PRODUCTION_CONFIG.DEV_API_BASE_URL;
-    try { console.log(`[CONFIG] Using API base URL: ${url}`); } catch (_) {}
     return url;
   } catch (error) {
-    console.warn(' Error getting API URL, using fallback:', error);
     return PRODUCTION_CONFIG.DEV_API_BASE_URL;
   }
 };
@@ -53,7 +50,6 @@ const validateConfig = () => {
   const missingProps = requiredProps.filter(prop => !PRODUCTION_CONFIG.hasOwnProperty(prop));
   
   if (missingProps.length > 0) {
-    console.error(' Missing required config properties:', missingProps);
     return false;
   }
   
@@ -63,12 +59,10 @@ const validateConfig = () => {
 // Health check for CONFIG availability
 const healthCheck = () => {
   if (typeof window === 'undefined') {
-    console.warn(' Window object not available');
     return false;
   }
   
   if (!window.CONFIG) {
-    console.warn(' CONFIG not available on window object');
     return false;
   }
   
@@ -78,7 +72,6 @@ const healthCheck = () => {
 // Export configuration with error handling
 const createConfig = () => {
   if (!validateConfig()) {
-    console.error(' Configuration validation failed');
     return null;
   }
   
@@ -110,7 +103,6 @@ const ensureConfigAvailable = () => {
     configLoadTimeout = setTimeout(() => {
       if (!configLoadResolved) {
         configLoadResolved = true;
-        console.error(' CONFIG load timeout reached (10 seconds)');
         reject(new Error('CONFIG failed to load within 10 seconds'));
       }
     }, CONFIG_LOAD_TIMEOUT);
@@ -127,11 +119,9 @@ const ensureConfigAvailable = () => {
         clearTimeout(configLoadTimeout);
         resolve(config);
       } else {
-        console.error(' Failed to create CONFIG');
         reject(new Error('Failed to create CONFIG'));
       }
     } catch (error) {
-      console.error(' Error loading CONFIG:', error);
       configLoadResolved = true;
       clearTimeout(configLoadTimeout);
       reject(error);
@@ -146,13 +136,11 @@ const initializeConfig = async () => {
     // Configuration loaded successfully
     return config;
   } catch (error) {
-    console.error(' CONFIG initialization failed:', error.message);
     
     // Create a fallback config for graceful degradation
     const fallbackConfig = createConfig();
     if (fallbackConfig && typeof window !== 'undefined') {
       window.CONFIG = fallbackConfig;
-      console.warn(' Using fallback CONFIG due to initialization failure');
     }
     
     throw error;
@@ -162,7 +150,7 @@ const initializeConfig = async () => {
 // Start CONFIG initialization
 if (typeof window !== 'undefined') {
   initializeConfig().catch(error => {
-    console.error(' CONFIG initialization failed with error:', error);
+    // CONFIG initialization failed
   });
 }
 
