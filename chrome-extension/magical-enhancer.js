@@ -1891,10 +1891,13 @@ class MagicalEnhancer {
                         chrome.storage.local.get(['user_info'], resolve);
                     });
                     const userEmail = userData.user_info?.email || '';
+                    const reqId = `ins_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                    console.log('INSERT_INCREMENT_SEND', { userEmail, reqId });
                     if (userEmail) {
                         chrome.runtime.sendMessage({
                             action: 'increment_count',
-                            userEmail
+                            userEmail,
+                            reqId
                         });
                     }
                 } catch (_) { /* ignore */ }

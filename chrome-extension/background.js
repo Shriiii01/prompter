@@ -453,9 +453,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
+                // Idempotency guard in background to avoid duplicate increments
+                const incKey = `inc_${request.userEmail}_${request.reqId || ''}`;
+                try { globalThis.__incSeen = globalThis.__incSeen || new Set(); } catch (_) {}
+                if (globalThis.__incSeen && request.reqId && globalThis.__incSeen.has(incKey)) {
+                    console.log('BG_INCREMENT_SKIPPED_DUP', { email: request.userEmail, reqId: request.reqId });
+                    sendResponse({ success: true, skipped: true, reason: 'duplicate_reqid' });
+                    return;
+                }
+                if (globalThis.__incSeen && request.reqId) globalThis.__incSeen.add(incKey);
+
                 // Use local backend and increment ONLY on Insert
                 const apiUrl = 'http://localhost:8000';
 
+                console.log('BG_INCREMENT_CALL', { email: request.userEmail, reqId: request.reqId });
                 const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
@@ -463,13 +474,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 
                 if (res.ok) {
                     const data = await res.json();
+                    console.log('BG_INCREMENT_OK', { email: request.userEmail, reqId: request.reqId, newCount: data.enhanced_prompts });
                     chrome.storage.local.set({ last_known_prompt_count: data.enhanced_prompts });
                     chrome.runtime.sendMessage({ action: 'count_updated', count: data.enhanced_prompts }).catch(() => {});
                     sendResponse({ success: true, count: data.enhanced_prompts });
                 } else {
+                    console.warn('BG_INCREMENT_FAIL', { email: request.userEmail, reqId: request.reqId, status: res.status });
                     sendResponse({ success: false, error: 'Failed to increment count' });
                 }
             } catch (e) {
+                console.warn('BG_INCREMENT_ERROR', { email: request.userEmail, reqId: request.reqId, message: e?.message });
                 sendResponse({ success: false, error: e.message });
             }
         })();
