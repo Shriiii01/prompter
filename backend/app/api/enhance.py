@@ -719,11 +719,9 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
         logger.info(f"  - Headers: X-User-ID={x_user_id}")
         logger.info(f" Available providers: OpenAI={'' if config.settings.openai_api_key and config.settings.openai_api_key != 'your_openai_api_key_here' else ''}, Gemini={'' if config.settings.gemini_api_key and config.settings.gemini_api_key != 'your_gemini_api_key_here' else ''}")
 
-        # DO NOT increment here. We only increment on Insert action from the UI
-        # to avoid double counting (stream + insert). The background script calls
-        # /api/v1/users/{email}/increment after the user clicks Insert.
+        # Counting is handled ONLY on Insert button (frontend), not here
         if not x_user_id:
-            logger.info(" No user email provided - skipping count increment (handled on Insert)")
+            logger.info(" No user email provided - count will be handled on insert")
 
         # Use REAL streaming from AI service
         try:
@@ -734,7 +732,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                 """Generate REAL streaming response from AI"""
                 # Removed model metadata - just show enhanced prompt directly
                 
-                # No count update here; count will be incremented on Insert.
+                # Do not emit count updates here; count increments on Insert action only
                 
                 # Stream the response in real-time as it comes from OpenAI
                 current_text = ""

@@ -1326,7 +1326,7 @@ class MagicalEnhancer {
                 insertBtn.disabled = false;
             insertBtn.textContent = 'Insert';
 
-            // Simple click handler - increment count when inserting
+             // Simple click handler - increment count when inserting (single source of truth)
             insertBtn.onclick = async () => {
                 // Insert the text
                 this.insertText(finalText, inputElement);
@@ -1876,7 +1876,7 @@ class MagicalEnhancer {
             insertBtn.disabled = false;
             insertBtn.textContent = 'Insert';
 
-            // Remove any existing click handler & rebind without extra count increment
+            // Remove any existing click handler
             const newInsertBtn = insertBtn.cloneNode(true);
             insertBtn.parentNode.replaceChild(newInsertBtn, insertBtn);
 
@@ -1885,22 +1885,24 @@ class MagicalEnhancer {
                 this.insertText(finalText, inputElement);
                 this.closePopup();
                 
-                // Increment count ONLY on Insert (single source of truth)
-                try {
-                    const userData = await new Promise((resolve) => {
-                        chrome.storage.local.get(['user_info'], resolve);
-                    });
-                    const userEmail = userData.user_info?.email || '';
-                    const reqId = `ins_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-                    console.log('INSERT_INCREMENT_SEND', { userEmail, reqId });
-                    if (userEmail) {
-                        chrome.runtime.sendMessage({
-                            action: 'increment_count',
-                            userEmail,
-                            reqId
-                        });
-                    }
-                } catch (_) { /* ignore */ }
+                 // Increment count by making a simple API call
+                 try {
+                     // Get user email
+                     const userData = await new Promise((resolve) => {
+                         chrome.storage.local.get(['user_info'], resolve);
+                     });
+                     const userEmail = userData.user_info?.email || '';
+                     
+                     if (userEmail) {
+                         // Send message to background to increment count
+                         chrome.runtime.sendMessage({
+                             action: 'increment_count',
+                             userEmail: userEmail
+                         });
+                     }
+                 } catch (e) {
+                     // Ignore count increment errors
+                 }
             };
 
         }
