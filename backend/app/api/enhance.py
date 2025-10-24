@@ -152,15 +152,8 @@ async def enhance_prompt(
         if not fast_mode:
             logger.info(f"Enhancement completed in {processing_time:.2f}s for {client_ip}")
         
-        #  Track successful enhancement in database (ALWAYS TRACK FOR UI)
-        try:
-            # Increment user's prompt count (always track for popup UI)
-            new_count = await db_service.increment_user_prompts(email=user_email)
-            logger.info(f" User stats updated: {user_email} -> {new_count} prompts")
-            
-        except Exception as e:
-            logger.error(f" Failed to track enhancement in database: {e}")
-            # Don't fail the request, just log the error
+        # Count increment REMOVED - only Insert button increments count now
+        # This prevents double-counting when both enhance and insert are called
         
         return result
         
