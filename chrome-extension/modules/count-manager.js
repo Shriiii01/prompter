@@ -133,31 +133,21 @@ class CountManager {
             // Loading count from backend
             
             // Quick health check
-            const healthController = new AbortController();
-            const healthTimeoutId = setTimeout(() => healthController.abort(), 2000);
-            
             const healthCheck = await fetch(`${this.apiBaseUrl}${this.endpoints.health}`, {
                 method: 'GET',
-                signal: healthController.signal
+                signal: AbortSignal.timeout(2000)
             });
-            
-            clearTimeout(healthTimeoutId);
             
             if (!healthCheck.ok) {
                 throw new Error('Backend unavailable');
             }
             
             // Fetch user count
-            const countController = new AbortController();
-            const countTimeoutId = setTimeout(() => countController.abort(), 5000);
-            
             const response = await fetch(`${this.apiBaseUrl}${this.endpoints.userCount}/${encodeURIComponent(userEmail)}`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
-                signal: countController.signal
+                signal: AbortSignal.timeout(5000)
             });
-            
-            clearTimeout(countTimeoutId);
             
             if (response.ok) {
                 const userData = await response.json();
