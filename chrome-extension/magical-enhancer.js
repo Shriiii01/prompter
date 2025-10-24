@@ -1455,18 +1455,11 @@ class MagicalEnhancer {
             if (finalUserTier === 'free' && userEmail) {
                 try {
                     const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
-                    
-                    // Create timeout controller for better browser compatibility
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 2000);
-                    
                     const finalCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
-                        signal: controller.signal
+                        signal: AbortSignal.timeout(2000)
                     });
-                    
-                    clearTimeout(timeoutId);
 
                     if (finalCheck.ok) {
                         const finalStatus = await finalCheck.json();

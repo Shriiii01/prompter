@@ -17,8 +17,7 @@
         "https://gemini.google.com/*",
         "https://perplexity.ai/*",
         "https://www.perplexity.ai/*",
-        "https://prompter-production-76a3.up.railway.app/*",
-        "http://localhost:8000/*"
+        "https://claude.ai/new/*"   
     ],
     "content_scripts": [
         {
@@ -27,7 +26,8 @@
                 "https://chatgpt.com/*",
                 "https://claude.ai/*",
                 "https://gemini.google.com/*",
-                "https://www.perplexity.ai/*"
+                "https://www.perplexity.ai/*",
+                "https://claude.ai/new/*"
             ],
             "js": ["config.js", "magical-enhancer.js"],
             "run_at": "document_end"
