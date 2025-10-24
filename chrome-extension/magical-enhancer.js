@@ -28,45 +28,9 @@ window.addEventListener('unhandledrejection', (event) => {
     }
 });
 
-// Override console.error to filter out extension errors (fail-safe)
-const originalConsoleError = console.error.bind(console);
-console.error = function(...args) {
-    try {
-        // Normalize args to strings to avoid [object Object] noise in UX error surfaces
-        const normalized = args.map((a) => {
-            if (a instanceof Error) return a.stack || a.message;
-            if (typeof a === 'object') {
-                try { return JSON.stringify(a); } catch { return String(a); }
-            }
-            return String(a);
-        });
+// Console error filtering removed
 
-        const message = normalized.join(' ');
-        if (message.includes('Receiving end does not exist') ||
-            message.includes('Could not establish connection') ||
-            message.includes('Extension context invalidated') ||
-            message.includes('runtime.lastError') ||
-            message.includes('Uncaught (in promise) Error: Extension context invalidated')) {
-            return; // Suppress noisy extension lifecycle errors
-        }
-
-        originalConsoleError(...args);
-    } catch (_) {
-        // Never let logging crash the content script
-        try { originalConsoleError('Suppressed console.error due to logging failure'); } catch {}
-    }
-};
-
-// Also override console.warn to catch any warnings
-const originalConsoleWarn = console.warn;
-console.warn = function(...args) {
-    const message = args.join(' ');
-    if (message.includes('Extension context invalidated') ||
-        message.includes('Receiving end does not exist')) {
-        return; // Don't show these warnings
-    }
-    originalConsoleWarn.apply(console, args);
-};
+// Console warn filtering removed
 
 class MagicalEnhancer {
     constructor() {
@@ -129,7 +93,7 @@ class MagicalEnhancer {
             });
 
         } catch (error) {
-            console.error('Cross-tab auth initialization failed:', error);
+            // Cross-tab auth initialization failed
         }
     }
 
@@ -1185,7 +1149,7 @@ class MagicalEnhancer {
             if (!userEmail) {
                 chrome.runtime.sendMessage({action: 'open_popup_for_login'}, (response) => {
                     if (chrome.runtime.lastError) {
-                        console.error('Failed to open popup:', chrome.runtime.lastError);
+                        // Failed to open popup
                     }
                 });
                 icon.classList.remove('processing');
@@ -1249,7 +1213,6 @@ class MagicalEnhancer {
                 }
             }
         } catch (error) {
-            console.error('Frontend limit check error:', error);
             // Allow request on error - backend safety net will catch it
         }
 
@@ -1402,7 +1365,7 @@ class MagicalEnhancer {
                 userEmail = userData.user_info?.email || '';
 
             } catch (storageError) {
-                console.error('Storage error:', storageError);
+                // Storage error
             }
             
             // Fallback: try popup display (only if storage failed)
@@ -1416,12 +1379,11 @@ class MagicalEnhancer {
                     userEmail = popupEmail;
 
                 } catch (popupError) {
-                    console.error('Popup email error:', popupError);
+                    // Popup email error
                 }
             }
             
             if (!userEmail) {
-                console.error('No user email found in storage or popup');
                 // CRITICAL FIX: Instead of showing error, redirect to login flow
                 // This fixes the cross-tab switching issue by ensuring user is always logged in
                 streamText.textContent = ' Please reload your page ';
@@ -1482,7 +1444,6 @@ class MagicalEnhancer {
                         }
                     }
                 } catch (e) {
-                    console.warn(' Final limit check failed:', e.message);
                     // Allow if check fails - backend will enforce
                 }
             }
@@ -1490,7 +1451,6 @@ class MagicalEnhancer {
             // Test background script connectivity first
             chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
                 if (chrome.runtime.lastError) {
-                    console.error('Background script not available:', chrome.runtime.lastError);
                     streamText.textContent = 'Please reload your page.';
                     return;
                 }
@@ -1519,7 +1479,6 @@ class MagicalEnhancer {
                 clearTimeout(messageTimeout);
                 
                 if (chrome.runtime.lastError) {
-                    console.error('Runtime error:', chrome.runtime.lastError);
                     streamText.textContent = 'Error: Extension not responding. Please refresh the page and try again.';
                     return;
                 }
@@ -1917,7 +1876,7 @@ class MagicalEnhancer {
                     });
                     userEmail = popupEmail;
                 } catch (popupError) {
-                    console.error('Popup email error:', popupError);
+                    // Popup email error
                 }
             }
 
@@ -1925,7 +1884,7 @@ class MagicalEnhancer {
                 // User not logged in - open popup for login
                 chrome.runtime.sendMessage({action: 'open_popup_for_login'}, (response) => {
                     if (chrome.runtime.lastError) {
-                        console.error('Failed to open popup:', chrome.runtime.lastError);
+                        // Failed to open popup
                     }
                 });
                 return null;
@@ -2340,7 +2299,7 @@ Additional context: Please structure your response in a clear, organized manner 
         } catch (error) {
             // Don't log extension context errors - they're normal
             if (!error.message || !error.message.includes('Extension context invalidated')) {
-                console.error('Error checking login status:', error);
+                // Error checking login status
             }
             // On error, assume not logged in and deactivate
             this.deactivate();

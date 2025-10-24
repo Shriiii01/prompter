@@ -75,7 +75,6 @@ class SecureStorage {
         try {
             // Handle Manifest V3 service worker context where navigator might be undefined
             if (typeof navigator === 'undefined') {
-                console.log(' Navigator not available, using fallback device info');
                 return {
                     userAgent: 'Chrome Extension Service Worker',
                     platform: 'Chrome Extension',
@@ -85,7 +84,6 @@ class SecureStorage {
             
             // Check if userAgent is available
             if (!navigator.userAgent) {
-                console.log(' User agent not available, using fallback');
                 return {
                     userAgent: 'Chrome Extension',
                     platform: navigator.platform || 'Chrome Extension',
@@ -99,7 +97,6 @@ class SecureStorage {
                 language: navigator.language
             };
         } catch (error) {
-            console.error(' Error getting device info:', error);
             return {
                 userAgent: 'Chrome Extension',
                 platform: 'Chrome Extension',
@@ -110,7 +107,6 @@ class SecureStorage {
 
     async setEncrypted(key, data) {
         try {
-            console.log(`🔐 Attempting to encrypt and store: ${key}`);
             const encryptionKey = await this.getEncryptionKey();
             const encrypted = await this.encrypt(data, encryptionKey);
             
@@ -118,17 +114,13 @@ class SecureStorage {
                 [key]: encrypted
             });
             
-            console.log(` Securely stored: ${key}`);
             return true;
         } catch (error) {
-            console.error(` Failed to store encrypted data for ${key}:`, error);
             // Fallback to plain storage
             try {
                 await chrome.storage.local.set({ [key]: data });
-                console.log(` Stored in plain text: ${key}`);
                 return false; // Indicate fallback was used
             } catch (fallbackError) {
-                console.error(` Even fallback storage failed for ${key}:`, fallbackError);
                 throw fallbackError;
             }
         }
@@ -136,35 +128,27 @@ class SecureStorage {
 
     async getEncrypted(key) {
         try {
-            console.log(`🔐 Attempting to retrieve encrypted data: ${key}`);
             const result = await chrome.storage.local.get([key]);
             if (!result[key]) {
-                console.log(` No data found for key: ${key}`);
                 return null;
             }
             
             // Check if it's encrypted data
             if (result[key].encrypted && result[key].iv && result[key].salt) {
-                console.log(`🔐 Decrypting data for: ${key}`);
                 const encryptionKey = await this.getEncryptionKey();
                 const decrypted = await this.decrypt(result[key], encryptionKey);
-                console.log(` Successfully decrypted: ${key}`);
                 return decrypted;
             } else {
-                console.log(`📄 Returning plain data for: ${key}`);
                 // Plain data (fallback)
                 return result[key];
             }
         } catch (error) {
-            console.error(` Failed to decrypt data for ${key}:`, error);
             // Return plain data as fallback
             try {
                 const result = await chrome.storage.local.get([key]);
                 const fallbackData = result[key] || null;
-                console.log(`📄 Returning fallback data for ${key}:`, !!fallbackData);
                 return fallbackData;
             } catch (fallbackError) {
-                console.error(` Even fallback retrieval failed for ${key}:`, fallbackError);
                 return null;
             }
         }
@@ -172,28 +156,22 @@ class SecureStorage {
 
     async removeEncrypted(key) {
         try {
-            console.log(` Removing encrypted data: ${key}`);
             await chrome.storage.local.remove([key]);
-            console.log(` Successfully removed: ${key}`);
         } catch (error) {
-            console.error(` Failed to remove encrypted data for ${key}:`, error);
             // Try plain removal as fallback
             try {
                 await chrome.storage.local.remove([key]);
-                console.log(` Removed using fallback: ${key}`);
             } catch (fallbackError) {
-                console.error(` Even fallback removal failed for ${key}:`, fallbackError);
+                // Even fallback removal failed
             }
         }
     }
 
     async clearAll() {
         try {
-            console.log(' Clearing all encrypted data...');
             await chrome.storage.local.clear();
-            console.log(' Successfully cleared all data');
         } catch (error) {
-            console.error(' Failed to clear all data:', error);
+            // Failed to clear all data
         }
     }
 } 
