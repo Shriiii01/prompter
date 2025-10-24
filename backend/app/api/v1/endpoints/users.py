@@ -117,11 +117,11 @@ async def increment_user_count(email: str):
         Updated user data with new count
     """
     try:
-        logger.info(f" INC_API: Incrementing count for user: {email}")
+        logger.info(f" Incrementing count for user: {email}")
         
         # Increment the count
         new_count = await db_service.increment_user_prompts(email)
-        logger.info(f" INC_API: Count incremented to: {new_count}")
+        logger.info(f" Count incremented to: {new_count}")
         
         # Get updated user data
         user_data = await db_service.get_user_stats(email)
@@ -131,15 +131,13 @@ async def increment_user_count(email: str):
                 detail=f"User with email '{email}' not found"
             )
         
-        resp = UserResponse(
+        return UserResponse(
             id=user_data.get('id', ''),
             email=email,
             name=user_data.get('name') or 'User',  # Ensure name is never None
             enhanced_prompts=user_data.get('enhanced_prompts', 0),
             created_at=user_data.get('created_at', '')
         )
-        logger.info(f" INC_API: Responding with count={resp.enhanced_prompts}")
-        return resp
         
     except Exception as e:
         logger.error(f" Failed to increment count for {email}: {e}")

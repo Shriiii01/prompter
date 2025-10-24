@@ -173,8 +173,18 @@ async def enhance_prompt_stream(
                 # Send completion signal
                 yield f"data: {json.dumps({'type': 'complete', 'data': ''})}\n\n"
                 
-                # DO NOT increment here - count only increments on Insert button click
-                # This prevents double counting (stream + insert)
+                # ONLY NOW increment the count after successful enhancement
+                if user_email:
+                    try:
+                        result = await db_service.record_enhancement_atomic(
+                            email=user_email,
+                            idempotency_key=f"stream_{int(time.time() * 1000)}",
+                            platform='chatgpt'
+                        )
+                        # Send updated count
+                        yield f"data: {json.dumps({'type': 'count_update', 'data': result.get('enhanced_prompts', 0)})}\n\n"
+                    except Exception as e:
+                        logger.error(f" Failed to increment count: {e}")
                 
             except Exception as e:
                 logger.error(f" Streaming error: {str(e)}")

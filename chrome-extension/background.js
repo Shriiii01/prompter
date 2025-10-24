@@ -300,7 +300,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                // Read the stream
+                // Read the stream (no count updates will be emitted by backend now)
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
@@ -339,17 +339,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                 try {
                                     const chunk = JSON.parse(dataStr);
 
-                                    // Handle count update separately
-                                    if (chunk.type === 'count_update') {
-
-                                        // Update local storage with new count
-                                        chrome.storage.local.set({ last_known_prompt_count: chunk.data });
-                                        // Also send to popup if it's open
-                                        chrome.runtime.sendMessage({
-                                            action: 'count_updated',
-                                            count: chunk.data
-                                        }).catch(() => {}); // Ignore if no popup listener
-                                    }
+                                    // Backend no longer emits count_update here; counting happens on Insert
                                     
                                     // Handle limit reached
                                     if (chunk.type === 'limit_reached') {
@@ -453,37 +443,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                // Idempotency guard in background to avoid duplicate increments
-                const incKey = `inc_${request.userEmail}_${request.reqId || ''}`;
-                try { globalThis.__incSeen = globalThis.__incSeen || new Set(); } catch (_) {}
-                if (globalThis.__incSeen && request.reqId && globalThis.__incSeen.has(incKey)) {
-                    console.log('BG_INCREMENT_SKIPPED_DUP', { email: request.userEmail, reqId: request.reqId });
-                    sendResponse({ success: true, skipped: true, reason: 'duplicate_reqid' });
-                    return;
-                }
-                if (globalThis.__incSeen && request.reqId) globalThis.__incSeen.add(incKey);
-
-                // Use local backend and increment ONLY on Insert
+                // Use the same API base URL strategy as the content script/popup
                 const apiUrl = 'http://localhost:8000';
 
-                console.log('BG_INCREMENT_CALL', { email: request.userEmail, reqId: request.reqId });
+                // Backend handles all limit checks (daily limits, subscription tier, etc.)
+                // Just call the increment endpoint and let backend decide
                 const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
                 if (res.ok) {
                     const data = await res.json();
-                    console.log('BG_INCREMENT_OK', { email: request.userEmail, reqId: request.reqId, newCount: data.enhanced_prompts });
+
+                    // Update storage and notify popup
                     chrome.storage.local.set({ last_known_prompt_count: data.enhanced_prompts });
-                    chrome.runtime.sendMessage({ action: 'count_updated', count: data.enhanced_prompts }).catch(() => {});
+                    chrome.runtime.sendMessage({
+                        action: 'count_updated',
+                        count: data.enhanced_prompts
+                    }).catch(() => {});
+                    
                     sendResponse({ success: true, count: data.enhanced_prompts });
                 } else {
-                    console.warn('BG_INCREMENT_FAIL', { email: request.userEmail, reqId: request.reqId, status: res.status });
                     sendResponse({ success: false, error: 'Failed to increment count' });
                 }
             } catch (e) {
-                console.warn('BG_INCREMENT_ERROR', { email: request.userEmail, reqId: request.reqId, message: e?.message });
                 sendResponse({ success: false, error: e.message });
             }
         })();
