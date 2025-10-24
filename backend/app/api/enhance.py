@@ -47,7 +47,7 @@ def get_enhancer():
     except Exception as e:
         logger.error(f" Failed to initialize MultiProviderService enhancer: {str(e)}")
         # Return ModelSpecificEnhancer without MultiProviderService - it has its own fallback logic
-        logger.info("🔄 Creating ModelSpecificEnhancer without MultiProviderService (will use internal fallback)")
+        logger.info("Creating ModelSpecificEnhancer without MultiProviderService (will use internal fallback)")
         return ModelSpecificEnhancer()
 
 def get_analyzer():

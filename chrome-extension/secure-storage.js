@@ -122,7 +122,6 @@ class SecureStorage {
             return true;
         } catch (error) {
             console.error(` Failed to store encrypted data for ${key}:`, error);
-            console.log(`🔄 Falling back to plain storage for: ${key}`);
             // Fallback to plain storage
             try {
                 await chrome.storage.local.set({ [key]: data });
@@ -158,7 +157,6 @@ class SecureStorage {
             }
         } catch (error) {
             console.error(` Failed to decrypt data for ${key}:`, error);
-            console.log(`🔄 Attempting fallback for: ${key}`);
             // Return plain data as fallback
             try {
                 const result = await chrome.storage.local.get([key]);

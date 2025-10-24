@@ -103,7 +103,7 @@ CRITICAL: Return ONLY the enhanced version of the user's prompt. Do NOT include 
     
     def create_fallback_enhancement(self, prompt: str, target_model: str) -> str:
         """Create a basic enhanced prompt when all providers fail"""
-        logger.info("🔄 Creating fallback enhancement")
+        logger.info("Creating fallback enhancement")
         
         # Simple but effective enhancement
         enhanced_parts = []

@@ -217,9 +217,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             const userStatus = await statusCheck.json();
                             
                             // DEBUG: Log the full API response to see what we're getting
-                            console.log('🔍 Background API Response:', userStatus);
-                            console.log('🔍 Background subscription_tier:', userStatus.subscription_tier);
-                            console.log('🔍 Background daily_prompts_used:', userStatus.daily_prompts_used);
                             
                             const dailyUsed = userStatus.daily_prompts_used || 0;
                             const dailyLimit = userStatus.daily_limit || 10;
@@ -233,21 +230,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         result.user_info.daily_prompts_used = dailyUsed;
                                         result.user_info.daily_limit = dailyLimit;
                                         chrome.storage.local.set({ user_info: result.user_info });
-                                        console.log('🔄 Updated Chrome storage with fresh subscription data');
                                     }
                                 });
                             } catch (storageError) {
-                                console.log('⚠️ Failed to update storage:', storageError);
                             }
 
                             // PRO USERS: Allow all requests (unlimited access)
                             if (userTier === 'pro') {
-                                console.log('✅ Pro user - allowing unlimited API calls');
                                 // Pro users can proceed without any limits
                             }
                             // FREE USERS: Block if at daily limit
                             else if (userTier === 'free' && dailyUsed >= 10) {
-                                console.log('❌ Free user at daily limit - blocking API call');
                                 // Backend block: Free user at limit - blocking API call
 
                                 const targetTabId = globalThis.activeEnhancementTabId || tabId;

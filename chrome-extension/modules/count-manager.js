@@ -86,7 +86,6 @@ class CountManager {
         
         //  ROLLBACK: Restore original count
         this.updateDisplay(pendingUpdate.originalCount);
-        console.log(`🔄 Rollback complete: ${pendingUpdate.originalCount}`);
         
         // Remove from pending updates
         this.pendingUpdates.delete(updateId);
@@ -103,7 +102,6 @@ class CountManager {
     // 🔄 Retry failed backend update
     async retryBackendUpdate(updateId, userEmail) {
         try {
-            console.log(`🔄 Retrying backend update for ${updateId}`);
             
             const response = await fetch(`${this.apiBaseUrl}${this.endpoints.incrementCount}`, {
                 method: 'POST',
