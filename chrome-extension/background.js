@@ -453,7 +453,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                // Use local backend and increment only on Insert
+                // Use local backend and increment ONLY on Insert
                 const apiUrl = 'http://localhost:8000';
 
                 const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
