@@ -1331,9 +1331,15 @@ class MagicalEnhancer {
 
                 // Simple click handler - increment count when inserting (single source of truth)
                 insertBtn.onclick = async () => {
+                    console.error('🔴 INSERT BUTTON CLICKED');
+                    
                     // Prevent double-click
-                    if (isIncrementing) return;
+                    if (isIncrementing) {
+                        console.error('🔴 INSERT: Already incrementing, blocking double-click');
+                        return;
+                    }
                     isIncrementing = true;
+                    console.error('🔴 INSERT: Starting increment process');
                     
                     // Insert the text
                     this.insertText(finalText, inputElement);
@@ -1346,19 +1352,28 @@ class MagicalEnhancer {
                             chrome.storage.local.get(['user_info'], resolve);
                         });
                         const userEmail = userData.user_info?.email || '';
+                        console.error(`🔴 INSERT: Got user email: ${userEmail}`);
                         
                         if (userEmail) {
                             // Send message to background to increment count
+                            console.error('🔴 INSERT: Sending increment_count message to background');
                             chrome.runtime.sendMessage({
                                 action: 'increment_count',
                                 userEmail: userEmail
+                            }, (response) => {
+                                console.error(`🔴 INSERT: Background response:`, response);
                             });
+                        } else {
+                            console.error('🔴 INSERT: No user email, skipping increment');
                         }
                     } catch (e) {
-                        // Ignore count increment errors
+                        console.error('🔴 INSERT: Error during increment:', e);
                     } finally {
                         // Reset flag after short delay
-                        setTimeout(() => { isIncrementing = false; }, 500);
+                        setTimeout(() => { 
+                            isIncrementing = false;
+                            console.error('🔴 INSERT: Reset isIncrementing flag');
+                        }, 500);
                     }
                 };
             }
