@@ -698,6 +698,8 @@ class DatabaseService:
                         current_daily = current.get("daily_prompts_used", 0) or 0
                         last_reset = current.get("last_prompt_reset")
                         tier = current.get("subscription_tier", "free")
+                        
+                        logger.error(f"🚨 FALLBACK: current_prompts={current_prompts}, tier={tier}, daily={current_daily}")
 
                         # Reset daily counter if needed
                         today = datetime.now().date()
@@ -720,14 +722,17 @@ class DatabaseService:
                                 current_daily = 0
                                 last_reset = today
 
-                        # Check daily limit for free users
+                        # Check daily limit for free users (NOT for pro users!)
                         if tier == "free" and current_daily >= 10:
                             logger.warning(f"Free user {email} reached daily limit")
+                            logger.error(f"🚨 FALLBACK: Blocking free user, returning {current_prompts}")
                             return current_prompts
 
                         # Increment counters
                         new_prompts = current_prompts + 1
                         new_daily = current_daily + 1
+                        
+                        logger.error(f"🚨 FALLBACK: Incrementing to new_prompts={new_prompts}, new_daily={new_daily}")
 
                         update_payload = {
                             "enhanced_prompts": new_prompts,
@@ -741,12 +746,15 @@ class DatabaseService:
                             json=update_payload,
                             timeout=aiohttp.ClientTimeout(total=5)
                         ) as update_response:
+                            logger.error(f"🚨 FALLBACK: PATCH response status={update_response.status}")
                             if update_response.status == 200:
                                 logger.info(f"Updated user {email}: prompts={new_prompts}, daily={new_daily}")
+                                logger.error(f"🚨 FALLBACK: Successfully updated, returning {new_prompts}")
                                 return new_prompts
                             else:
                                 error_text = await update_response.text()
                                 logger.error(f"Failed to update user: {update_response.status} - {error_text}")
+                                logger.error(f"🚨 FALLBACK: PATCH failed, returning 0")
                                 return 0
                     else:
                         logger.error(f"Failed to get user data: {response.status}")
