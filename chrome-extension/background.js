@@ -216,6 +216,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         if (statusCheck.ok) {
                             const userStatus = await statusCheck.json();
                             
+                            // DEBUG: Log the full API response to see what we're getting
+                            console.log('🔍 Background API Response:', userStatus);
+                            console.log('🔍 Background subscription_tier:', userStatus.subscription_tier);
+                            console.log('🔍 Background daily_prompts_used:', userStatus.daily_prompts_used);
+                            
                             const dailyUsed = userStatus.daily_prompts_used || 0;
                             const dailyLimit = userStatus.daily_limit || 10;
                             const userTier = userStatus.subscription_tier || 'free';
@@ -228,18 +233,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                         result.user_info.daily_prompts_used = dailyUsed;
                                         result.user_info.daily_limit = dailyLimit;
                                         chrome.storage.local.set({ user_info: result.user_info });
+                                        console.log('🔄 Updated Chrome storage with fresh subscription data');
                                     }
                                 });
                             } catch (storageError) {
-                                // Silent error handling
+                                console.log('⚠️ Failed to update storage:', storageError);
                             }
 
                             // PRO USERS: Allow all requests (unlimited access)
                             if (userTier === 'pro') {
+                                console.log('✅ Pro user - allowing unlimited API calls');
                                 // Pro users can proceed without any limits
                             }
                             // FREE USERS: Block if at daily limit
                             else if (userTier === 'free' && dailyUsed >= 10) {
+                                console.log('❌ Free user at daily limit - blocking API call');
                                 // Backend block: Free user at limit - blocking API call
 
                                 const targetTabId = globalThis.activeEnhancementTabId || tabId;
@@ -271,7 +279,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-User-Email': userEmail || '',
+                        // Backend expects X-User-ID for counting
+                        'X-User-ID': userEmail || '',
                         'X-Idempotency-Key': idempotencyKey || `${Date.now()}-${Math.random()}`,
                         'X-Platform': (platform || '').toLowerCase(),
                         'Accept': 'text/event-stream',
@@ -444,27 +453,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                const apiUrl = 'https://prompter-production-76a3.up.railway.app'; // Production Railway URL
+                // Use local backend and increment only on Insert
+                const apiUrl = 'http://localhost:8000';
 
-                // Backend handles all limit checks (daily limits, subscription tier, etc.)
-                // Just call the increment endpoint and let backend decide
                 const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 if (res.ok) {
                     const data = await res.json();
-
-                    // Update storage and notify popup
                     chrome.storage.local.set({ last_known_prompt_count: data.enhanced_prompts });
-                    chrome.runtime.sendMessage({
-                        action: 'count_updated',
-                        count: data.enhanced_prompts
-                    }).catch(() => {});
-                    
+                    chrome.runtime.sendMessage({ action: 'count_updated', count: data.enhanced_prompts }).catch(() => {});
                     sendResponse({ success: true, count: data.enhanced_prompts });
                 } else {
                     sendResponse({ success: false, error: 'Failed to increment count' });

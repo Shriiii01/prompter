@@ -719,18 +719,11 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
         logger.info(f"  - Headers: X-User-ID={x_user_id}")
         logger.info(f" Available providers: OpenAI={'' if config.settings.openai_api_key and config.settings.openai_api_key != 'your_openai_api_key_here' else ''}, Gemini={'' if config.settings.gemini_api_key and config.settings.gemini_api_key != 'your_gemini_api_key_here' else ''}")
 
-        # Increment user's prompt count (always track for popup UI)
-        if x_user_id:
-            try:
-                logger.info(f" Incrementing prompt count for user: {x_user_id}")
-                logger.info(f" ABOUT TO CALL increment_user_prompts with: {x_user_id}")
-                new_count = await db_service.increment_user_prompts(x_user_id)
-                logger.info(f" Prompt count incremented to: {new_count}")
-                logger.info(f" NEW COUNT RETURNED: {new_count}")
-            except Exception as db_error:
-                logger.warning(f" Failed to increment prompt count: {db_error}")
-        else:
-            logger.info(" No user email provided - prompt count not incremented")
+        # DO NOT increment here. We only increment on Insert action from the UI
+        # to avoid double counting (stream + insert). The background script calls
+        # /api/v1/users/{email}/increment after the user clicks Insert.
+        if not x_user_id:
+            logger.info(" No user email provided - skipping count increment (handled on Insert)")
 
         # Use REAL streaming from AI service
         try:
@@ -741,14 +734,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                 """Generate REAL streaming response from AI"""
                 # Removed model metadata - just show enhanced prompt directly
                 
-                # Send updated count after increment
-                if x_user_id:
-                    try:
-                        current_count = await db_service.get_user_stats(x_user_id)
-                        if current_count:
-                            yield f"data: {json.dumps({'type': 'count_update', 'data': current_count.get('enhanced_prompts', 0)})}\n\n"
-                    except Exception as e:
-                        logger.warning(f" Failed to get updated count: {e}")
+                # No count update here; count will be incremented on Insert.
                 
                 # Stream the response in real-time as it comes from OpenAI
                 current_text = ""
