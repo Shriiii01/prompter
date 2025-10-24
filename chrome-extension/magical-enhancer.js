@@ -1331,15 +1331,9 @@ class MagicalEnhancer {
 
                 // Simple click handler - increment count when inserting (single source of truth)
                 insertBtn.onclick = async () => {
-                    console.error('🔴 INSERT BUTTON CLICKED');
-                    
                     // Prevent double-click
-                    if (isIncrementing) {
-                        console.error('🔴 INSERT: Already incrementing, blocking double-click');
-                        return;
-                    }
+                    if (isIncrementing) return;
                     isIncrementing = true;
-                    console.error('🔴 INSERT: Starting increment process');
                     
                     // Insert the text
                     this.insertText(finalText, inputElement);
@@ -1347,33 +1341,21 @@ class MagicalEnhancer {
                     
                     // Increment count by making a simple API call
                     try {
-                        // Get user email
                         const userData = await new Promise((resolve) => {
                             chrome.storage.local.get(['user_info'], resolve);
                         });
                         const userEmail = userData.user_info?.email || '';
-                        console.error(`🔴 INSERT: Got user email: ${userEmail}`);
                         
                         if (userEmail) {
-                            // Send message to background to increment count
-                            console.error('🔴 INSERT: Sending increment_count message to background');
                             chrome.runtime.sendMessage({
                                 action: 'increment_count',
                                 userEmail: userEmail
-                            }, (response) => {
-                                console.error(`🔴 INSERT: Background response:`, response);
                             });
-                        } else {
-                            console.error('🔴 INSERT: No user email, skipping increment');
                         }
                     } catch (e) {
-                        console.error('🔴 INSERT: Error during increment:', e);
+                        // Ignore count increment errors
                     } finally {
-                        // Reset flag after short delay
-                        setTimeout(() => { 
-                            isIncrementing = false;
-                            console.error('🔴 INSERT: Reset isIncrementing flag');
-                        }, 500);
+                        setTimeout(() => { isIncrementing = false; }, 500);
                     }
                 };
             }

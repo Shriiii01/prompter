@@ -428,9 +428,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Simple count increment
     if (request.action === 'increment_count') {
-        console.error('🟠 BACKGROUND: Received increment_count action');
-        console.error('🟠 BACKGROUND: Request email:', request.userEmail);
-
         (async () => {
             try {
                 // CRITICAL SAFETY: Verify this is the currently logged-in user
@@ -439,50 +436,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 });
                 
                 const currentUserEmail = currentUserData.user_info?.email;
-                console.error('🟠 BACKGROUND: Current user email:', currentUserEmail);
-                
                 if (currentUserEmail && currentUserEmail !== request.userEmail) {
-                    console.error('🟠 BACKGROUND: User mismatch - BLOCKING');
                     sendResponse({ success: false, error: 'User mismatch - security violation' });
                     return;
                 }
 
-                // Use the same API base URL strategy as the content script/popup
                 const apiUrl = 'http://localhost:8000';
-                const incrementUrl = `${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`;
-                
-                console.error('🟠 BACKGROUND: Calling increment API:', incrementUrl);
-
-                // Backend handles all limit checks (daily limits, subscription tier, etc.)
-                // Just call the increment endpoint and let backend decide
-                const res = await fetch(incrementUrl, {
+                const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 });
                 
-                console.error('🟠 BACKGROUND: API response status:', res.status);
-                
                 if (res.ok) {
                     const data = await res.json();
-                    console.error('🟠 BACKGROUND: API response data:', data);
-
-                    // Update storage and notify popup
                     chrome.storage.local.set({ last_known_prompt_count: data.enhanced_prompts });
                     chrome.runtime.sendMessage({
                         action: 'count_updated',
                         count: data.enhanced_prompts
                     }).catch(() => {});
                     
-                    console.error('🟠 BACKGROUND: Successfully incremented to:', data.enhanced_prompts);
                     sendResponse({ success: true, count: data.enhanced_prompts });
                 } else {
-                    console.error('🟠 BACKGROUND: API call failed');
                     sendResponse({ success: false, error: 'Failed to increment count' });
                 }
             } catch (e) {
-                console.error('🟠 BACKGROUND: Exception during increment:', e);
                 sendResponse({ success: false, error: e.message });
             }
         })();
