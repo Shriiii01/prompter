@@ -221,7 +221,7 @@ class ModelSpecificEnhancer:
     def _create_fallback_enhancement(self, prompt: str, model_name: str) -> str:
         """Create a high-quality enhanced prompt using simple but effective techniques"""
         
-        logger.info(f"🔄 Creating fallback enhancement for {model_name}")
+        logger.info(f"Creating fallback enhancement for {model_name}")
         
         # Create enhanced prompts, not answers
         enhanced_parts = []

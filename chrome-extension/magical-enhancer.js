@@ -1210,16 +1210,11 @@ class MagicalEnhancer {
                         const userStatus = await statusCheck.json();
                         
                         // DEBUG: Log the full API response to see what we're getting
-                        console.log('🔍 API Response:', userStatus);
-                        console.log('🔍 Raw subscription_tier:', userStatus.subscription_tier);
-                        console.log('🔍 Raw daily_prompts_used:', userStatus.daily_prompts_used);
-                        console.log('🔍 Raw daily_limit:', userStatus.daily_limit);
                         
                         const userTier = userStatus.subscription_tier || 'free';
                         const dailyUsed = userStatus.daily_prompts_used || 0;
                         const dailyLimit = userStatus.daily_limit || 10;
 
-                        console.log('🔍 Processed values - userTier:', userTier, 'dailyUsed:', dailyUsed, 'dailyLimit:', dailyLimit);
 
                         // UPDATE CHROME STORAGE with fresh subscription data
                         try {
@@ -1229,34 +1224,27 @@ class MagicalEnhancer {
                                     result.user_info.daily_prompts_used = dailyUsed;
                                     result.user_info.daily_limit = dailyLimit;
                                     chrome.storage.local.set({ user_info: result.user_info });
-                                    console.log('🔄 Magical-enhancer: Updated Chrome storage with fresh subscription data');
                                 }
                             });
                         } catch (storageError) {
-                            console.log('⚠️ Magical-enhancer: Failed to update storage:', storageError);
                         }
 
                         // PRO USERS: No limits, allow all requests
                         if (userTier === 'pro') {
-                            console.log('✅ Pro user - unlimited access granted');
                             // Pro users can proceed without any limits
                         }
                         // FREE USERS: Check daily limit
                         else if (userTier === 'free' && dailyUsed >= 10) {
-                            console.log('❌ Free user at daily limit - blocking request');
                             this.showLimitNotification(inputElement);
                             icon.classList.remove('processing');
                             return;
                         }
                         // FREE USERS: Still have prompts remaining
                         else {
-                            console.log(`✅ Free user has ${10 - dailyUsed} prompts remaining`);
                         }
                     } else {
-                        console.log('⚠️ Could not check subscription status - allowing request');
                     }
                 } catch (backendError) {
-                    console.log('⚠️ Backend check failed - allowing request (backend will enforce limits)');
                     // Allow request if backend check fails - backend will still enforce limits
                 }
             }
@@ -2034,7 +2022,6 @@ Additional context: Please structure your response in a clear, organized manner 
         
         if (isGemini) {
             // GEMINI SPECIAL HANDLING: More aggressive approach to prevent interference
-            console.log('🔧 Using Gemini-specific insertion method');
             
             // Store original value to prevent reversion
             const originalValue = inputElement.value || inputElement.textContent || '';
@@ -2078,7 +2065,6 @@ Additional context: Please structure your response in a clear, organized manner 
                 // If the text has been reverted to original or cleared, restore it
                 if (currentValue !== text && (currentValue === originalValue || currentValue === '')) {
                     revertAttempts++;
-                    console.log(`🔧 Gemini reversion detected (attempt ${revertAttempts}), restoring text`);
                     
                     if (revertAttempts <= maxRevertAttempts) {
                         if (inputElement.tagName === 'TEXTAREA') {
@@ -2098,7 +2084,6 @@ Additional context: Please structure your response in a clear, organized manner 
             const monitorInterval = setInterval(preventReversion, 100);
             setTimeout(() => {
                 clearInterval(monitorInterval);
-                console.log('🔧 Gemini insertion monitoring complete');
             }, 3000);
             
         } else {

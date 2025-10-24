@@ -35,7 +35,7 @@ class CircuitBreaker:
             if self.last_failure_time:
                 if time.time() - self.last_failure_time > self.timeout_duration:
                     self.state = CircuitState.HALF_OPEN
-                    logger.info("🔄 Circuit breaker transitioning to half-open")
+                    logger.info("Circuit breaker transitioning to half-open")
                     return True
             return False
         elif self.state == CircuitState.HALF_OPEN:

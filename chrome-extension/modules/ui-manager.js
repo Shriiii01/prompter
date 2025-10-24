@@ -255,14 +255,12 @@ class UIManager {
     startTokenRefreshMonitoring() {
         // This would be handled by the AuthManager
         // Just a placeholder for UI coordination
-        console.log('🔄 Token refresh monitoring started');
     }
 
     //  Stop token refresh monitoring
     stopTokenRefreshMonitoring() {
         // This would be handled by the AuthManager
         // Just a placeholder for UI coordination
-        console.log('🔄 Token refresh monitoring stopped');
     }
 
     //  Validate name input
