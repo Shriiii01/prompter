@@ -627,11 +627,23 @@ class DatabaseService:
 
     async def increment_user_prompts(self, email: str) -> int:
         """Increment user's prompt count and return new count."""
+        import traceback
+        logger.error(f"🚨 INCREMENT CALLED FOR: {email}")
+        logger.error(f"🚨 CALL STACK:\n{''.join(traceback.format_stack())}")
+        
+        logger.info(f" DATABASE: increment_user_prompts called with email: {email}")
+        logger.info(f" DATABASE: email type: {type(email)}, length: {len(email) if email else 0}")
+
         if not self._is_configured():
+            logger.error(" DATABASE: Database not configured!")
             return 0
 
+        # Use ONLY the direct database update method to avoid double-increment bug
+        # The RPC + fallback approach was causing +2 increments
         try:
-            return await self._increment_user_prompts_fallback(email)
+            result = await self._increment_user_prompts_fallback(email)
+            logger.error(f"🚨 INCREMENT RESULT: {result} for {email}")
+            return result
         except Exception as e:
             logger.error(f"Error incrementing user prompts: {str(e)}")
             return 0
@@ -708,7 +720,7 @@ class DatabaseService:
                                 current_daily = 0
                                 last_reset = today
 
-                        # Check daily limit for free users (NOT for pro users!)
+                        # Check daily limit for free users
                         if tier == "free" and current_daily >= 10:
                             logger.warning(f"Free user {email} reached daily limit")
                             return current_prompts
@@ -729,8 +741,7 @@ class DatabaseService:
                             json=update_payload,
                             timeout=aiohttp.ClientTimeout(total=5)
                         ) as update_response:
-                            # Supabase returns 204 (No Content) for successful updates
-                            if update_response.status in [200, 204]:
+                            if update_response.status == 200:
                                 logger.info(f"Updated user {email}: prompts={new_prompts}, daily={new_daily}")
                                 return new_prompts
                             else:
