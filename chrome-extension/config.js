@@ -22,8 +22,13 @@ const PRODUCTION_CONFIG = {
 // Environment detection with improved reliability
 const isProduction = () => {
   try {
-    return window.location.protocol === 'https:' || 
-           window.location.hostname !== 'localhost';
+    // If running inside a Chrome extension context (popup or content script),
+    // prefer development API unless explicitly overridden.
+    const isChromeExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
+    if (isChromeExtension) return false;
+
+    // Fallback: treat real HTTPS web origins as production
+    return (window.location.protocol === 'https:' && window.location.hostname !== 'localhost');
   } catch (error) {
     console.warn(' Error detecting production environment:', error);
     return false; // Default to development
@@ -33,7 +38,9 @@ const isProduction = () => {
 // Get the appropriate API URL with fallback
 const getApiUrl = () => {
   try {
-    return isProduction() ? PRODUCTION_CONFIG.API_BASE_URL : PRODUCTION_CONFIG.DEV_API_BASE_URL;
+    const url = isProduction() ? PRODUCTION_CONFIG.API_BASE_URL : PRODUCTION_CONFIG.DEV_API_BASE_URL;
+    try { console.log(`[CONFIG] Using API base URL: ${url}`); } catch (_) {}
+    return url;
   } catch (error) {
     console.warn(' Error getting API URL, using fallback:', error);
     return PRODUCTION_CONFIG.DEV_API_BASE_URL;
