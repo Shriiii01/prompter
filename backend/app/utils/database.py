@@ -634,28 +634,13 @@ class DatabaseService:
             logger.error(" DATABASE: Database not configured!")
             return 0
 
+        # Use ONLY the direct database update method to avoid double-increment bug
+        # The RPC + fallback approach was causing +2 increments
         try:
-            # Try the atomic RPC function first
-            logger.info(f" DATABASE: About to call record_enhancement_atomic")
-            result = await self.record_enhancement_atomic(email, str(uuid.uuid4()), "chatgpt")
-            new_count = result.get("enhanced_prompts", 0)
-            logger.info(f" DATABASE: RPC result: {result}")
-            logger.info(f" DATABASE: New count from RPC: {new_count}")
-
-            # If RPC failed (returns 0), use fallback direct update
-            if new_count == 0:
-                logger.warning("RPC function failed, using direct database update as fallback")
-                return await self._increment_user_prompts_fallback(email)
-
-            return new_count
+            return await self._increment_user_prompts_fallback(email)
         except Exception as e:
             logger.error(f"Error incrementing user prompts: {str(e)}")
-            # Fallback to direct database update
-            try:
-                return await self._increment_user_prompts_fallback(email)
-            except Exception as fallback_e:
-                logger.error(f"Fallback increment also failed: {fallback_e}")
-                return 0
+            return 0
 
     async def _increment_user_prompts_fallback(self, email: str) -> int:
         """Fallback method to increment user prompts using direct database operations."""
