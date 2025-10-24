@@ -1885,7 +1885,7 @@ class MagicalEnhancer {
                 this.insertText(finalText, inputElement);
                 this.closePopup();
                 
-                // Increment count on Insert (single source of truth)
+                // Increment count ONLY on Insert (single source of truth)
                 try {
                     const userData = await new Promise((resolve) => {
                         chrome.storage.local.get(['user_info'], resolve);
