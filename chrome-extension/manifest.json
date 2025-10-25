@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "PromptGrammarly",
+    "name": "PromptGrammerly",
     "version": "1.0",
     "description": "improve your prompts with promptgrammarly",
     "permissions": [
