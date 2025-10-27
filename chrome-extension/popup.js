@@ -855,32 +855,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             this.currentUserEmail = email;
         }
 
-        // Dynamically load Razorpay script
-        async loadRazorpayScript() {
-            return new Promise((resolve, reject) => {
-                // Check if already loaded
-                if (typeof Razorpay !== 'undefined') {
-
-                    resolve();
-                    return;
-                }
-
-                // Create script element
-                const script = document.createElement('script');
-                script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-                script.onload = () => {
-
-                    resolve();
-                };
-                script.onerror = () => {
-
-                    reject(new Error('Failed to load Razorpay script'));
-                };
-                
-                // Add to document head
-                document.head.appendChild(script);
-            });
-        }
+        // Removed remote script loading to comply with MV3: no remotely hosted code
+        // All payment interactions will happen via a backend-hosted checkout page opened in a new tab.
 
         // Open payment modal
         openPaymentModal() {
@@ -920,7 +896,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // Open Razorpay checkout
-
+                // MV3-compliant: open backend-hosted checkout page (no remote scripts in extension)
                 await this.openRazorpayCheckout(order);
 
             } catch (error) {
