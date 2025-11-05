@@ -22,15 +22,15 @@ const PRODUCTION_CONFIG = {
 // Environment detection with improved reliability
 const isProduction = () => {
   try {
-    // If running inside a Chrome extension context (popup or content script),
-    // prefer development API unless explicitly overridden.
+    // If running inside a Chrome extension context, always use the production API.
+    // The extension runs on end-user machines and must not point to localhost.
     const isChromeExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
-    if (isChromeExtension) return false;
+    if (isChromeExtension) return true;
 
     // Fallback: treat real HTTPS web origins as production
     return (window.location.protocol === 'https:' && window.location.hostname !== 'localhost');
   } catch (error) {
-    return false; // Default to development
+    return true; // Be conservative and prefer production in ambiguous cases
   }
 };
 
