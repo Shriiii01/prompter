@@ -50,6 +50,20 @@ class MagicalEnhancer {
         this.init();
     }
 
+    // Safely convert plain text to HTML with <br> for newlines
+    escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    toHtmlWithLineBreaks(text) {
+        return this.escapeHtml(text).replace(/\n/g, '<br>');
+    }
+
     init() {
         // Clean up any existing icons from previous instances
         this.cleanupExistingIcons();
@@ -1328,8 +1342,8 @@ class MagicalEnhancer {
             if (message.action === 'stream_chunk') {
                 const aiText = message.chunk?.data || '';
                 if (aiText) {
-                    // CRITICAL FIX: Use innerHTML to preserve structure and formatting
-                    streamText.innerHTML = aiText.replace(/\n/g, '<br>');
+                    // Safely render text with preserved line breaks
+                    streamText.innerHTML = this.toHtmlWithLineBreaks(aiText);
                 }
             } else if (message.action === 'stream_complete') {
                 // CRITICAL FIX: Get the original text with line breaks preserved
@@ -1818,8 +1832,8 @@ class MagicalEnhancer {
         const textContainer = document.createElement('div');
         textContainer.id = 'final-text';
         textContainer.style.cssText = 'font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;';
-        // CRITICAL FIX: Use innerHTML to preserve structure and formatting
-        textContainer.innerHTML = finalText.replace(/\n/g, '<br>');
+        // Safely render text with preserved line breaks
+        textContainer.innerHTML = this.toHtmlWithLineBreaks(finalText);
         container.appendChild(textContainer);
 
         // Show insert button

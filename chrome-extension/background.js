@@ -7,31 +7,10 @@ self.addEventListener('error', (event) => {
     }
 });
 
-// CRITICAL FIX: Keep service worker alive
-let keepAliveInterval;
-
-function keepAlive() {
-    if (keepAliveInterval) {
-        clearInterval(keepAliveInterval);
-    }
-    keepAliveInterval = setInterval(() => {
-        // Ping ourselves to keep the service worker alive
-        chrome.runtime.getPlatformInfo(() => {});
-    }, 20000); // Every 20 seconds
-}
-
-// Ensure background script is running
-chrome.runtime.onStartup.addListener(() => {
-    keepAlive();
-});
-
-chrome.runtime.onInstalled.addListener(() => {
-    keepAlive();
-});
+// Removed keep-alive interval to comply with event-driven MV3 background
 
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    keepAlive(); // Reset keep-alive timer
 
     // Ping test for background script
     if (request.action === 'ping') {
@@ -434,7 +413,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                const apiUrl = 'http://localhost:8000';
+                const apiUrl = 'https://prompter-production-76a3.up.railway.app';
                 const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
                     method: 'POST',
                     headers: {

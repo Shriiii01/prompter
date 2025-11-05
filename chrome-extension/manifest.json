@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "PromptGrammerly",
-    "version": "1.0.1", 
+    "version": "1.0.2", 
     "description": "your personal Promptengineer",
     "permissions": [
         "identity",
@@ -10,7 +10,7 @@
         "scripting"
     ],
     "host_permissions": [
-        "https://www.googleapis.com/",
+        "https://www.googleapis.com/*",  
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
         "https://claude.ai/*",
@@ -18,7 +18,6 @@
         "https://perplexity.ai/*",
         "https://www.perplexity.ai/*",
         "https://claude.ai/new/*",
-        "http://localhost:8000/*",
         "https://prompter-production-76a3.up.railway.app/*"
     ],
     "content_scripts": [
