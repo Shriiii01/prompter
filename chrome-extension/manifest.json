@@ -10,7 +10,8 @@
         "scripting"
     ],
     "host_permissions": [
-        "https://www.googleapis.com/*",  
+        "https://www.googleapis.com/*",
+        "https://accounts.google.com/*",
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
         "https://claude.ai/*",
@@ -53,7 +54,7 @@
         "128": "icons/icon128.png"
     },
     "oauth2": {
-        "client_id": "20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com",
+        "client_id": "20427090028-mlk4i4l7o23nrp3tcut5ulpa58papfmt.apps.googleusercontent.com",
         "scopes": [
             "https://www.googleapis.com/auth/userinfo.email",
             "https://www.googleapis.com/auth/userinfo.profile",
