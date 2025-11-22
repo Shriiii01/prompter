@@ -169,7 +169,7 @@ class AIService:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            "max_completion_tokens": 500,
+            "max_tokens": 500,
             "temperature": 0.3
         }
         
@@ -197,12 +197,12 @@ class AIService:
         system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
         
         data = {
-            "model": "gpt-5-mini",
+            "model": "gpt-4o-mini",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            "max_completion_tokens": 500,
+            "max_tokens": 500,
             "temperature": 0.3,
             "stream": True
         }
