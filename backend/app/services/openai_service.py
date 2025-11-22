@@ -72,4 +72,3 @@ class OpenAIService:
     def is_available(self) -> bool:
         """Check if OpenAI service is available"""
         return bool(self.api_key)
-
