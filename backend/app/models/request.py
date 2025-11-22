@@ -38,7 +38,7 @@ class LLMModel(str, Enum):
 class EnhanceRequest(BaseModel):
     """Request model for prompt enhancement"""
     prompt: str = Field(..., description="The prompt to enhance", min_length=1, max_length=2000)
-    target_model: Optional[str] = Field(default="gemini-2.5-pro", description="Target AI model for enhancement")
+    target_model: Optional[str] = Field(default="gpt-5-mini", description="Target AI model for enhancement")
     context: Optional[str] = Field(default=None, description="Additional context for enhancement")
     fast_mode: Optional[bool] = Field(default=False, description="Skip database operations for faster response")
     
