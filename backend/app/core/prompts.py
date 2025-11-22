@@ -634,8 +634,6 @@ Purpose: Create engaging content
 
 **The WRONG format has ````xml` wrapper - NEVER USE IT**
 
----
-
 Transform the user's input now following this system exactly.''',
 
             "gemini": '''Transform the user's input into an optimized prompt for Gemini.
