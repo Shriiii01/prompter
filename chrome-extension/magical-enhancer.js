@@ -586,7 +586,6 @@ class MagicalEnhancer {
 
         // Optimized selectors
         const selectors = [
-            // CLAUDE SPECIFIC - Highest Priority
             'div[contenteditable="true"][data-placeholder*="Talk with Claude"]',
             'div[contenteditable="true"][aria-label*="Write a message"]',
             'div.ProseMirror[contenteditable="true"]',
@@ -1918,9 +1917,6 @@ Additional context: Please structure your response in a clear, organized manner 
             }, 3000);
             
         } else if (isClaude) {
-            // CLAUDE SPECIFIC FIX: Use execCommand 'insertText' for reliable insertion
-            // Claude's editor handles this better than paste events or direct DOM manipulation
-            
             // 1. Focus
             inputElement.focus();
             
