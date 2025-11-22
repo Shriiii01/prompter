@@ -31,10 +31,15 @@ class OpenAIService:
             # Use sophisticated model-specific system prompt
             system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
 
-            # Use max_completion_tokens for newer models like gpt-4o
-            if "gpt-4o" in target_model:
+            # Use max_completion_tokens for newer models like gpt-4o and gpt-5
+            if "gpt-4o" in target_model or "gpt-5" in target_model:
+                # Determine which model to use for enhancement
+                # If user asks for gpt-5-mini specifically, use it. 
+                # If user asks for gpt-4o, we use gpt-5-mini as the enhancer as requested.
+                enhancement_model = "gpt-5-mini"
+                
                 response = await self.client.chat.completions.create(
-                    model="gpt-5",  # Use GPT-5 for enhancement
+                    model=enhancement_model,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"Please enhance this prompt:\n\n{prompt}"}
