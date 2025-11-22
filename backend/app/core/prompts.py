@@ -24,7 +24,7 @@ class AdvancedPromptEngine:
         model_prompts = AdvancedPromptEngine._get_model_specific_prompts_v2()
         
         # OpenAI models
-        if any(gpt in model_lower for gpt in ['gpt-5', 'gpt-5-mini', 'gpt-4', 'gpt-4o', 'chatgpt']):
+        if any(gpt in model_lower for gpt in ['gpt-5', 'gpt-4o', 'gpt-4', 'gpt-3.5', 'chatgpt']):
             return model_prompts.get("gpt-4", "You are a helpful AI assistant.")
         
         # Anthropic Claude models

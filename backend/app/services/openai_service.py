@@ -23,7 +23,7 @@ class OpenAIService:
         self.api_key = api_key
         logger.info(" OpenAI service initialized")
     
-    async def enhance_with_model_specific_prompt(self, prompt: str, target_model: str = "gpt-5-mini") -> str:
+    async def enhance_with_model_specific_prompt(self, prompt: str, target_model: str = "gpt-4o") -> str:
         """Enhance prompt using OpenAI API"""
         try:
             logger.info(f" OpenAI enhancing prompt with {target_model}")
