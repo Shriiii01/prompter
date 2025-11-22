@@ -570,17 +570,28 @@ class MagicalEnhancer {
     scanForInputs(bypassDebounce = false) {
         // Reduced debouncing for faster response
         const now = Date.now();
-        if (!bypassDebounce && now - this.lastScanTime < 100) { // Reduced from 500ms to 100ms
+        if (!bypassDebounce && now - this.lastScanTime < 100) { 
             return;
         }
         this.lastScanTime = now;
 
-        // Clean up any orphaned icons before scanning
-        this.cleanupOrphanedIcons();
-        
+        // DEBUG: Claude-specific logging
+        if (window.location.hostname.includes('claude.ai')) {
+            console.log('🔍 [PromptGrammarly] Scanning for inputs on Claude...');
+        }
 
-        // Optimized selectors for faster detection - focus on main chat inputs only
+        // AGGRESSIVE CLEANUP: First remove ALL duplicates immediately
+        // This ensures we start clean every scan
+        this.removeDuplicateIcons();
+        this.cleanupOrphanedIcons();
+
+        // Optimized selectors
         const selectors = [
+            // CLAUDE SPECIFIC - Highest Priority
+            'div[contenteditable="true"][data-placeholder*="Talk with Claude"]',
+            'div[contenteditable="true"][aria-label*="Write a message"]',
+            'div.ProseMirror[contenteditable="true"]',
+
             // Perplexity AI specific selectors (prioritized) - UPDATED 2024
             'textarea[placeholder*="Ask anything or @mention a Space"]',
             'textarea[placeholder*="Ask anything or @mention"]',
@@ -619,73 +630,81 @@ class MagicalEnhancer {
             'div[contenteditable="true"]'
         ];
 
-        let totalFound = 0;
         let newlyAdded = 0;
 
-        // Process selectors in order of priority for faster results
+        // Find ALL potential inputs first
+        let allInputs = [];
         for (const selector of selectors) {
             const elements = document.querySelectorAll(selector);
-            totalFound += elements.length;
-            
-            
-            for (const element of elements) {
-                const inputId = this.getInputId(element);
-                
-                // ROBUST duplicate check - multiple layers to prevent duplicates
-                if (this.icons.has(element)) {
-
-                    continue;
-                }
-                
-                if (this.iconCreationLock.has(inputId)) {
-
-                    continue;
-                }
-                
-                // Check if there's already an icon in the DOM for this input
-                const existingIcon = document.querySelector(`[data-input-id="${inputId}"]`);
-                if (existingIcon) {
-
-                    continue;
-                }
-                
-                // Additional check: look for any icon near this input element
-                const rect = element.getBoundingClientRect();
-                const nearbyIcons = document.querySelectorAll('.ce-icon');
-                let hasNearbyIcon = false;
-                for (const icon of nearbyIcons) {
-                    const iconRect = icon.getBoundingClientRect();
-                    const distance = Math.sqrt(
-                        Math.pow(iconRect.left - rect.right, 2) + 
-                        Math.pow(iconRect.top - rect.top, 2)
-                    );
-                    if (distance < 100) { // If icon is within 100px, consider it a duplicate
-
-                        hasNearbyIcon = true;
-                        break;
-                    }
-                }
-                
-                if (hasNearbyIcon) {
-                    continue;
-                }
-                
-                if (this.isValidInputFast(element)) { // Use fast validation
-                    this.addIconToInput(element);
-                    newlyAdded++;
-                    
-                    // Early exit if we found enough inputs (performance optimization)
-                    if (newlyAdded >= 3) {
-
-                        break;
-                    }
-                }
-            }
-            
-            // Early exit if we found inputs from high-priority selectors
-            if (newlyAdded > 0) break;
+            elements.forEach(el => allInputs.push(el));
         }
 
+        // Deduplicate elements (selectors might overlap)
+        const uniqueInputs = [...new Set(allInputs)];
+
+        // Prioritize inputs: prefer visible, larger inputs
+        uniqueInputs.sort((a, b) => {
+            const rectA = a.getBoundingClientRect();
+            const rectB = b.getBoundingClientRect();
+            return (rectB.width * rectB.height) - (rectA.width * rectA.height);
+        });
+
+        // ONLY add icon to the SINGLE BEST input found
+        for (const element of uniqueInputs) {
+            // 1. Valid check
+            if (!this.isValidInputFast(element)) continue;
+
+            // 2. Check if ANY icon exists on the page for THIS input ID
+            const inputId = this.getInputId(element);
+            const existingIcon = document.querySelector(`[data-input-id="${inputId}"]`);
+            
+            if (existingIcon) {
+                // Verify position - if it's far away, it might be detached
+                const iconRect = existingIcon.getBoundingClientRect();
+                const inputRect = element.getBoundingClientRect();
+                const distance = Math.sqrt(
+                    Math.pow(iconRect.left - inputRect.right, 2) + 
+                    Math.pow(iconRect.top - inputRect.top, 2)
+                );
+                
+                if (distance > 200) {
+                    // Icon is too far, remove it and recreate
+                    existingIcon.remove();
+                    this.icons.delete(element);
+                    this.iconCreationLock.delete(inputId);
+                } else {
+                    // Icon is good, skip this input
+                    continue;
+                }
+            }
+
+            // 3. Check if input is already marked
+            if (element.dataset.pgHasIcon === 'true' && document.querySelector(`[data-input-id="${inputId}"]`)) {
+                continue;
+            }
+
+            // 4. GLOBAL SINGLETON CHECK (Strict Mode)
+            // If there is ALREADY an icon on the screen that looks valid, DO NOT add another one
+            // unless the new input is clearly different and far away
+            const anyIcon = document.querySelector('.ce-icon');
+            if (anyIcon) {
+                const anyIconRect = anyIcon.getBoundingClientRect();
+                const inputRect = element.getBoundingClientRect();
+                // If the input is physically close to an existing icon, assume covered
+                if (Math.abs(inputRect.top - anyIconRect.top) < 100) {
+                    continue;
+                }
+            }
+
+            // Passed checks - Add the icon
+            this.addIconToInput(element);
+            newlyAdded++;
+            
+            // CRITICAL: Break immediately after adding 1 icon. 
+            // We prefer to miss a secondary input than to spam duplicate icons.
+            // Most chat interfaces only have ONE main input.
+            break; 
+        }
     }
 
     scanForInputsRelaxed() {
@@ -775,25 +794,38 @@ class MagicalEnhancer {
         // FINAL CHECK: Remove any existing duplicates before creating new icon
         this.removeDuplicateIcons();
         
-        // ROBUST duplicate prevention - multiple layers of checking
+        // PRODUCTION GRADE DUPLICATE PREVENTION
+        // 1. Check internal map
         if (this.icons.has(inputElement)) {
-
             return;
         }
         
+        // 2. Check DOM marker (most robust)
+        if (inputElement.dataset.pgHasIcon === 'true') {
+            // Verify if icon actually exists
+            const existingIcon = document.querySelector(`[data-input-id="${inputId}"]`);
+            if (existingIcon) {
+                return;
+            } else {
+                // False positive marker - clean it up
+                delete inputElement.dataset.pgHasIcon;
+            }
+        }
+        
+        // 3. Check creation lock
         if (this.iconCreationLock.has(inputId)) {
-
             return;
         }
         
-        // Check if there's already an icon in the DOM for this input
+        // 4. Check DOM for existing icon by ID
         const existingIcon = document.querySelector(`[data-input-id="${inputId}"]`);
         if (existingIcon) {
-
+            // Mark input as having icon since the icon exists
+            inputElement.dataset.pgHasIcon = 'true';
             return;
         }
         
-        // Additional check: look for any icon near this input element
+        // 5. Proximity check
         const rect = inputElement.getBoundingClientRect();
         const nearbyIcons = document.querySelectorAll('.ce-icon');
         for (const icon of nearbyIcons) {
@@ -802,8 +834,7 @@ class MagicalEnhancer {
                 Math.pow(iconRect.left - rect.right, 2) + 
                 Math.pow(iconRect.top - rect.top, 2)
             );
-            if (distance < 100) { // If icon is within 100px, consider it a duplicate
-
+            if (distance < 50) { // Reduced radius check
                 return;
             }
         }
@@ -828,6 +859,9 @@ class MagicalEnhancer {
             document.body.appendChild(icon);
             this.icons.set(inputElement, icon);
             
+            // Mark the input element itself
+            inputElement.dataset.pgHasIcon = 'true';
+            
             // Store reference for positioning updates
             icon._targetElement = inputElement;
             
@@ -838,8 +872,7 @@ class MagicalEnhancer {
             // Always unlock after creation attempt
             setTimeout(() => {
                 this.iconCreationLock.delete(inputId);
-
-            }, 50); // Reduced from 100ms to 50ms
+            }, 50); 
         }
     }
 
@@ -850,7 +883,6 @@ class MagicalEnhancer {
         this.icons.forEach((icon, inputElement) => {
             // Check if the input element still exists in the DOM
             if (!document.contains(inputElement)) {
-
                 iconsToRemove.push(inputElement);
                 return;
             }
@@ -860,7 +892,6 @@ class MagicalEnhancer {
             if (rect.width === 0 || rect.height === 0 ||
                 inputElement.hasAttribute('readonly') ||
                 inputElement.disabled) {
-
                 iconsToRemove.push(inputElement);
                 return;
             }
@@ -869,7 +900,6 @@ class MagicalEnhancer {
             const inputId = icon.getAttribute('data-input-id');
             const allIconsForInput = document.querySelectorAll(`[data-input-id="${inputId}"]`);
             if (allIconsForInput.length > 1) {
-
                 // Keep only the first icon, remove the rest
                 for (let i = 1; i < allIconsForInput.length; i++) {
                     allIconsForInput[i].remove();
@@ -881,18 +911,31 @@ class MagicalEnhancer {
         iconsToRemove.forEach(inputElement => {
             const icon = this.icons.get(inputElement);
             if (icon) {
-                // Cleanup auto-repositioning listeners
-                if (icon._cleanup) {
-                    icon._cleanup();
-                }
+                if (icon._cleanup) icon._cleanup();
                 icon.remove();
                 this.icons.delete(inputElement);
+                // Clean marker
+                delete inputElement.dataset.pgHasIcon;
             }
         });
         
-        if (iconsToRemove.length > 0) {
-
-        }
+        // Scan specifically for inputs with markers but no icons (ghost markers)
+        const markedInputs = document.querySelectorAll('[data-pg-has-icon="true"]');
+        markedInputs.forEach(input => {
+            if (!this.icons.has(input)) {
+                // It's marked but we don't track it. Check if icon exists in DOM.
+                const inputId = this.getInputId(input);
+                const domIcon = document.querySelector(`[data-input-id="${inputId}"]`);
+                if (!domIcon) {
+                    // No icon exists, clear marker
+                    delete input.dataset.pgHasIcon;
+                } else {
+                    // Icon exists but not in our map? Re-track it if possible, or remove icon to let it be recreated
+                    domIcon.remove();
+                    delete input.dataset.pgHasIcon;
+                }
+            }
+        });
     }
 
     positionIconFast(icon, inputElement) {
@@ -1342,14 +1385,16 @@ class MagicalEnhancer {
             if (message.action === 'stream_chunk') {
                 const aiText = message.chunk?.data || '';
                 if (aiText) {
+                    // Update our internal tracker of the raw text
+                    this.lastReceivedText = aiText;
                     // Safely render text with preserved line breaks
                     streamText.innerHTML = this.toHtmlWithLineBreaks(aiText);
                 }
             } else if (message.action === 'stream_complete') {
-                // CRITICAL FIX: Get the original text with line breaks preserved
-                // Convert <br> tags back to \n for proper insertion
-                const originalText = streamText.innerHTML.replace(/<br\s*\/?>/gi, '\n');
-                this.showInsertButton(popup, originalText, inputElement);
+                // CRITICAL FIX: Use the exact raw text from backend, or fall back to last received chunk
+                // DO NOT read from innerHTML to avoid double-encoding issues (e.g. &lt; -> &amp;lt;)
+                const finalText = message.chunk?.data || this.lastReceivedText || '';
+                this.showInsertButton(popup, finalText, inputElement);
             } else if (message.action === 'limit_reached') {
                 // Backend detected limit reached during streaming
 
@@ -1992,6 +2037,7 @@ Additional context: Please structure your response in a clear, organized manner 
         
         // GEMINI-SPECIFIC FIX: Detect if we're on Gemini and use special handling
         const isGemini = window.location.hostname.includes('gemini.google.com');
+        const isClaude = window.location.hostname.includes('claude.ai');
         
         if (isGemini) {
             // GEMINI SPECIAL HANDLING: More aggressive approach to prevent interference
@@ -2059,8 +2105,29 @@ Additional context: Please structure your response in a clear, organized manner 
                 clearInterval(monitorInterval);
             }, 3000);
             
+        } else if (isClaude) {
+            // CLAUDE SPECIFIC FIX: Use execCommand 'insertText' for reliable insertion
+            // Claude's editor handles this better than paste events or direct DOM manipulation
+            
+            // 1. Focus
+            inputElement.focus();
+            
+            // 2. Select all content
+            const range = document.createRange();
+            range.selectNodeContents(inputElement);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // 3. Execute insertText command (replaces selection)
+            // This correctly handles newlines and triggers internal editor state updates
+            document.execCommand('insertText', false, text);
+            
+            // 4. Dispatch input event to be safe
+            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+            
         } else {
-            // STANDARD INSERTION for other platforms (ChatGPT, Claude, Perplexity, etc.)
+            // STANDARD INSERTION for other platforms (ChatGPT, Perplexity, etc.)
             
             // CRITICAL FIX: Select all existing text first, then replace with paste
             if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
