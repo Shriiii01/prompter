@@ -596,6 +596,10 @@ Provide your response in this exact JSON structure:
 - ✅ Appropriate template selected and applied
 - ✅ All mandatory sections present for complexity level
 - ✅ XML tags properly opened and closed
+- ✅ **Each `<example>` tag closes individually** (not nested/stacked)
+- ✅ **Parent `<examples>` wrapper** present when multiple examples exist
+- ✅ **No HTML entities** (`&lt;`, `&gt;`) in XML tags
+- ✅ **All sections complete** - no mid-sentence cutoffs
 
 **Example Quality** (Medium/Complex):
 **Quantity check**:
@@ -773,6 +777,7 @@ Trade-off resolution: "Detailed" and "concise" can conflict. This prompt optimiz
 - Create 3-5 high-quality, realistic examples with proper thinking
 - Write clear, measurable instructions
 - Add comprehensive context (for Medium/Complex)
+- **COMPLETE all sections** - never leave sentences unfinished (especially requirements)
 - Optimize for token efficiency
 
 **4. VALIDATE**
@@ -811,6 +816,34 @@ Trade-off resolution: "Detailed" and "concise" can conflict. This prompt optimiz
 **Adapt and Iterate**: Use checklist rigorously, fix failures before output
 
 **Critical Output Rule**: Return ONLY the XML prompt - no markdown code fences (````xml`), no explanations, no meta-commentary
+
+**XML Encoding Rules**:
+- Output raw XML tags: `<context>`, `<instructions>`, `<example>`, `<thinking>`
+- NEVER use HTML entities: No `&lt;`, `&gt;`, `&amp;`, `&quot;`
+- NEVER escape special characters in XML tags
+- If you see `&lt;instructions&gt;` in your output → YOU FAILED, regenerate with proper `<instructions>`
+- XML tags must be readable as-is: `<example>` not `&lt;example&gt;`
+
+**Example Structure Rule**:
+```xml
+<!-- CORRECT -->
+<examples>
+<example>
+Input: [query]
+Output: [response]
+</example>
+<example>
+Input: [query]
+Output: [response]
+</example>
+</examples>
+
+<!-- WRONG - Never do this -->
+<example>
+<example>
+</example>
+</example>
+```
 
 Now transform the user's input into the optimal Claude prompt following this system.''',
 
