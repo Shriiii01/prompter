@@ -507,7 +507,7 @@ class DatabaseService:
     async def check_user_subscription_status(self, email: str) -> Dict:
         """Check user's subscription status and handle expiry."""
         if not self._is_configured():
-                return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 10, "subscription_expires": None}
+                return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 999999, "subscription_expires": None}
         
         try:
             user = await self.get_user_by_email(email)
@@ -531,14 +531,14 @@ class DatabaseService:
                 return {
                     "subscription_tier": subscription_tier,
                     "daily_prompts_used": user.get("daily_prompts_used", 0),
-                    "daily_limit": 10 if subscription_tier == "free" else None,
+                    "daily_limit": 999999, # Unlimited for everyone
                     "subscription_expires": subscription_expires
                 }
             else:
-                return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 10, "subscription_expires": None}
+                return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 999999, "subscription_expires": None}
         except Exception as e:
             logger.error(f"Error checking subscription status: {str(e)}")
-            return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 10, "subscription_expires": None}
+            return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 999999, "subscription_expires": None}
 
     async def _downgrade_to_free(self, email: str) -> bool:
         """Downgrade user from pro to free subscription."""
@@ -708,10 +708,10 @@ class DatabaseService:
                                 current_daily = 0
                                 last_reset = today
 
-                        # Check daily limit for free users
+                        # Check daily limit - LOG ONLY, NO BLOCKING
                         if tier == "free" and current_daily >= 10:
-                            logger.warning(f"Free user {email} reached daily limit")
-                            return current_prompts
+                            logger.info(f"Free user {email} reached hypothetical daily limit (10) - Allowing anyway")
+                            # return current_prompts  <-- REMOVED BLOCKING
 
                         # Increment counters
                         new_prompts = current_prompts + 1

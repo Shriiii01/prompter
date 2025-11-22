@@ -47,6 +47,7 @@ class MagicalEnhancer {
         this.isStreaming = false; // Track streaming state
         this.currentStreamAbortController = null; // Stream abort controller
         this.streamMessageListener = null; // Stream message listener
+        this.isInserting = false; // Flag to prevent duplicate icons during insertion
         this.init();
     }
 
@@ -504,6 +505,9 @@ class MagicalEnhancer {
         
         // Set up optimized observer for dynamic content
         this.observer = new MutationObserver((mutations) => {
+            // Skip if we are currently inserting text (prevents duplicate icons)
+            if (this.isInserting) return;
+
             if (this.isActive && mutations.length > 0) {
                 // Only scan if there are significant changes
                 const hasRelevantChanges = mutations.some(mutation => {
@@ -574,11 +578,6 @@ class MagicalEnhancer {
             return;
         }
         this.lastScanTime = now;
-
-        // DEBUG: Claude-specific logging
-        if (window.location.hostname.includes('claude.ai')) {
-            console.log('🔍 [PromptGrammarly] Scanning for inputs on Claude...');
-        }
 
         // AGGRESSIVE CLEANUP: First remove ALL duplicates immediately
         // This ensures we start clean every scan
@@ -1243,34 +1242,24 @@ class MagicalEnhancer {
                                 if (result.user_info) {
                                     result.user_info.subscription_tier = userTier;
                                     result.user_info.daily_prompts_used = dailyUsed;
-                                    result.user_info.daily_limit = dailyLimit;
+                                    // UNLIMITED for everyone
+                                    result.user_info.daily_limit = 999999;
                                     chrome.storage.local.set({ user_info: result.user_info });
                                 }
                             });
                         } catch (storageError) {
                         }
 
-                        // PRO USERS: No limits, allow all requests
-                        if (userTier === 'pro') {
-                            // Pro users can proceed without any limits
-                        }
-                        // FREE USERS: Check daily limit
-                        else if (userTier === 'free' && dailyUsed >= 10) {
-                            this.showLimitNotification(inputElement);
-                            icon.classList.remove('processing');
-                            return;
-                        }
-                        // FREE USERS: Still have prompts remaining
-                        else {
-                        }
+                        // NO LIMITS - Allow all requests for everyone
+                        // Free/Pro distinction removed for limits
                     } else {
                     }
                 } catch (backendError) {
-                    // Allow request if backend check fails - backend will still enforce limits
+                    // Allow request if backend check fails
                 }
             }
         } catch (error) {
-            // Allow request on error - backend safety net will catch it
+            // Allow request on error
         }
 
         if (this.activePopup) {
@@ -1481,31 +1470,9 @@ class MagicalEnhancer {
                 // Don't use cached data - force fresh backend check
             }
 
-            //  FINAL SAFETY CHECK: Only block if actually at limit
-            if (finalUserTier === 'free' && userEmail) {
-                try {
-                    const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
-                    const finalCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
-                        method: 'GET',
-                        headers: { 'Content-Type': 'application/json' },
-                        signal: AbortSignal.timeout(2000)
-                    });
+            //  FINAL SAFETY CHECK: REMOVED - UNLIMITED ACCESS
+            // We no longer block requests based on daily limits
 
-                    if (finalCheck.ok) {
-                        const finalStatus = await finalCheck.json();
-                        const finalDailyUsed = finalStatus.daily_prompts_used || 0;
-
-                        // Only block if actually at 10+ prompts (limit reached)
-                        if (finalDailyUsed >= 10) {
-                            this.showLimitNotification(inputElement);
-                            streamText.textContent = 'You\'ve used all 10 free prompts today. Your free prompts will reset tomorrow, or upgrade to Pro for unlimited access.';
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    // Allow if check fails - backend will enforce
-                }
-            }
 
             // Test background script connectivity first
             chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
@@ -1619,175 +1586,16 @@ class MagicalEnhancer {
 
     }
 
-    // This method is now deprecated - we use showFinalResult instead
+    // This method is now deprecated - Upgrade modal removed
     showUpgradeModal(popup, details) {
-
-        const content = popup.querySelector('.ce-content');
-        content.innerHTML = `
-            <div class="ce-upgrade-modal">
-                <div class="ce-upgrade-header">
-                    <h3>Free Prompts Used Up!</h3>
-                </div>
-                <div class="ce-upgrade-body">
-                    <p>You've used all <strong>10 free prompts</strong> today.</p>
-                    <p>Your free prompts will reset tomorrow, or upgrade to Pro for <strong>unlimited access</strong>!</p>
-                    <div class="ce-upgrade-features">
-                        <div class="ce-feature"> Unlimited daily prompts</div>
-                        <div class="ce-feature"> Priority processing</div>
-                        <div class="ce-feature"> Advanced AI models</div>
-                    </div>
-                    <div class="ce-upgrade-price">
-                        <span class="ce-price">$5<span class="ce-period">/month</span></span>
-                        <span class="ce-cancel">Cancel anytime</span>
-                    </div>
-                </div>
-                <div class="ce-upgrade-actions">
-                    <button class="ce-upgrade-btn" onclick="window.open('${window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000'}/api/v1/payment/checkout-page?order_id=temp&user_email=${details?.user_email || ''}', '_blank')">
-                        Upgrade to Pro
-                    </button>
-                    <button class="ce-cancel-btn" onclick="this.closest('.ce-popup').remove()">
-                        Maybe Later
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Add styles for upgrade modal
-        const style = document.createElement('style');
-        style.textContent = `
-            .ce-upgrade-modal {
-                text-align: center;
-                padding: 20px;
-                max-width: 350px;
-            }
-            .ce-upgrade-header h3 {
-                color: #ff6b35;
-                margin: 0 0 15px 0;
-                font-size: 18px;
-            }
-            .ce-upgrade-body p {
-                margin: 10px 0;
-                color: #333;
-            }
-            .ce-upgrade-features {
-                background: #f8f9fa;
-                padding: 15px;
-                border-radius: 8px;
-                margin: 15px 0;
-            }
-            .ce-feature {
-                color: #28a745;
-                margin: 5px 0;
-                font-size: 14px;
-            }
-            .ce-upgrade-price {
-                margin: 15px 0;
-            }
-            .ce-price {
-                font-size: 24px;
-                font-weight: bold;
-                color: #007bff;
-            }
-            .ce-period {
-                font-size: 14px;
-                color: #666;
-            }
-            .ce-cancel {
-                display: block;
-                color: #666;
-                font-size: 12px;
-                margin-top: 5px;
-            }
-            .ce-upgrade-actions {
-                display: flex;
-                gap: 10px;
-                margin-top: 20px;
-            }
-            .ce-upgrade-btn {
-                flex: 1;
-                background: #007bff;
-                color: white;
-                border: none;
-                padding: 12px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-            }
-            .ce-upgrade-btn:hover {
-                background: #0056b3;
-            }
-            .ce-cancel-btn {
-                flex: 1;
-                background: #6c757d;
-                color: white;
-                border: none;
-                padding: 12px;
-                border-radius: 6px;
-                cursor: pointer;
-            }
-            .ce-cancel-btn:hover {
-                background: #545b62;
-            }
-        `;
-        document.head.appendChild(style);
+        // No-op: Upgrade functionality removed
+        return;
     }
 
-    // Center notification - 3 seconds only
+    // Center notification - DISABLED (Unlimited Mode)
     showLimitNotification(inputElement) {
-        // Remove any existing notification
-        const existingNotification = document.querySelector('.ce-limit-notification');
-        if (existingNotification) {
-            existingNotification.remove();
-        }
-
-        // Create center notification
-        const notification = document.createElement('div');
-        notification.className = 'ce-limit-notification';
-        notification.innerHTML = `
-            <div style="
-                background: #DC2626;
-                color: #FFFFFF;
-                padding: 8px 16px;
-                font-size: 14px;
-                font-weight: 500;
-                text-align: center;
-                box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-                z-index: 99999;
-                position: fixed;
-                top: 10%;
-                left: 50%;
-                transform: translate(-50%, -50%) scale(0.8);
-                border-radius: 6px;
-                border: 2px solid #B91C1C;
-                white-space: normal;
-                transition: transform 0.3s ease-out;
-                max-width: 280px;
-                line-height: 1.3;
-            ">
-                You've used all 10 free prompts today. Your free prompts will reset tomorrow, or upgrade to Pro for unlimited access.
-            </div>
-        `;
-
-        document.body.appendChild(notification);
-
-        // Animate in from center
-        setTimeout(() => {
-            const notificationBar = notification.querySelector('div');
-            notificationBar.style.transform = 'translate(-50%, -50%) scale(1)';
-        }, 10);
-
-        // Auto remove after 3 seconds with animation
-        setTimeout(() => {
-            if (notification.parentNode) {
-                const notificationBar = notification.querySelector('div');
-                notificationBar.style.transform = 'translate(-50%, -50%) scale(0.8)';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.remove();
-                    }
-                }, 300);
-            }
-        }, 3000);
+        // No-op: Limits are removed
+        return;
     }
 
     async showEnhancedResultWithAnimation(popup, enhancedText, inputElement) {
@@ -2032,6 +1840,9 @@ Additional context: Please structure your response in a clear, organized manner 
         // CRITICAL FIX: Use text EXACTLY as it appears in the small UI - NO processing!
         // The small UI shows perfect structure, so we must preserve it exactly
         
+        // PREVENT DUPLICATE ICONS: Stop observer during insertion
+        this.isInserting = true;
+        
         // Focus the element first
         inputElement.focus();
         
@@ -2103,6 +1914,7 @@ Additional context: Please structure your response in a clear, organized manner 
             const monitorInterval = setInterval(preventReversion, 100);
             setTimeout(() => {
                 clearInterval(monitorInterval);
+                this.isInserting = false; // Re-enable observer
             }, 3000);
             
         } else if (isClaude) {
@@ -2125,6 +1937,11 @@ Additional context: Please structure your response in a clear, organized manner 
             
             // 4. Dispatch input event to be safe
             inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // Re-enable observer after short delay
+            setTimeout(() => {
+                this.isInserting = false;
+            }, 500);
             
         } else {
             // STANDARD INSERTION for other platforms (ChatGPT, Perplexity, etc.)
@@ -2162,6 +1979,11 @@ Additional context: Please structure your response in a clear, organized manner 
                 // Also trigger input event to ensure the platform recognizes the change
                 inputElement.dispatchEvent(new Event('input', { bubbles: true }));
                 inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                // Re-enable observer
+                setTimeout(() => {
+                    this.isInserting = false;
+                }, 500);
             }, 10); // Small delay to ensure selection is complete
         }
     }

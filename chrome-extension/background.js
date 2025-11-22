@@ -207,39 +207,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                                     if (result.user_info) {
                                         result.user_info.subscription_tier = userTier;
                                         result.user_info.daily_prompts_used = dailyUsed;
-                                        result.user_info.daily_limit = dailyLimit;
+                                        // UNLIMITED MODE
+                                        result.user_info.daily_limit = 999999;
                                         chrome.storage.local.set({ user_info: result.user_info });
                                     }
                                 });
                             } catch (storageError) {
                             }
 
-                            // PRO USERS: Allow all requests (unlimited access)
-                            if (userTier === 'pro') {
-                                // Pro users can proceed without any limits
-                            }
-                            // FREE USERS: Block if at daily limit
-                            else if (userTier === 'free' && dailyUsed >= 10) {
-                                // Backend block: Free user at limit - blocking API call
-
-                                const targetTabId = globalThis.activeEnhancementTabId || tabId;
-                                chrome.tabs.sendMessage(targetTabId, {
-                                    action: 'limit_reached',
-                                    details: {
-                                        user_email: userEmail,
-                                        daily_prompts_used: dailyUsed,
-                                        daily_limit: dailyLimit,
-                                        subscription_tier: userTier
-                                    }
-                                });
-                                return;
-                            }
-
+                            // PRO/FREE Distinction removed - Allow all
                         } else {
                         }
                     } catch (statusError) {
-                        // Backend status check failed
-                        // Continue with request even if check fails (don't block due to network issues)
+                        // Backend status check failed - Allow anyway
                     }
                 }
 
