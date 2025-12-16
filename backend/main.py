@@ -30,9 +30,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Prompt Assistant API",
-    description="AI-powered prompt enhancement service with Perplexity and Meta AI support",
-    version="1.0.1",
+    title="PromptGrammerly API",
+    description="your personal PromptEngineer",
+    version="2.0.4",
     docs_url="/docs",
     redoc_url="/redoc"
 )
