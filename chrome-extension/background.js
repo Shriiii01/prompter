@@ -226,7 +226,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
 
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 45000); // Longer timeout for streaming
+                const timeout = setTimeout(() => controller.abort(), 45000); // 45 seconds - faster timeout
 
 
                 const res = await fetch(`${apiUrl}/api/stream-enhance`, {
@@ -254,7 +254,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                // Read the stream (no count updates will be emitted by backend now)
+                // REAL-TIME STREAMING: Process chunks immediately as they arrive
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
@@ -264,14 +264,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         const { done, value } = await reader.read();
                         
                         if (done) {
-
                             break;
                         }
 
-                        // Decode chunk and add to buffer
-                        buffer += decoder.decode(value, { stream: true });
+                        // Decode chunk IMMEDIATELY and process
+                        const chunk = decoder.decode(value, { stream: true });
+                        buffer += chunk;
                         
-                        // Process complete lines
+                        // Process ALL complete lines IMMEDIATELY (no waiting)
                         const lines = buffer.split('\n');
                         buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
@@ -295,21 +295,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                                     // Backend no longer emits count_update here; counting happens on Insert
                                     
-                                    // Handle limit reached
-                                    if (chunk.type === 'limit_reached') {
-                                        // Use stored tab ID to handle cross-tab switching
-                                        const targetTabId = globalThis.activeEnhancementTabId || tabId;
-                                        chrome.tabs.sendMessage(targetTabId, {
-                                            action: 'limit_reached',
-                                            details: {
-                                                user_email: userEmail,
-                                                daily_prompts_used: chunk.data?.daily_prompts_used || 10,
-                                                daily_limit: chunk.data?.daily_limit || 10,
-                                                subscription_tier: chunk.data?.subscription_tier || 'free'
-                                            }
-                                        });
-                                        return; // Stop processing stream
-                                    }
 
                                     // Forward chunk to content script immediately (but skip count updates)
                                     // Use stored tab ID to handle cross-tab switching

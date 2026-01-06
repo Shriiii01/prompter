@@ -15,10 +15,10 @@
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
         "https://claude.ai/*",
+        "https://claude.ai/new/*",
         "https://gemini.google.com/*",
         "https://perplexity.ai/*",
         "https://www.perplexity.ai/*",
-        "https://claude.ai/new/*",
         "https://prompter-production-76a3.up.railway.app/*"
     ],
     "content_scripts": [
@@ -27,9 +27,9 @@
                 "https://chat.openai.com/*",
                 "https://chatgpt.com/*",
                 "https://claude.ai/*",
+                "https://claude.ai/new/*",
                 "https://gemini.google.com/*",
-                "https://www.perplexity.ai/*",
-                "https://claude.ai/new/*"
+                "https://www.perplexity.ai/*"
             ],
             "js": ["config.js", "magical-enhancer.js"],
             "run_at": "document_end"

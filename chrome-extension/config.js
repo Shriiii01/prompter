@@ -10,12 +10,12 @@ const PRODUCTION_CONFIG = {
   
   // API endpoints (don't change these)
   endpoints: {
-    enhance: '/api/v1/enhance',
+    enhance: '/api/stream-enhance',
     quickTest: '/api/v1/quick-test',
     health: '/api/v1/health',
     userStats: '/api/v1/user/stats',
     userCount: '/api/v1/user/count',
-    incrementCount: '/api/v1/user/increment-count'
+    incrementCount: '/api/v1/users/{email}/increment'
   }
 };
 

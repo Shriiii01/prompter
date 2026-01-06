@@ -781,5 +781,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ====================================
 // 🔄 ENHANCED USER DASHBOARD FUNCTION
 // ====================================
-
-

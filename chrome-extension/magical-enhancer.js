@@ -327,8 +327,8 @@ class MagicalEnhancer {
         style.textContent = `
             .ce-icon {
                 position: fixed !important;
-                width: 40px !important;
-                height: 40px !important;
+                width: 32px !important;
+                height: 32px !important;
                 background: #2c2c2c !important;
                 border: none !important;
                 border-radius: 50% !important;
@@ -338,7 +338,7 @@ class MagicalEnhancer {
                 align-items: center !important;
                 justify-content: center !important;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-                font-size: 22px !important;
+                font-size: 16px !important;
                 font-weight: bold !important;
                 color: white !important;
                 transition: all 0.2s ease !important;
@@ -371,11 +371,6 @@ class MagicalEnhancer {
                 50% { opacity: 0.8; transform: scale(1.05); }
             }
 
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-
             .ce-popup {
                 position: fixed !important;
                 width: 400px !important;
@@ -392,6 +387,7 @@ class MagicalEnhancer {
                 display: flex !important;
                 flex-direction: column !important;
                 padding-bottom: 60px !important; /* Space for the insert button */
+                cursor: default !important; /* Ensure default cursor */
             }
 
             .ce-close-btn {
@@ -423,6 +419,7 @@ class MagicalEnhancer {
                 line-height: 1.6 !important;
                 position: relative !important;
                 padding-bottom: 16px !important;
+                cursor: text !important; /* Text cursor for content */
             }
 
             .ce-loading {
@@ -469,13 +466,6 @@ class MagicalEnhancer {
                     sendResponse({ success: true });
             } else if (message.action === 'deactivate') {
                     this.deactivate();
-                    sendResponse({ success: true });
-            } else if (message.action === 'limit_reached') {
-                    // Handle limit reached from background script
-                    const inputElement = this.findActiveInput();
-                    if (inputElement) {
-                        this.showLimitNotification(inputElement);
-                    }
                     sendResponse({ success: true });
             }
         });
@@ -1368,27 +1358,29 @@ class MagicalEnhancer {
         // Show loading
         streamText.textContent = 'Enhancing your prompt...';
 
-        // Set up simple message listener
+        // Initialize accumulator for real-time streaming
+        this.lastReceivedText = '';
+        
+        // Set up simple message listener for REAL-TIME streaming (no animation, no delays)
         this.streamMessageListener = (message) => {
             if (message.action === 'stream_chunk') {
                 const aiText = message.chunk?.data || '';
                 if (aiText) {
-                    // Update our internal tracker of the raw text
-                    this.lastReceivedText = aiText;
-                    // Safely render text with preserved line breaks
-                    streamText.innerHTML = this.toHtmlWithLineBreaks(aiText);
+                    // NATURAL STREAMING: Display chunks exactly as they arrive from OpenAI API
+                    // No animation, no delays, no buffering - just show what we get from API
+                    this.lastReceivedText += aiText;  // Accumulate chunks
+                    // Update display IMMEDIATELY - words appear naturally as OpenAI generates them
+                    streamText.innerHTML = this.toHtmlWithLineBreaks(this.lastReceivedText);
                 }
             } else if (message.action === 'stream_complete') {
-                // CRITICAL FIX: Use the exact raw text from backend, or fall back to last received chunk
-                // DO NOT read from innerHTML to avoid double-encoding issues (e.g. &lt; -> &amp;lt;)
+                // Use accumulated text or final text from backend
                 const finalText = message.chunk?.data || this.lastReceivedText || '';
-                this.showInsertButton(popup, finalText, inputElement);
-            } else if (message.action === 'limit_reached') {
-                // Backend detected limit reached during streaming
-
-                this.showLimitNotification(inputElement);
-                // Close popup since limit is reached
-                this.closePopup();
+                // Ensure we have the complete text
+                if (finalText && !this.lastReceivedText) {
+                    this.lastReceivedText = finalText;
+                    streamText.innerHTML = this.toHtmlWithLineBreaks(finalText);
+                }
+                this.showInsertButton(popup, finalText || this.lastReceivedText, inputElement);
             } else if (message.action === 'stream_error') {
                 streamText.textContent = `Error: ${message.error}`;
             }
@@ -1453,34 +1445,7 @@ class MagicalEnhancer {
                 return;
             }
 
-            // DOUBLE SAFETY CHECK: FINAL VERIFICATION before API call
-            // This is the LAST LINE OF DEFENSE against money-wasting API calls
-            const finalCheckData = await new Promise((resolve) => {
-                chrome.storage.local.get(['user_info', 'last_known_prompt_count'], resolve);
-            });
-
-            const finalPromptCount = finalCheckData.last_known_prompt_count || 0;
-            const finalUserTier = finalCheckData.user_info?.subscription_tier || 'free';
-            const cachedEmail = finalCheckData.user_info?.email;
-
-            // CRITICAL FIX: Verify we're checking the SAME user who's currently logged in
-            if (cachedEmail && cachedEmail !== userEmail) {
-                // Email mismatch detected, forcing fresh backend check
-                // Don't use cached data - force fresh backend check
-            }
-
-            //  FINAL SAFETY CHECK: REMOVED - UNLIMITED ACCESS
-            // We no longer block requests based on daily limits
-
-
-            // Test background script connectivity first
-            chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
-                if (chrome.runtime.lastError) {
-                    streamText.textContent = 'Please reload your page.';
-                    return;
-                }
-                // Background script is running
-            });
+            // SPEED OPTIMIZATION: Skip all safety checks for faster streaming
 
             const messageData = {
                 action: 'stream_enhance',
@@ -1494,11 +1459,11 @@ class MagicalEnhancer {
 
             // Sending API call to background script
 
-            // Add timeout for message sending
+            // Add timeout for message sending (optimized for speed)
             const messageTimeout = setTimeout(() => {
                 // API call timeout, background script not responding
                 streamText.textContent = 'Error: Background script not responding. Please refresh the page.';
-            }, 5000);
+            }, 30000); // 30 seconds - faster timeout
 
             chrome.runtime.sendMessage(messageData, (response) => {
                 clearTimeout(messageTimeout);
@@ -1591,11 +1556,6 @@ class MagicalEnhancer {
         return;
     }
 
-    // Center notification - DISABLED (Unlimited Mode)
-    showLimitNotification(inputElement) {
-        // No-op: Limits are removed
-        return;
-    }
 
     async showEnhancedResultWithAnimation(popup, enhancedText, inputElement) {
         const content = popup.querySelector('.ce-content');
@@ -2225,7 +2185,7 @@ Additional context: Please structure your response in a clear, organized manner 
     makePopupDraggable(popup) {
         const content = popup.querySelector('.ce-content');
         let isDragging = false, startX, startY, startLeft, startTop;
-        content.style.cursor = 'move';
+        content.style.cursor = 'default'; // Default cursor initially
 
         content.onmousedown = (e) => {
             // Don't drag if clicking on buttons
@@ -2256,6 +2216,7 @@ Additional context: Please structure your response in a clear, organized manner 
 
             document.onmouseup = () => {
                 isDragging = false;
+                content.style.cursor = 'default'; // Revert to default cursor
                 document.onmousemove = null;
                 document.onmouseup = null;
             };
