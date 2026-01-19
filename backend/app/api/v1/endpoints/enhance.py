@@ -5,8 +5,7 @@ from app.models.response import EnhancementResult, PromptAnalysis, ErrorResponse
 from app.core.enhancer import PromptEnhancer
 from app.core.analyzer import PromptAnalyzer
 from app.core.model_specific_enhancer import ModelSpecificEnhancer
-from app.services.ai_service import AIService, ai_service
-from app.services.multi_provider import MultiProviderService
+from app.services.openai_service import OpenAIService, OpenAIService as openai_service
 from app.utils.auth import get_email_from_token, get_user_info_from_token
 from app.utils.database import db_service
 from app.core.config import config
@@ -21,33 +20,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["enhancement"])
 
 def get_enhancer():
-    """Dependency to get MultiProviderService enhancer instance"""
+    """Dependency to get OpenAI-only enhancer instance"""
     try:
-        logger.info(f" Initializing MultiProviderService enhancer...")
+        logger.info(f" Initializing OpenAI GPT-5 Mini enhancer...")
         logger.info(f"🔑 OpenAI API key available: {bool(config.settings.openai_api_key)}")
-        logger.info(f"🔑 Gemini API key available: {bool(config.settings.gemini_api_key)}")
-        logger.info(f"🔑 Together API key available: {bool(config.settings.together_api_key)}")
 
-        # Initialize MultiProviderService with all available API keys
-        multi_provider_service = MultiProviderService(
-            openai_key=config.settings.openai_api_key,
-            gemini_key=config.settings.gemini_api_key,
-            together_key=config.settings.together_api_key
-        )
+        # Initialize with OpenAI service only
+        openai_service = OpenAIService(api_key=config.settings.openai_api_key)
         
-        logger.info(" MultiProviderService initialized successfully")
-        logger.info(f" MultiProviderService type: {type(multi_provider_service)}")
-        
-        # Create ModelSpecificEnhancer with MultiProviderService
-        logger.info(" Creating ModelSpecificEnhancer with MultiProviderService")
-        enhancer = ModelSpecificEnhancer(multi_provider_service=multi_provider_service)
-        logger.info(f" ModelSpecificEnhancer created: {type(enhancer)}")
+        # Create ModelSpecificEnhancer with OpenAI service
+        enhancer = ModelSpecificEnhancer(openai_service=openai_service)
+        logger.info(" ModelSpecificEnhancer (OpenAI ONLY) initialized successfully")
         return enhancer
         
     except Exception as e:
-        logger.error(f" Failed to initialize MultiProviderService enhancer: {str(e)}")
-        # Return ModelSpecificEnhancer without MultiProviderService - it has its own fallback logic
-        logger.info("Creating ModelSpecificEnhancer without MultiProviderService (will use internal fallback)")
+        logger.error(f" Failed to initialize enhancer: {str(e)}")
+        # Return ModelSpecificEnhancer without service - it has its own fallback logic
         return ModelSpecificEnhancer()
 
 @router.post("/enhance", response_model=EnhancementResult)

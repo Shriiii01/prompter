@@ -23,39 +23,27 @@ class OpenAIService:
         self.api_key = api_key
         logger.info(" OpenAI service initialized")
     
-    async def enhance_with_model_specific_prompt(self, prompt: str, target_model: str = "gpt-4o") -> str:
-        """Enhance prompt using OpenAI API"""
+    async def enhance_with_model_specific_prompt(self, prompt: str, target_model: str = "gpt-5-mini") -> str:
+        """Enhance prompt using OpenAI API with GPT-5 Mini"""
         try:
-            logger.info(f" OpenAI enhancing prompt with {target_model}")
+            logger.info(f" OpenAI enhancing prompt for target: {target_model} using gpt-5-mini")
             
             # Use sophisticated model-specific system prompt
             system_prompt = ModelSpecificPrompts.get_system_prompt(target_model)
 
-            if "gpt-5" in target_model or "gpt-4o" in target_model:
-                # Determine which model to use for enhancement
-                # We only use gpt-5-mini as the enhancer.
-                enhancement_model = "gpt-5-mini"
-                
-                response = await self.client.chat.completions.create(
-                    model=enhancement_model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"Please enhance this prompt:\n\n{prompt}"}
-                    ],
-                    max_completion_tokens=5000,
-                    timeout=60
-                )
-            else:
-                response = await self.client.chat.completions.create(
-                    model=target_model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"Please enhance this prompt:\n\n{prompt}"}
-                    ],
-                    max_tokens=1000,
-                    temperature=0.7,
-                    timeout=30
-                )
+            # We ONLY use gpt-5-mini as the enhancer for all target models
+            enhancement_model = "gpt-5-mini"
+            
+            response = await self.client.chat.completions.create(
+                model=enhancement_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Please enhance this prompt:\n\n{prompt}"}
+                ],
+                max_completion_tokens=2000,
+                temperature=0.7,
+                timeout=45
+            )
             
             if not response.choices[0].message.content:
                 logger.warning(f" OpenAI returned empty content. Full response: {response}")

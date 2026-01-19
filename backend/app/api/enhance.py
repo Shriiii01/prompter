@@ -2,11 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends, Query, Request, Header, s
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.models.request import EnhanceRequest, AnalyzeRequest, LLMModel
 from app.models.response import EnhancementResult, PromptAnalysis, ErrorResponse
-from app.core.enhancer import PromptEnhancer
-from app.core.analyzer import PromptAnalyzer
 from app.core.model_specific_enhancer import ModelSpecificEnhancer
-from app.services.ai_service import AIService, ai_service
-from app.services.multi_provider import MultiProviderService
+from app.services.openai_service import OpenAIService
 from app.utils.auth import get_email_from_token, get_user_info_from_token
 import time
 from app.utils.database import db_service
@@ -21,33 +18,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["enhancement"])  # No prefix here, will be added in main.py
 
 def get_enhancer():
-    """Dependency to get MultiProviderService enhancer instance"""
+    """Dependency to get OpenAI-only enhancer instance"""
     try:
-        logger.info(f" Initializing MultiProviderService enhancer...")
-        logger.info(f"🔑 OpenAI API key available: {bool(config.settings.openai_api_key)}")
-        logger.info(f"🔑 Gemini API key available: {bool(config.settings.gemini_api_key)}")
-        logger.info(f"🔑 Together API key available: {bool(config.settings.together_api_key)}")
-
-        # Initialize MultiProviderService with all available API keys
-        multi_provider_service = MultiProviderService(
-            openai_key=config.settings.openai_api_key,
-            gemini_key=config.settings.gemini_api_key,
-            together_key=config.settings.together_api_key
-        )
+        logger.info(f" Initializing OpenAI GPT-5 Mini enhancer...")
+        # Initialize with OpenAI service only
+        openai_service = OpenAIService(api_key=config.settings.openai_api_key)
         
-        logger.info(" MultiProviderService initialized successfully")
-        logger.info(f" MultiProviderService type: {type(multi_provider_service)}")
-        
-        # Create ModelSpecificEnhancer with MultiProviderService
-        logger.info(" Creating ModelSpecificEnhancer with MultiProviderService")
-        enhancer = ModelSpecificEnhancer(multi_provider_service=multi_provider_service)
-        logger.info(f" ModelSpecificEnhancer created: {type(enhancer)}")
+        # Create ModelSpecificEnhancer with OpenAI service
+        enhancer = ModelSpecificEnhancer(openai_service=openai_service)
         return enhancer
         
     except Exception as e:
-        logger.error(f" Failed to initialize MultiProviderService enhancer: {str(e)}")
-        # Return ModelSpecificEnhancer without MultiProviderService - it has its own fallback logic
-        logger.info("Creating ModelSpecificEnhancer without MultiProviderService (will use internal fallback)")
+        logger.error(f" Failed to initialize enhancer: {str(e)}")
         return ModelSpecificEnhancer()
 
 def get_analyzer():
@@ -208,41 +190,24 @@ async def health_check():
         services_status = {
             "openai": {
                 "available": bool(config.settings.openai_api_key),
-                "configured": bool(enhancer.multi_provider_service),
                 "purpose": "Primary LLM for all enhancements"
             },
-            "gpt_4o_mini": {
+            "gpt_5_mini": {
                 "available": bool(config.settings.openai_api_key),
-                "configured": bool(enhancer.multi_provider_service),
-                "purpose": "GPT-4o-mini for all model-specific enhancements"
-            },
-            "model_specific_enhancement": {
-                "available": True,
-                "configured": True,
-                "description": "Multi-provider system with model-specific prompts for all target models"
+                "purpose": "GPT-5-mini for all model-specific enhancements"
             }
         }
         
-        # Check service availability - ModelSpecificEnhancer uses MultiProviderService
-        multi_provider_available = bool(enhancer.multi_provider_service)
-        
-        # Determine health status and strategy
-        if multi_provider_available:
-            health_status = "healthy"
-            strategy = "Multi-provider system (OpenAI → Gemini → Together) with model-specific prompts"
-            message = "Multi-provider AI service available for all model enhancements"
-        else:
-            health_status = "degraded"
-            strategy = "Fallback enhancement only"
-            message = "No AI providers configured - using fallback enhancement"
+        # Check service availability
+        is_available = bool(config.settings.openai_api_key)
         
         return {
-            "status": health_status,
+            "status": "healthy" if is_available else "degraded",
             "version": config.settings.app_version,
             "timestamp": time.time(),
             "services": services_status,
-            "enhancement_strategy": strategy,
-            "message": message
+            "enhancement_strategy": "Strict OpenAI GPT-5 Mini enhancement",
+            "message": "OpenAI service available for all model enhancements" if is_available else "OpenAI not configured"
         }
         
     except Exception as e:
@@ -273,12 +238,12 @@ async def get_pipeline_info(enhancer: ModelSpecificEnhancer = Depends(get_enhanc
             ],
             "features": [
                 "Model-specific system prompts",
-                "Unified OpenAI GPT-4o-mini enhancement",
+                "Unified OpenAI GPT-5 Mini enhancement",
                 "Intelligent quality analysis",
                 "Comprehensive caching",
                 "Target model detection"
             ],
-            "strategy": "OpenAI GPT-4o-mini for all enhancements with model-specific prompts"
+            "strategy": "OpenAI GPT-5 Mini for all enhancements with model-specific prompts"
         }
     except Exception as e:
         logger.error(f"Pipeline info failed: {str(e)}")
@@ -403,8 +368,7 @@ async def get_database_version():
 async def get_available_models():
     """Get list of available models and their unified enhancement status"""
     
-    enhancer = get_enhancer()
-    is_openai_available = bool(enhancer.multi_provider_service and hasattr(enhancer.multi_provider_service, 'providers'))
+    is_openai_available = bool(config.settings.openai_api_key)
     
     models = {
         "gpt-4o": {
@@ -437,86 +401,6 @@ async def get_available_models():
             "available": is_openai_available,
             "description": "Latest OpenAI mini model with improved capabilities",
             "recommended_for": ["cost-effective enhancements", "low latency", "high volume"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "claude-3-5-sonnet": {
-            "name": "Claude 3.5 Sonnet",
-            "provider": "Anthropic",
-            "available": is_openai_available,
-            "description": "Balanced performance and quality",
-            "recommended_for": ["general purpose", "creative tasks"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "claude-3-opus": {
-            "name": "Claude 3 Opus",
-            "provider": "Anthropic",
-            "available": is_openai_available,
-            "description": "Most capable Claude model",
-            "recommended_for": ["complex analysis", "creative writing"],
-            "enhancement_llm": "gpt-5-mini"
-                },
-        "gemini-1.0-pro": {
-            "name": "Gemini 1.0 Pro",
-            "provider": "Google",
-            "available": is_openai_available,
-            "description": "Original Gemini Pro model",
-            "recommended_for": ["general tasks", "conversation", "content creation"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "gemini-1.5-flash": {
-            "name": "Gemini 1.5 Flash",
-            "provider": "Google",
-            "available": is_openai_available,
-            "description": "Fast and efficient model",
-            "recommended_for": ["quick responses", "general tasks"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "perplexity": {
-            "name": "Perplexity",
-            "provider": "Perplexity AI",
-            "available": is_openai_available,
-            "description": "Research-focused AI with source citation",
-            "recommended_for": ["research queries", "fact-checking", "comprehensive analysis"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "perplexity-pro": {
-            "name": "Perplexity Pro",
-            "provider": "Perplexity AI",
-            "available": is_openai_available,
-            "description": "Advanced research AI with enhanced capabilities",
-            "recommended_for": ["complex research", "academic queries", "professional analysis"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "perplexity-sonar": {
-            "name": "Perplexity Sonar",
-            "provider": "Perplexity AI", 
-            "available": is_openai_available,
-            "description": "Real-time search and analysis",
-            "recommended_for": ["current events", "real-time information", "trending topics"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "meta-ai": {
-            "name": "Meta AI",
-            "provider": "Meta",
-            "available": is_openai_available,
-            "description": "Intelligent, conversational AI with helpful and natural responses",
-            "recommended_for": ["helpful conversations", "practical advice", "general assistance"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "meta-llama-2": {
-            "name": "Meta Llama 2",
-            "provider": "Meta",
-            "available": is_openai_available,
-            "description": "Second generation Llama with improved conversational abilities",
-            "recommended_for": ["dialogue", "content creation", "reasoning tasks"],
-            "enhancement_llm": "gpt-5-mini"
-        },
-        "meta-llama-3": {
-            "name": "Meta Llama 3",
-            "provider": "Meta",
-            "available": is_openai_available,
-            "description": "Latest Llama model with advanced reasoning and helpful responses",
-            "recommended_for": ["complex reasoning", "helpful assistance", "natural conversations"],
             "enhancement_llm": "gpt-5-mini"
         }
     }

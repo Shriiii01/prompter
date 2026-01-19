@@ -74,10 +74,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 // Store in chrome storage
                 chrome.storage.local.set({ auth_token: token, user_info: userInfo }, () => {
-
-                    // Ensure user exists in database
-
-                    const apiUrl = 'https://prompter-production-76a3.up.railway.app'; // Production Railway URL
+                    // Smart API URL selection: Local for dev, Railway for prod
+                    const isDevMode = !chrome.runtime.getManifest().update_url;
+                    const apiUrl = isDevMode 
+                        ? 'http://localhost:8000' 
+                        : 'https://prompter-production-76a3.up.railway.app';
+                    
                     fetch(`${apiUrl}/api/v1/users`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -393,7 +395,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                const apiUrl = 'https://prompter-production-76a3.up.railway.app';
+                // Smart API URL selection: Local for dev, Railway for prod
+                const isDevMode = !chrome.runtime.getManifest().update_url;
+                const apiUrl = isDevMode 
+                    ? 'http://localhost:8000' 
+                    : 'https://prompter-production-76a3.up.railway.app';
+
                 const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
                     method: 'POST',
                     headers: {

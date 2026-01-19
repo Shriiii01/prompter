@@ -11,14 +11,14 @@ from app.models.request import LLMModel
 class PromptEnhancer:
     """Fast and efficient prompt enhancer"""
     
-    def __init__(self, openai_key: Optional[str] = None, anthropic_key: Optional[str] = None, google_key: Optional[str] = None):
+    def __init__(self, openai_key: Optional[str] = None):
         
         # Initialize services
         self.ai_service = ai_service
         self.analyzer = PromptAnalyzer()
         self.cache = CacheService()
         
-        print(" PromptEnhancer initialized with Fast Pipeline")
+        print(" PromptEnhancer initialized with OpenAI GPT-5 Mini Pipeline")
     
     async def enhance(self, prompt: str, target_model: LLMModel, 
                      context: Optional[str] = None) -> EnhancementResult:

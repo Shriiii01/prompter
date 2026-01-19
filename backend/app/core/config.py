@@ -35,10 +35,8 @@ class Settings(BaseSettings):
     port: int = 8000
     workers: int = 4
     
-    # API Keys for Three-Tier Fallback System
+    # API Key for OpenAI GPT-5 Mini
     openai_api_key: Optional[str] = None
-    gemini_api_key: Optional[str] = None
-    together_api_key: Optional[str] = None
     
     # Database Configuration
     supabase_url: Optional[str] = None
@@ -69,18 +67,6 @@ class Settings(BaseSettings):
     def validate_openai_key(cls, v):
         if not v or v == "your_openai_api_key_here":
             logger.warning("OpenAI API key not configured")
-        return v
-    
-    @validator('gemini_api_key')
-    def validate_gemini_key(cls, v):
-        if not v or v == "your_gemini_api_key_here":
-            logger.warning("Gemini API key not configured")
-        return v
-    
-    @validator('together_api_key')
-    def validate_together_key(cls, v):
-        if not v or v == "your_together_api_key_here":
-            logger.warning("Together API key not configured")
         return v
     
     @validator('supabase_url')
