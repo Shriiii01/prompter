@@ -57,8 +57,12 @@ class DatabaseService:
             async with aiohttp.ClientSession(timeout=self.timeout) as session:
                 async with session.request(method, url, headers=self.headers, params=params, json=json_data) as resp:
                     if resp.status in [200, 201, 204]:
-                        # Return JSON if content exists, else True
-                        return await resp.json() if resp.content_length else True
+                        # ALWAYS try to parse JSON (Supabase returns [] for empty results)
+                        try:
+                            result = await resp.json()
+                            return result
+                        except:
+                            return True  # Fallback for truly empty responses
                     elif resp.status == 409: # Conflict
                         return "CONFLICT"
                     
@@ -80,8 +84,18 @@ class DatabaseService:
         params = {k: f"eq.{v}" for k, v in query.items()}
         params["select"] = "*"
         data = await self._request("GET", table, params=params)
-        print(f"🔎 _get({table}, {query}) -> {type(data).__name__}: {data[:1] if isinstance(data, list) else data}")
-        return data[0] if data and isinstance(data, list) and len(data) > 0 else None
+        
+        # Handle the response
+        if isinstance(data, list):
+            if len(data) > 0:
+                print(f"✅ _get({table}) -> Found: {data[0].get('email', 'unknown')}")
+                return data[0]
+            else:
+                print(f"🔎 _get({table}) -> Empty (user not in DB)")
+                return None
+        else:
+            print(f"⚠️ _get({table}) -> Unexpected: {type(data).__name__}")
+            return None
 
     async def _update(self, table: str, query: Dict, data: Dict) -> bool:
         """Generic UPDATE record."""
