@@ -41,12 +41,15 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
             client = AsyncOpenAI(api_key=config.settings.openai_api_key)
             
             # Call OpenAI API with streaming
+            # Using GPT-5-mini with token limit for cost control
             stream = await client.chat.completions.create(
                 model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Please enhance this prompt:\n\n{request.prompt}"}
                 ],
+                max_tokens=1500,  # Limit output length for cost control
+                temperature=0.7,  # Balanced creativity
                 stream=True,
                 timeout=30
             )
