@@ -327,8 +327,8 @@ class MagicalEnhancer {
         style.textContent = `
             .ce-icon {
                 position: fixed !important;
-                width: 40px !important;
-                height: 40px !important;
+                width: 32px !important;
+                height: 32px !important;
                 background: #2c2c2c !important;
                 border: none !important;
                 border-radius: 50% !important;
@@ -338,7 +338,7 @@ class MagicalEnhancer {
                 align-items: center !important;
                 justify-content: center !important;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-                font-size: 22px !important;
+                font-size: 16px !important;
                 font-weight: bold !important;
                 color: white !important;
                 transition: all 0.2s ease !important;
@@ -371,11 +371,6 @@ class MagicalEnhancer {
                 50% { opacity: 0.8; transform: scale(1.05); }
             }
 
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-
             .ce-popup {
                 position: fixed !important;
                 width: 400px !important;
@@ -392,6 +387,7 @@ class MagicalEnhancer {
                 display: flex !important;
                 flex-direction: column !important;
                 padding-bottom: 60px !important; /* Space for the insert button */
+                cursor: default !important; /* Ensure default cursor */
             }
 
             .ce-close-btn {
@@ -423,6 +419,7 @@ class MagicalEnhancer {
                 line-height: 1.6 !important;
                 position: relative !important;
                 padding-bottom: 16px !important;
+                cursor: text !important; /* Text cursor for content */
             }
 
             .ce-loading {
@@ -469,13 +466,6 @@ class MagicalEnhancer {
                     sendResponse({ success: true });
             } else if (message.action === 'deactivate') {
                     this.deactivate();
-                    sendResponse({ success: true });
-            } else if (message.action === 'limit_reached') {
-                    // Handle limit reached from background script
-                    const inputElement = this.findActiveInput();
-                    if (inputElement) {
-                        this.showLimitNotification(inputElement);
-                    }
                     sendResponse({ success: true });
             }
         });
@@ -1190,77 +1180,6 @@ class MagicalEnhancer {
             return;
         }
         
-
-        //  SMART LIMIT CHECK: Get real daily usage from backend before blocking
-        try {
-            const userData = await new Promise((resolve) => {
-                chrome.storage.local.get(['user_info'], resolve);
-            });
-
-            const userEmail = userData.user_info?.email || '';
-            const userTier = userData.user_info?.subscription_tier || 'free';
-
-            // If no user email found, open popup for login
-            if (!userEmail) {
-                chrome.runtime.sendMessage({action: 'open_popup_for_login'}, (response) => {
-                    if (chrome.runtime.lastError) {
-                        // Failed to open popup
-                    }
-                });
-                icon.classList.remove('processing');
-                return;
-            }
-
-            // CRITICAL FIX: Always use fresh backend data for current user's email
-            // Don't rely on cached data that might be from a different user
-            // Check user limits
-
-            // Check user subscription status from backend for ALL users
-            if (userEmail) {
-                try {
-                    const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
-                    const statusCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
-                        method: 'GET',
-                        headers: { 'Content-Type': 'application/json' },
-                        signal: AbortSignal.timeout(3000) // 3 second timeout
-                    });
-
-                    if (statusCheck.ok) {
-                        const userStatus = await statusCheck.json();
-                        
-                        // DEBUG: Log the full API response to see what we're getting
-                        
-                        const userTier = userStatus.subscription_tier || 'free';
-                        const dailyUsed = userStatus.daily_prompts_used || 0;
-                        const dailyLimit = userStatus.daily_limit || 10;
-
-
-                        // UPDATE CHROME STORAGE with fresh subscription data
-                        try {
-                            chrome.storage.local.get(['user_info'], (result) => {
-                                if (result.user_info) {
-                                    result.user_info.subscription_tier = userTier;
-                                    result.user_info.daily_prompts_used = dailyUsed;
-                                    // UNLIMITED for everyone
-                                    result.user_info.daily_limit = 999999;
-                                    chrome.storage.local.set({ user_info: result.user_info });
-                                }
-                            });
-                        } catch (storageError) {
-                        }
-
-                        // NO LIMITS - Allow all requests for everyone
-                        // Free/Pro distinction removed for limits
-                    } else {
-                    }
-                } catch (backendError) {
-                    // Allow request if backend check fails
-                }
-            }
-        } catch (error) {
-            // Allow request on error
-        }
-
         if (this.activePopup) {
             this.closePopup();
         }
@@ -1368,27 +1287,29 @@ class MagicalEnhancer {
         // Show loading
         streamText.textContent = 'Enhancing your prompt...';
 
-        // Set up simple message listener
+        // Initialize accumulator for real-time streaming
+        this.lastReceivedText = '';
+        
+        // Set up simple message listener for REAL-TIME streaming (no animation, no delays)
         this.streamMessageListener = (message) => {
             if (message.action === 'stream_chunk') {
                 const aiText = message.chunk?.data || '';
                 if (aiText) {
-                    // Update our internal tracker of the raw text
-                    this.lastReceivedText = aiText;
-                    // Safely render text with preserved line breaks
-                    streamText.innerHTML = this.toHtmlWithLineBreaks(aiText);
+                    // NATURAL STREAMING: Display chunks exactly as they arrive from OpenAI API
+                    // No animation, no delays, no buffering - just show what we get from API
+                    this.lastReceivedText += aiText;  // Accumulate chunks
+                    // Update display IMMEDIATELY - words appear naturally as OpenAI generates them
+                    streamText.innerHTML = this.toHtmlWithLineBreaks(this.lastReceivedText);
                 }
             } else if (message.action === 'stream_complete') {
-                // CRITICAL FIX: Use the exact raw text from backend, or fall back to last received chunk
-                // DO NOT read from innerHTML to avoid double-encoding issues (e.g. &lt; -> &amp;lt;)
+                // Use accumulated text or final text from backend
                 const finalText = message.chunk?.data || this.lastReceivedText || '';
-                this.showInsertButton(popup, finalText, inputElement);
-            } else if (message.action === 'limit_reached') {
-                // Backend detected limit reached during streaming
-
-                this.showLimitNotification(inputElement);
-                // Close popup since limit is reached
-                this.closePopup();
+                // Ensure we have the complete text
+                if (finalText && !this.lastReceivedText) {
+                    this.lastReceivedText = finalText;
+                    streamText.innerHTML = this.toHtmlWithLineBreaks(finalText);
+                }
+                this.showInsertButton(popup, finalText || this.lastReceivedText, inputElement);
             } else if (message.action === 'stream_error') {
                 streamText.textContent = `Error: ${message.error}`;
             }
@@ -1453,34 +1374,7 @@ class MagicalEnhancer {
                 return;
             }
 
-            // DOUBLE SAFETY CHECK: FINAL VERIFICATION before API call
-            // This is the LAST LINE OF DEFENSE against money-wasting API calls
-            const finalCheckData = await new Promise((resolve) => {
-                chrome.storage.local.get(['user_info', 'last_known_prompt_count'], resolve);
-            });
-
-            const finalPromptCount = finalCheckData.last_known_prompt_count || 0;
-            const finalUserTier = finalCheckData.user_info?.subscription_tier || 'free';
-            const cachedEmail = finalCheckData.user_info?.email;
-
-            // CRITICAL FIX: Verify we're checking the SAME user who's currently logged in
-            if (cachedEmail && cachedEmail !== userEmail) {
-                // Email mismatch detected, forcing fresh backend check
-                // Don't use cached data - force fresh backend check
-            }
-
-            //  FINAL SAFETY CHECK: REMOVED - UNLIMITED ACCESS
-            // We no longer block requests based on daily limits
-
-
-            // Test background script connectivity first
-            chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
-                if (chrome.runtime.lastError) {
-                    streamText.textContent = 'Please reload your page.';
-                    return;
-                }
-                // Background script is running
-            });
+            // SPEED OPTIMIZATION: Skip all safety checks for faster streaming
 
             const messageData = {
                 action: 'stream_enhance',
@@ -1494,11 +1388,11 @@ class MagicalEnhancer {
 
             // Sending API call to background script
 
-            // Add timeout for message sending
+            // Add timeout for message sending (optimized for speed)
             const messageTimeout = setTimeout(() => {
                 // API call timeout, background script not responding
                 streamText.textContent = 'Error: Background script not responding. Please refresh the page.';
-            }, 5000);
+            }, 30000); // 30 seconds - faster timeout
 
             chrome.runtime.sendMessage(messageData, (response) => {
                 clearTimeout(messageTimeout);
@@ -1585,17 +1479,7 @@ class MagicalEnhancer {
 
     }
 
-    // This method is now deprecated - Upgrade modal removed
-    showUpgradeModal(popup, details) {
-        // No-op: Upgrade functionality removed
-        return;
-    }
 
-    // Center notification - DISABLED (Unlimited Mode)
-    showLimitNotification(inputElement) {
-        // No-op: Limits are removed
-        return;
-    }
 
     async showEnhancedResultWithAnimation(popup, enhancedText, inputElement) {
         const content = popup.querySelector('.ce-content');
@@ -1701,102 +1585,6 @@ class MagicalEnhancer {
         }
     }
 
-    async enhancePrompt(text) {
-        try {
-            // Get auth token from storage
-            const authToken = await new Promise((resolve) => {
-                chrome.storage.local.get(['auth_token'], (result) => {
-                    resolve(result.auth_token);
-                });
-            });
-
-            if (!authToken) {
-
-                return null; // This will trigger auth required message
-            }
-
-            // Detect target model based on current site
-            const targetModel = this.detectTargetModel();
-            
-
-            const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
-            const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-            const platform = this.detectTargetModel();
-
-            // Get user email with multiple fallbacks
-            let userEmail = '';
-            
-            // Try storage first
-            const userData = await new Promise((resolve) => {
-                chrome.storage.local.get(['user_info'], resolve);
-            });
-            userEmail = userData.user_info?.email || '';
-            
-            // Fallback: try popup display if storage failed
-            if (!userEmail) {
-                try {
-                    const popupEmail = await new Promise((resolve) => {
-                        chrome.runtime.sendMessage({action: 'get_user_email'}, (response) => {
-                            resolve(response?.email || '');
-                        });
-                    });
-                    userEmail = popupEmail;
-                } catch (popupError) {
-                    // Popup email error
-                }
-            }
-
-            if (!userEmail) {
-                // User not logged in - open popup for login
-                chrome.runtime.sendMessage({action: 'open_popup_for_login'}, (response) => {
-                    if (chrome.runtime.lastError) {
-                        // Failed to open popup
-                    }
-                });
-                return null;
-            }
-
-            // Use background to perform the network call so content-script context invalidation cannot break it
-            const data = await new Promise((resolve, reject) => {
-                const messageData = {
-                    action: 'enhance_prompt',
-                    apiUrl,
-                    prompt: text,
-                    targetModel,
-                    userEmail: userEmail,
-                    platform,
-                    idempotencyKey
-                };
-                
-
-                chrome.runtime.sendMessage(messageData, (resp) => {
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message));
-                        return;
-                    }
-                    if (!resp || !resp.success) {
-                        reject(new Error(resp?.error || 'Enhance failed'));
-                    } else {
-                        resolve(resp.data);
-                    }
-                });
-            });
-
-            // Update local last-known count immediately (no popup blink)
-            if (typeof data.user_prompt_count === 'number') {
-                try {
-                    chrome.storage.local.set({ last_known_prompt_count: data.user_prompt_count });
-                } catch (e) { /* ignore */ }
-            }
-            
-            
-            return data.enhanced_prompt;
-            
-        } catch (error) {
-
-            return this.getFallbackEnhancement(text);
-        }
-    }
 
     detectTargetModel() {
         const hostname = window.location.hostname;
@@ -1819,13 +1607,6 @@ class MagicalEnhancer {
         return 'gpt-5'; // Default fallback for ChatGPT
     }
 
-    getFallbackEnhancement(text) {
-        return `Please provide a comprehensive and detailed response to the following query, ensuring accuracy and clarity:
-
-${text}
-
-Additional context: Please structure your response in a clear, organized manner with relevant examples where appropriate.`;
-    }
 
     formatText(text) {
         //  CRITICAL FIX: Return AI text EXACTLY as generated - no processing!
@@ -2225,7 +2006,7 @@ Additional context: Please structure your response in a clear, organized manner 
     makePopupDraggable(popup) {
         const content = popup.querySelector('.ce-content');
         let isDragging = false, startX, startY, startLeft, startTop;
-        content.style.cursor = 'move';
+        content.style.cursor = 'default'; // Default cursor initially
 
         content.onmousedown = (e) => {
             // Don't drag if clicking on buttons
@@ -2256,6 +2037,7 @@ Additional context: Please structure your response in a clear, organized manner 
 
             document.onmouseup = () => {
                 isDragging = false;
+                content.style.cursor = 'default'; // Revert to default cursor
                 document.onmousemove = null;
                 document.onmouseup = null;
             };
@@ -2267,9 +2049,3 @@ Additional context: Please structure your response in a clear, organized manner 
 if (!window.magicalEnhancer) {
     window.magicalEnhancer = new MagicalEnhancer();
 }
-
-
-
-
-
-

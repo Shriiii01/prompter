@@ -10,27 +10,26 @@ const PRODUCTION_CONFIG = {
   
   // API endpoints (don't change these)
   endpoints: {
-    enhance: '/api/v1/enhance',
+    enhance: '/api/stream-enhance',
     quickTest: '/api/v1/quick-test',
     health: '/api/v1/health',
     userStats: '/api/v1/user/stats',
     userCount: '/api/v1/user/count',
-    incrementCount: '/api/v1/user/increment-count'
+    incrementCount: '/api/v1/users/{email}/increment'
   }
 };
 
 // Environment detection with improved reliability
 const isProduction = () => {
   try {
-    // If running inside a Chrome extension context, always use the production API.
-    // The extension runs on end-user machines and must not point to localhost.
-    const isChromeExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
-    if (isChromeExtension) return true;
+    // Smart detection: Unpacked extensions (development) don't have an update_url
+    const isDevMode = !chrome.runtime.getManifest().update_url;
+    if (isDevMode) return false;
 
     // Fallback: treat real HTTPS web origins as production
     return (window.location.protocol === 'https:' && window.location.hostname !== 'localhost');
   } catch (error) {
-    return true; // Be conservative and prefer production in ambiguous cases
+    return true; 
   }
 };
 

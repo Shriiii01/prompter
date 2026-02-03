@@ -4,9 +4,6 @@ from typing import Optional, Dict, Any
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from google.auth import default
-import logging
-
-logger = logging.getLogger(__name__)
 
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = "20427090028-asq8b7s849pq95li1hkmc7vrq1qeertg.apps.googleusercontent.com"
@@ -47,11 +44,9 @@ def get_email_from_token(authorization: str) -> str:
         if not email:
             raise ValueError("No email found in token response")
             
-        logger.info(f" Authenticated user: {email}")
         return email
         
     except Exception as e:
-        logger.error(f" Authentication failed: {str(e)}")
         raise ValueError(f"Invalid authentication token: {str(e)}")
 
 def get_user_info_from_token(authorization: str) -> Dict[str, Any]:
@@ -99,11 +94,9 @@ def get_user_info_from_token(authorization: str) -> Dict[str, Any]:
         if not formatted_user_info['email']:
             raise ValueError("No email found in token response")
             
-        logger.info(f" User info extracted: {formatted_user_info['email']}")
         return formatted_user_info
         
     except Exception as e:
-        logger.error(f" User info extraction failed: {str(e)}")
         raise ValueError(f"Invalid authentication token: {str(e)}")
 
 def verify_token_validity(authorization: str) -> bool:

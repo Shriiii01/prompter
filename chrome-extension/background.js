@@ -74,10 +74,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 // Store in chrome storage
                 chrome.storage.local.set({ auth_token: token, user_info: userInfo }, () => {
-
-                    // Ensure user exists in database
-
-                    const apiUrl = 'https://prompter-production-76a3.up.railway.app'; // Production Railway URL
+                    // Smart API URL selection: Local for dev, Railway for prod
+                    const isDevMode = !chrome.runtime.getManifest().update_url;
+                    const apiUrl = isDevMode 
+                        ? 'http://localhost:8000' 
+                        : 'https://prompter-production-76a3.up.railway.app';
+                    
                     fetch(`${apiUrl}/api/v1/users`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -181,50 +183,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 // This fixes cross-tab switching issues
                 globalThis.activeEnhancementTabId = tabId;
 
-                //  CRITICAL MONEY PROTECTION: Backend double-check before making expensive API calls
-                if (userEmail) {
-                    try {
-                        // Quick check of user status before proceeding
-                        const statusCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-
-                        if (statusCheck.ok) {
-                            const userStatus = await statusCheck.json();
-                            
-                            // DEBUG: Log the full API response to see what we're getting
-                            
-                            const dailyUsed = userStatus.daily_prompts_used || 0;
-                            const dailyLimit = userStatus.daily_limit || 10;
-                            const userTier = userStatus.subscription_tier || 'free';
-
-                            // UPDATE CHROME STORAGE with fresh subscription data
-                            try {
-                                chrome.storage.local.get(['user_info'], (result) => {
-                                    if (result.user_info) {
-                                        result.user_info.subscription_tier = userTier;
-                                        result.user_info.daily_prompts_used = dailyUsed;
-                                        // UNLIMITED MODE
-                                        result.user_info.daily_limit = 999999;
-                                        chrome.storage.local.set({ user_info: result.user_info });
-                                    }
-                                });
-                            } catch (storageError) {
-                            }
-
-                            // PRO/FREE Distinction removed - Allow all
-                        } else {
-                        }
-                    } catch (statusError) {
-                        // Backend status check failed - Allow anyway
-                    }
-                }
-
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 45000); // Longer timeout for streaming
+                const timeout = setTimeout(() => controller.abort(), 45000); // 45 seconds - faster timeout
 
 
                 const res = await fetch(`${apiUrl}/api/stream-enhance`, {
@@ -252,7 +212,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                // Read the stream (no count updates will be emitted by backend now)
+                // REAL-TIME STREAMING: Process chunks immediately as they arrive
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
@@ -262,14 +222,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         const { done, value } = await reader.read();
                         
                         if (done) {
-
                             break;
                         }
 
-                        // Decode chunk and add to buffer
-                        buffer += decoder.decode(value, { stream: true });
+                        // Decode chunk IMMEDIATELY and process
+                        const chunk = decoder.decode(value, { stream: true });
+                        buffer += chunk;
                         
-                        // Process complete lines
+                        // Process ALL complete lines IMMEDIATELY (no waiting)
                         const lines = buffer.split('\n');
                         buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
@@ -293,21 +253,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                                     // Backend no longer emits count_update here; counting happens on Insert
                                     
-                                    // Handle limit reached
-                                    if (chunk.type === 'limit_reached') {
-                                        // Use stored tab ID to handle cross-tab switching
-                                        const targetTabId = globalThis.activeEnhancementTabId || tabId;
-                                        chrome.tabs.sendMessage(targetTabId, {
-                                            action: 'limit_reached',
-                                            details: {
-                                                user_email: userEmail,
-                                                daily_prompts_used: chunk.data?.daily_prompts_used || 10,
-                                                daily_limit: chunk.data?.daily_limit || 10,
-                                                subscription_tier: chunk.data?.subscription_tier || 'free'
-                                            }
-                                        });
-                                        return; // Stop processing stream
-                                    }
 
                                     // Forward chunk to content script immediately (but skip count updates)
                                     // Use stored tab ID to handle cross-tab switching
@@ -393,7 +338,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     return;
                 }
 
-                const apiUrl = 'https://prompter-production-76a3.up.railway.app';
+                // Smart API URL selection: Local for dev, Railway for prod
+                const isDevMode = !chrome.runtime.getManifest().update_url;
+                const apiUrl = isDevMode 
+                    ? 'http://localhost:8000' 
+                    : 'https://prompter-production-76a3.up.railway.app';
+
                 const res = await fetch(`${apiUrl}/api/v1/users/${encodeURIComponent(request.userEmail)}/increment`, {
                     method: 'POST',
                     headers: {
@@ -421,65 +371,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    // Fallback to old non-streaming method for compatibility
-    if (request.action === 'enhance_prompt') {
-
-        (async () => {
-            try {
-                const { apiUrl, prompt, targetModel, userEmail, platform, idempotencyKey } = request;
-                
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 30000);
-
-                const res = await fetch(`${apiUrl}/api/v1/enhance`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-User-Email': userEmail || '',
-                        'X-Idempotency-Key': idempotencyKey || `${Date.now()}-${Math.random()}`,
-                        'X-Platform': (platform || '').toLowerCase()
-                    },
-                    body: JSON.stringify({ prompt, target_model: targetModel || 'auto' }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeout);
-
-                if (!res.ok) {
-                    const txt = await res.text().catch(() => '');
-                    sendResponse({ success: false, error: `API ${res.status}: ${txt}` });
-                    return;
-                }
-
-                const data = await res.json();
-                
-
-                // Update count in storage and notify popup
-                try {
-                    if (typeof data.user_prompt_count === 'number') {
-
-                        chrome.storage.local.set({ last_known_prompt_count: data.user_prompt_count });
-                        
-                        // Notify popup to refresh count
-
-                        chrome.runtime.sendMessage({
-                            action: 'count_updated',
-                            count: data.user_prompt_count
-                        }).catch(() => {}); // Ignore if popup is closed
-                    } else {
-
-                    }
-                } catch (e) {
-
-                }
-
-                sendResponse({ success: true, enhanced_prompt: data.enhanced_prompt, data });
-            } catch (e) {
-                sendResponse({ success: false, error: e?.message || 'Enhance failed' });
-            }
-        })();
-        return true; // Keep channel open for async response
-    }
 });
 
 // Function to activate content script on all tabs

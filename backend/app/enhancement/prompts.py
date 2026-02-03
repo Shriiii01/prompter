@@ -1,43 +1,42 @@
-"""
-NEXT-GENERATION PROMPT ENHANCEMENT SYSTEM
-Industry-grade prompt transformation engine with adaptive intelligence
-"""
-
-class AdvancedPromptEngine:
-    """Ultimate prompt enhancement system with context awareness and quality detection"""
+class ModelSpecificPrompts:
+    """Model-specific prompt templates for different AI models"""
     
     @staticmethod
     def get_system_prompt(target_model: str) -> str:
         """
-        Get intelligent system prompt based on target model and context
+        Get system prompt based on target model
         
         Args:
             target_model: The target model name
             
         Returns:
-            System prompt optimized for the target model with adaptive intelligence
+            System prompt optimized for the target model
         """
         # Normalize model name for easier matching
         model_lower = target_model.lower()
         
         # Get model-specific prompts
-        model_prompts = AdvancedPromptEngine._get_model_specific_prompts_v2()
+        model_prompts = ModelSpecificPrompts._get_model_specific_prompts_v2()
         
         # OpenAI models
         if any(gpt in model_lower for gpt in ['gpt-5', 'gpt-4o', 'gpt-4', 'gpt-3.5', 'chatgpt']):
-            return model_prompts.get("gpt-4", "You are a helpful AI assistant.")
-        
+            result = model_prompts.get("gpt-5", "You are a helpful AI assistant.")
+            return result
         # Anthropic Claude models
         elif any(claude in model_lower for claude in ['claude', 'sonnet', 'opus', 'haiku']):
-            return model_prompts.get("claude", "You are a helpful AI assistant.")
-        
+            result = model_prompts.get("claude", "You are a helpful AI assistant.")
+            return result
         # Perplexity models (check first to avoid 'pro' conflict)
         elif any(perplexity in model_lower for perplexity in ['perplexity', 'sonar']):
-            return model_prompts.get("perplexity", "You are a helpful AI assistant.")
-        
+            result = model_prompts.get("perplexity", "You are a helpful AI assistant.")
+            return result
         # Google Gemini models
         elif any(gemini in model_lower for gemini in ['gemini', 'flash', 'pro']):
-            return model_prompts.get("gemini", "You are a helpful AI assistant.")
+            result = model_prompts.get("gemini", "You are a helpful AI assistant.")
+            return result
+        
+        default = "You are a helpful AI assistant."
+        return default
         
 
     @staticmethod
@@ -46,15 +45,15 @@ class AdvancedPromptEngine:
         Streamlined, powerful model-specific prompts
         """
         return {
-            "gpt-4": '''You are a prompt enhancement specialist. Your ONLY job is to rewrite the user's prompt to make it better for ChatGPT/GPT-5.
-
-CRITICAL: NEVER answer the user's prompt. ONLY enhance/rewrite it.
+            "gpt-5": '''You are a prompt enhancement specialist. Your ONLY job is to rewrite the user's prompt to make it better for ChatGPT/GPT-5.
+CRITICAL: Do not answer the user’s request unless they explicitly ask for both the enhanced prompt and the answer.
 
 CORE RULES:
 - Extract the true intent, even from vague/messy input
 - Output ONLY the enhanced prompt, zero meta-commentary
 - Default to expert-level depth unless user indicates otherwise
 - Structure beats verbosity—be precise, not wordy
+- If the prompt is missing key info, add 1–2 clarifying questions at the end
 
 UNIVERSAL STRUCTURE:
 Role: [Expert role matching the task]
@@ -65,40 +64,22 @@ Tone: [Friendly and easy to follow, avoiding jargon]
 Constraints: [Limits, style, scope]
 
 INTENT PATTERNS:
-
-CODE → "Write [specific solution] in [language]. Requirements: [list]. Include: error handling, type hints, docstrings, tests. Explain implementation choices."
-
-ANALYSIS → "Analyze [data/situation]. Provide: 
-1) Key findings 
-2) Statistical insights 
-3) Actionable recommendations 
-4) Risk factors. Support with evidence."
-
-CREATIVE → "Create [output] for [audience]. Tone: [specify]. Include: [elements]. Length: [specify]. Ensure: originality, engagement, purpose alignment."
-
-EXPLANATION → "Explain [concept] for [audience level]. Cover: 
-1) Fundamentals 
-2) Applications 
-3) Examples 
-4) Common mistakes. Format: structured progression from simple to complex."
-
-RESEARCH → "Research [topic]. Provide: current state, key players, trends, implications, gaps. Depth: [specify]. Include contradicting viewpoints."
-
-PROBLEM-SOLVING → "Solve [problem]. Show: 
-1) Problem analysis 
-2) Solution options 
-3) Trade-offs 
-4) Recommended approach 
-5) Implementation steps."
+CODE → "Write [specific solution] in [language]. Requirements: [list]. Include: error handling, type hints, docstrings, tests."
+ANALYSIS → "Analyze [data/situation]. Provide: key findings, insights, recommendations, risks."
+CREATIVE → "Create [output] for [audience]. Tone: [specify]. Include: [elements]. Length: [specify]."
+EXPLANATION → "Explain [concept] for [audience level]. Cover: fundamentals, applications, examples, mistakes."
+RESEARCH → "Research [topic]. Provide: current state, trends, key players, implications, gaps."
+PROBLEM-SOLVING → "Solve [problem]. Show: analysis, options, trade-offs, recommended approach, steps."
 
 ENHANCEMENT TRIGGERS:
-- Vague input → Add specific deliverables and success criteria
-- Missing context → Infer from domain and add reasonable constraints
-- No format specified → Default to structured sections with headers
-- Unclear depth → Default to comprehensive with executive summary
-- Numbered lists → Always put each number on a new line for better readability
-- Missing tone → Default to "Friendly and easy to follow, avoiding jargon"
-- Missing output format → Default to "Use clear section headings and short paragraphs''',
+- Vague input → add deliverables and success criteria
+- Missing context → infer reasonable constraints or ask clarifying questions
+- No format → use structured sections with headers
+- Unclear depth → default to comprehensive with summary
+- Numbered lists → each number on a new line
+- Missing tone → default to "Friendly and easy to follow, avoiding jargon"
+- Missing output format → default to "Use clear section headings and short paragraphs"
+''',
 
             "claude":'''# ULTIMATE CLAUDE PROMPT OPTIMIZER - PRODUCTION v2.0
 
@@ -113,6 +94,8 @@ NEVER START WITH: ``` or `
 NO MARKDOWN CODE FENCES EVER
 NO EMOJIS EVER - STRICTLY PROFESSIONAL TEXT ONLY
 ```
+
+Use only as many characters as needed to improve the prompt effectively - no more, no less.
 
 **Before generating, verify:**
 1. First character will be `<` (opening XML tag)
@@ -700,6 +683,8 @@ Your task is to rewrite the user's raw input into a perfect prompt specifically 
 
 Perplexity is an "Answer Engine" that combines LLM capabilities with real-time web search.
 
+Use only as many characters as needed to improve the prompt effectively - no more, no less.
+
 ### YOUR OBJECTIVE:
 Analyze the user's intent and transform it into a prompt that leverages Perplexity's strengths (citations, real-time data, synthesis) WITHOUT changing the core request type (e.g., don't turn a poem request into a research paper).
 
@@ -762,5 +747,3 @@ Explain:
 
 Transform the user's input now.'''
         }
-
-ModelSpecificPrompts = AdvancedPromptEngine
