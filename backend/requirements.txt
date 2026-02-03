@@ -23,9 +23,6 @@ google-auth==2.40.3
 PyJWT==2.8.0
 email-validator==2.1.0
 
-# Payment Processing
-razorpay==1.4.1
-
 # Text Processing and Analysis
 textblob==0.17.1
 language-tool-python==2.7.1

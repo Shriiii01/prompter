@@ -2,8 +2,6 @@ import sys
 import os
 import time
 from datetime import datetime
-# DELETED: re import - NOT USED (clean_enhanced_text function deleted)
-
 # Add the backend directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -11,9 +9,8 @@ from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from app.enhancement import router as enhance_router
-from app.users import router as users_router
-from app.payment import router as payment_router
+from app.enhancement import endpoints as enhance_router
+from app.users import endpoints as users_endpoints
 from app.shared.rate_limiter import rate_limiter
 from app.shared.config import config
 
@@ -63,85 +60,13 @@ app.add_middleware(
 # Rate limiting middleware - 30 requests/month per user
 app.middleware("http")(rate_limiter)
 
-# DELETED: add_cors_headers middleware - DUPLICATE (CORS middleware already handles this on lines 50-76)
-
-# Request logging middleware
-@app.middleware("http")
-async def log_requests(request, call_next):
-    start_time = time.time()
-    
-    try:
-        response = await call_next(request)
-        return response
-        
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "Internal server error",
-                "timestamp": datetime.now().isoformat(),
-                "path": str(request.url)
-            }
-        )
-
 # Include routers
-app.include_router(users_router.router, prefix="/api/v1")
-app.include_router(payment_router.router, prefix="/api/v1/payment", tags=["payment"])
-try:
-    print(" Loading streaming enhance router...")
-    app.include_router(enhance_router.router, prefix="/api")  # Add streaming endpoint
-    print(" Streaming enhance router loaded successfully")
-except Exception as e:
-    print(f" Failed to load streaming enhance router: {e}")
-    import traceback
-    traceback.print_exc()
-# DELETED: websocket.router - NOT USED (P button uses /api/stream-enhance, not websocket)
-
-# Explicit OPTIONS handler for CORS preflight requests
-@app.options("/{path:path}")
-async def options_handler(path: str):
-    """Handle CORS preflight requests for all endpoints"""
-    return JSONResponse(
-        status_code=200,
-        content={},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Max-Age": "3600"
-        }
-    )
-
-@app.get("/")
-async def root():
-    """API information and status"""
-    return {
-        "name": "Prompt Assistant API",
-        "version": "2.0.4",
-        "status": "running",
-        "timestamp": datetime.now().isoformat(),
-        "endpoints": {
-            "health": "/health",
-            "health_detailed": "/health/detailed",
-            "enhance": "/api/stream-enhance",
-            "docs": "/docs"
-        },
-        "features": [
-            "AI-powered prompt enhancement (GPT-5 Mini)",
-            "Model-specific system prompts",
-            "In-memory caching for performance"
-        ]
-    }
+app.include_router(users_endpoints.router, prefix="/api/v1")
+app.include_router(enhance_router.router, prefix="/api")  # Add streaming endpoint
 
 @app.get("/health")
 async def health_check():
     """Simple health check for load balancers"""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-@app.get("/health/detailed")
-async def detailed_health_check():
-    """Detailed health check"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.exception_handler(404)
@@ -153,9 +78,7 @@ async def not_found_handler(request, exc):
             "error": "Endpoint not found",
             "message": f"The requested endpoint {request.url.path} does not exist",
             "available_endpoints": [
-                "/",
                 "/health",
-                "/health/detailed",
                 "/api/stream-enhance",
                 "/api/v1/users/{email}/increment",
                 "/docs"
@@ -174,8 +97,6 @@ async def internal_error_handler(request, exc):
             "timestamp": datetime.now().isoformat()
         }
     )
-
-# DELETED: clean_enhanced_text() function - NEVER CALLED (dead code)
 
 # Run the server
 if __name__ == "__main__":

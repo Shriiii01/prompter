@@ -79,4 +79,6 @@ temp/
 # OS generated files
 Thumbs.db
 ehthumbs.db
-Desktop.ini venv_312/
+Desktop.ini
+venv_312/
+myvenv/

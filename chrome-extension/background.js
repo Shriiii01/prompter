@@ -183,48 +183,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 // This fixes cross-tab switching issues
                 globalThis.activeEnhancementTabId = tabId;
 
-                //  CRITICAL MONEY PROTECTION: Backend double-check before making expensive API calls
-                if (userEmail) {
-                    try {
-                        // Quick check of user status before proceeding
-                        const statusCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-
-                        if (statusCheck.ok) {
-                            const userStatus = await statusCheck.json();
-                            
-                            // DEBUG: Log the full API response to see what we're getting
-                            
-                            const dailyUsed = userStatus.daily_prompts_used || 0;
-                            const dailyLimit = userStatus.daily_limit || 10;
-                            const userTier = userStatus.subscription_tier || 'free';
-
-                            // UPDATE CHROME STORAGE with fresh subscription data
-                            try {
-                                chrome.storage.local.get(['user_info'], (result) => {
-                                    if (result.user_info) {
-                                        result.user_info.subscription_tier = userTier;
-                                        result.user_info.daily_prompts_used = dailyUsed;
-                                        // UNLIMITED MODE
-                                        result.user_info.daily_limit = 999999;
-                                        chrome.storage.local.set({ user_info: result.user_info });
-                                    }
-                                });
-                            } catch (storageError) {
-                            }
-
-                            // PRO/FREE Distinction removed - Allow all
-                        } else {
-                        }
-                    } catch (statusError) {
-                        // Backend status check failed - Allow anyway
-                    }
-                }
-
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 45000); // 45 seconds - faster timeout
 
@@ -413,65 +371,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    // Fallback to old non-streaming method for compatibility
-    if (request.action === 'enhance_prompt') {
-
-        (async () => {
-            try {
-                const { apiUrl, prompt, targetModel, userEmail, platform, idempotencyKey } = request;
-                
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 30000);
-
-                const res = await fetch(`${apiUrl}/api/v1/enhance`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-User-Email': userEmail || '',
-                        'X-Idempotency-Key': idempotencyKey || `${Date.now()}-${Math.random()}`,
-                        'X-Platform': (platform || '').toLowerCase()
-                    },
-                    body: JSON.stringify({ prompt, target_model: targetModel || 'auto' }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeout);
-
-                if (!res.ok) {
-                    const txt = await res.text().catch(() => '');
-                    sendResponse({ success: false, error: `API ${res.status}: ${txt}` });
-                    return;
-                }
-
-                const data = await res.json();
-                
-
-                // Update count in storage and notify popup
-                try {
-                    if (typeof data.user_prompt_count === 'number') {
-
-                        chrome.storage.local.set({ last_known_prompt_count: data.user_prompt_count });
-                        
-                        // Notify popup to refresh count
-
-                        chrome.runtime.sendMessage({
-                            action: 'count_updated',
-                            count: data.user_prompt_count
-                        }).catch(() => {}); // Ignore if popup is closed
-                    } else {
-
-                    }
-                } catch (e) {
-
-                }
-
-                sendResponse({ success: true, enhanced_prompt: data.enhanced_prompt, data });
-            } catch (e) {
-                sendResponse({ success: false, error: e?.message || 'Enhance failed' });
-            }
-        })();
-        return true; // Keep channel open for async response
-    }
 });
 
 // Function to activate content script on all tabs

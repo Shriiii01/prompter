@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
-from app.users.service import DatabaseService
+from app.users.database import DatabaseService
 db_service = DatabaseService()
 
 router = APIRouter(tags=["users"])

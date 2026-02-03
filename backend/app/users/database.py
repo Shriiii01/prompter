@@ -122,45 +122,6 @@ class DatabaseService:
         
         return new_total if success else 0
 
-    async def check_user_subscription_status(self, email: str) -> Dict:
-        """Check status and auto-downgrade if expired."""
-        user = await self.get_user_stats(email)
-        if not user: 
-            return {"subscription_tier": "free", "daily_prompts_used": 0, "daily_limit": 999999}
-
-        tier = user.get("subscription_tier", "free")
-        expires = user.get("subscription_expires_at")
-
-        # Expiry Check
-        if tier == "pro" and expires:
-            try:
-                exp_date = datetime.fromisoformat(expires.replace('Z', '+00:00'))
-                if exp_date < datetime.utcnow().replace(tzinfo=exp_date.tzinfo):
-                    # Expired -> Downgrade logic inline
-                    await self._update("users", {"email": email}, {
-                        "subscription_tier": "free",
-                        "subscription_expires_at": None,
-                        "daily_prompts_used": 0,
-                        "last_prompt_reset": datetime.utcnow().date().isoformat()
-                    })
-                    tier = "free"
-            except: pass
-
-        return {
-            "subscription_tier": tier,
-            "daily_prompts_used": user.get("daily_prompts_used", 0),
-            "daily_limit": 999999,
-            "subscription_expires": expires
-        }
-
-    async def upgrade_user_to_pro(self, email: str) -> bool:
-        """Enable Pro tier for 30 days."""
-        expiry = (datetime.utcnow() + timedelta(days=30)).isoformat()
-        return await self._update("users", {"email": email}, {
-            "subscription_tier": "pro",
-            "subscription_expires_at": expiry
-        })
-
     # Backward compatibility helper for internal calls
     async def get_user_by_email(self, email: str):
         return await self.get_user_stats(email)

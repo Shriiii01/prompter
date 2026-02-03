@@ -1180,77 +1180,6 @@ class MagicalEnhancer {
             return;
         }
         
-
-        //  SMART LIMIT CHECK: Get real daily usage from backend before blocking
-        try {
-            const userData = await new Promise((resolve) => {
-                chrome.storage.local.get(['user_info'], resolve);
-            });
-
-            const userEmail = userData.user_info?.email || '';
-            const userTier = userData.user_info?.subscription_tier || 'free';
-
-            // If no user email found, open popup for login
-            if (!userEmail) {
-                chrome.runtime.sendMessage({action: 'open_popup_for_login'}, (response) => {
-                    if (chrome.runtime.lastError) {
-                        // Failed to open popup
-                    }
-                });
-                icon.classList.remove('processing');
-                return;
-            }
-
-            // CRITICAL FIX: Always use fresh backend data for current user's email
-            // Don't rely on cached data that might be from a different user
-            // Check user limits
-
-            // Check user subscription status from backend for ALL users
-            if (userEmail) {
-                try {
-                    const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
-                    const statusCheck = await fetch(`${apiUrl}/api/v1/payment/subscription-status/${encodeURIComponent(userEmail)}`, {
-                        method: 'GET',
-                        headers: { 'Content-Type': 'application/json' },
-                        signal: AbortSignal.timeout(3000) // 3 second timeout
-                    });
-
-                    if (statusCheck.ok) {
-                        const userStatus = await statusCheck.json();
-                        
-                        // DEBUG: Log the full API response to see what we're getting
-                        
-                        const userTier = userStatus.subscription_tier || 'free';
-                        const dailyUsed = userStatus.daily_prompts_used || 0;
-                        const dailyLimit = userStatus.daily_limit || 10;
-
-
-                        // UPDATE CHROME STORAGE with fresh subscription data
-                        try {
-                            chrome.storage.local.get(['user_info'], (result) => {
-                                if (result.user_info) {
-                                    result.user_info.subscription_tier = userTier;
-                                    result.user_info.daily_prompts_used = dailyUsed;
-                                    // UNLIMITED for everyone
-                                    result.user_info.daily_limit = 999999;
-                                    chrome.storage.local.set({ user_info: result.user_info });
-                                }
-                            });
-                        } catch (storageError) {
-                        }
-
-                        // NO LIMITS - Allow all requests for everyone
-                        // Free/Pro distinction removed for limits
-                    } else {
-                    }
-                } catch (backendError) {
-                    // Allow request if backend check fails
-                }
-            }
-        } catch (error) {
-            // Allow request on error
-        }
-
         if (this.activePopup) {
             this.closePopup();
         }
@@ -1550,11 +1479,6 @@ class MagicalEnhancer {
 
     }
 
-    // This method is now deprecated - Upgrade modal removed
-    showUpgradeModal(popup, details) {
-        // No-op: Upgrade functionality removed
-        return;
-    }
 
 
     async showEnhancedResultWithAnimation(popup, enhancedText, inputElement) {
@@ -1661,102 +1585,6 @@ class MagicalEnhancer {
         }
     }
 
-    async enhancePrompt(text) {
-        try {
-            // Get auth token from storage
-            const authToken = await new Promise((resolve) => {
-                chrome.storage.local.get(['auth_token'], (result) => {
-                    resolve(result.auth_token);
-                });
-            });
-
-            if (!authToken) {
-
-                return null; // This will trigger auth required message
-            }
-
-            // Detect target model based on current site
-            const targetModel = this.detectTargetModel();
-            
-
-            const apiUrl = window.CONFIG ? window.CONFIG.getApiUrl() : 'http://localhost:8000';
-            const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-            const platform = this.detectTargetModel();
-
-            // Get user email with multiple fallbacks
-            let userEmail = '';
-            
-            // Try storage first
-            const userData = await new Promise((resolve) => {
-                chrome.storage.local.get(['user_info'], resolve);
-            });
-            userEmail = userData.user_info?.email || '';
-            
-            // Fallback: try popup display if storage failed
-            if (!userEmail) {
-                try {
-                    const popupEmail = await new Promise((resolve) => {
-                        chrome.runtime.sendMessage({action: 'get_user_email'}, (response) => {
-                            resolve(response?.email || '');
-                        });
-                    });
-                    userEmail = popupEmail;
-                } catch (popupError) {
-                    // Popup email error
-                }
-            }
-
-            if (!userEmail) {
-                // User not logged in - open popup for login
-                chrome.runtime.sendMessage({action: 'open_popup_for_login'}, (response) => {
-                    if (chrome.runtime.lastError) {
-                        // Failed to open popup
-                    }
-                });
-                return null;
-            }
-
-            // Use background to perform the network call so content-script context invalidation cannot break it
-            const data = await new Promise((resolve, reject) => {
-                const messageData = {
-                    action: 'enhance_prompt',
-                    apiUrl,
-                    prompt: text,
-                    targetModel,
-                    userEmail: userEmail,
-                    platform,
-                    idempotencyKey
-                };
-                
-
-                chrome.runtime.sendMessage(messageData, (resp) => {
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message));
-                        return;
-                    }
-                    if (!resp || !resp.success) {
-                        reject(new Error(resp?.error || 'Enhance failed'));
-                    } else {
-                        resolve(resp.data);
-                    }
-                });
-            });
-
-            // Update local last-known count immediately (no popup blink)
-            if (typeof data.user_prompt_count === 'number') {
-                try {
-                    chrome.storage.local.set({ last_known_prompt_count: data.user_prompt_count });
-                } catch (e) { /* ignore */ }
-            }
-            
-            
-            return data.enhanced_prompt;
-            
-        } catch (error) {
-
-            return this.getFallbackEnhancement(text);
-        }
-    }
 
     detectTargetModel() {
         const hostname = window.location.hostname;
@@ -1779,13 +1607,6 @@ class MagicalEnhancer {
         return 'gpt-5'; // Default fallback for ChatGPT
     }
 
-    getFallbackEnhancement(text) {
-        return `Please provide a comprehensive and detailed response to the following query, ensuring accuracy and clarity:
-
-${text}
-
-Additional context: Please structure your response in a clear, organized manner with relevant examples where appropriate.`;
-    }
 
     formatText(text) {
         //  CRITICAL FIX: Return AI text EXACTLY as generated - no processing!
@@ -2228,9 +2049,3 @@ Additional context: Please structure your response in a clear, organized manner 
 if (!window.magicalEnhancer) {
     window.magicalEnhancer = new MagicalEnhancer();
 }
-
-
-
-
-
-
