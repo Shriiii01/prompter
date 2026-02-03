@@ -2,8 +2,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
-from app.users.database import DatabaseService
-db_service = DatabaseService()
+# FIX: Import the SHARED instance, don't create a new one!
+from app.users.database import db_service
 
 router = APIRouter(tags=["users"])
 
@@ -23,27 +23,26 @@ class UserResponse(BaseModel):
 @router.post("/users", response_model=UserResponse)
 async def create_user(request: UserCreateRequest):
     """
-    Create a new user in the database.
-    
-    Args:
-        request: User creation request with email and name
-    
-    Returns:
-        Created user data
+    Login/Register: Check if user exists by email. If yes, return their data. If no, create them.
     """
+    print(f"📥 POST /users - email: {request.email}")
+    
     try:
-        # Check if user already exists
+        # Step 1: Check if user already exists (by EMAIL only)
         existing_user = await db_service.get_user_stats(request.email)
+        
         if existing_user:
+            print(f"✅ User found: {request.email} (prompts: {existing_user.get('enhanced_prompts', 0)})")
             return UserResponse(
-                id=existing_user["id"],
-                email=existing_user["email"],
-                name=existing_user["name"],
-                enhanced_prompts=existing_user["enhanced_prompts"],
-                created_at=existing_user["created_at"]
+                id=str(existing_user.get("id", "")),
+                email=existing_user.get("email", request.email),
+                name=existing_user.get("name") or request.name,
+                enhanced_prompts=existing_user.get("enhanced_prompts", 0),
+                created_at=str(existing_user.get("created_at", ""))
             )
         
-        # Create new user
+        # Step 2: User doesn't exist, create them
+        print(f"🆕 Creating new user: {request.email}")
         user_data = {
             "email": request.email,
             "name": request.name,
@@ -52,87 +51,91 @@ async def create_user(request: UserCreateRequest):
         
         new_user = await db_service.get_or_create_user(request.email, user_data)
         
+        if not new_user:
+            print(f"❌ Failed to create user: {request.email}")
+            raise HTTPException(status_code=500, detail="Database failed to create user")
+        
+        print(f"✅ User created: {request.email}")
         return UserResponse(
-            id=new_user["id"],
-            email=new_user["email"],
-            name=new_user["name"],
-            enhanced_prompts=new_user["enhanced_prompts"],
-            created_at=new_user["created_at"]
+            id=str(new_user.get("id", "")),
+            email=new_user.get("email", request.email),
+            name=new_user.get("name") or request.name,
+            enhanced_prompts=new_user.get("enhanced_prompts", 0),
+            created_at=str(new_user.get("created_at", ""))
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to create user")
+        print(f"❌ Error in create_user: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
 
 @router.get("/users/{email}")
 async def get_user_by_email(email: str):
     """
-    Get user by email address. Creates user if they don't exist.
-    
-    Args:
-        email: User's email address
-    
-    Returns:
-        User data (created if not found)
+    Get user details by email. Creates user if not found (fallback for failed login POST).
     """
+    print(f"📥 GET /users/{email}")
+    
     try:
         user = await db_service.get_user_stats(email)
+        
+        # If user doesn't exist, create them (defensive fallback)
         if not user:
-            # User doesn't exist, create them
-            user_data = {
+            print(f"🆕 User not found, auto-creating: {email}")
+            user = await db_service.get_or_create_user(email, {
                 "email": email,
                 "name": "User",
                 "enhanced_prompts": 0
-            }
-            user = await db_service.get_or_create_user(email, user_data)
+            })
         
-        if "id" not in user:
-             raise HTTPException(status_code=500, detail="Failed to create user in database")
-
+        if not user:
+            print(f"❌ Failed to get/create user: {email}")
+            raise HTTPException(status_code=500, detail="Failed to get/create user")
+        
+        print(f"✅ User ready: {email} (prompts: {user.get('enhanced_prompts', 0)})")
         return UserResponse(
-            id=user["id"],
-            email=user["email"],
-            name=user.get("name") or "User",  # Ensure name is never None
+            id=str(user.get("id", "")),
+            email=user.get("email", email),
+            name=user.get("name") or "User",
             enhanced_prompts=user.get("enhanced_prompts", 0),
-            created_at=user.get("created_at", "")
+            created_at=str(user.get("created_at", ""))
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error in get_user_by_email: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get/create user")
+        print(f"❌ Error in get_user_by_email: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed: {str(e)}")
 
 @router.post("/users/{email}/increment", response_model=UserResponse)
 async def increment_user_count(email: str):
     """
-    Increment user's enhanced prompts count.
-    
-    Args:
-        email: User's email address
-        
-    Returns:
-        Updated user data with new count
+    Add +1 to user's enhanced prompts count.
     """
+    print(f"📥 POST /users/{email}/increment")
+    
     try:
-        # Increment the count
+        # Increment the count (this also creates user if missing)
         new_count = await db_service.increment_user_prompts(email)
+        print(f"✅ Incremented count for {email}: now {new_count}")
         
         # Get updated user data
         user_data = await db_service.get_user_stats(email)
         if not user_data:
-            raise HTTPException(
-                status_code=404,
-                detail=f"User with email '{email}' not found"
-            )
+            print(f"❌ User not found after increment: {email}")
+            raise HTTPException(status_code=404, detail="User not found")
         
         return UserResponse(
-            id=user_data.get('id', ''),
+            id=str(user_data.get('id', '')),
             email=email,
             name=user_data.get('name') or 'User',
             enhanced_prompts=user_data.get('enhanced_prompts', 0),
-            created_at=user_data.get('created_at', '')
+            created_at=str(user_data.get('created_at', ''))
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to increment count: {str(e)}"
-        )
+        print(f"❌ Error in increment: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to increment: {str(e)}")

@@ -20,6 +20,24 @@ class DatabaseService:
             "Prefer": "return=representation"  # Ask Supabase to return the modified/created object
         }
         self.timeout = aiohttp.ClientTimeout(total=10)
+        
+        # Debug connection info (safely)
+        if not self.base_url or "your_supabase" in self.base_url:
+            print(f"⚠️  WARNING: Invalid Supabase URL: {self.base_url}")
+        else:
+            print(f"✅ Supabase connected to: {self.base_url.split('.supabase.co')[0]}...")
+            
+            # CRITICAL DEBUG: Check key role
+            try:
+                import jwt
+                key = config.settings.supabase_service_key
+                if key:
+                    decoded = jwt.decode(key, options={"verify_signature": False})
+                    print(f"🔑 Key Role: {decoded.get('role', 'unknown')}")
+                    if decoded.get('role') != 'service_role':
+                         print("⚠️  WARNING: You are using the ANON key! You MUST use the SERVICE_ROLE key.")
+            except Exception as e:
+                print(f"⚠️  Could not decode key: {e}")
 
     # =========================================================================
     # CORE ENGINE (The "One Function to Rule Them All")
@@ -30,6 +48,7 @@ class DatabaseService:
         Unified request handler. Handles connection, auth, headers, and basic error parsing.
         """
         if not self.base_url or "your_supabase" in self.base_url:
+            print("❌ Error: Supabase URL not configured")
             return None
 
         url = f"{self.base_url}/{endpoint}"
@@ -42,9 +61,13 @@ class DatabaseService:
                         return await resp.json() if resp.content_length else True
                     elif resp.status == 409: # Conflict
                         return "CONFLICT"
+                    
+                    # Log error for non-success status
+                    error_text = await resp.text()
+                    print(f"❌ Supabase Request Failed: {method} {url} -> {resp.status} : {error_text}")
                     return None
         except Exception as e:
-            print(f"Supabase request error: {e}")
+            print(f"❌ Supabase Connection Error: {e}")
             return None
 
     # =========================================================================
@@ -57,7 +80,8 @@ class DatabaseService:
         params = {k: f"eq.{v}" for k, v in query.items()}
         params["select"] = "*"
         data = await self._request("GET", table, params=params)
-        return data[0] if data and isinstance(data, list) else None
+        print(f"🔎 _get({table}, {query}) -> {type(data).__name__}: {data[:1] if isinstance(data, list) else data}")
+        return data[0] if data and isinstance(data, list) and len(data) > 0 else None
 
     async def _update(self, table: str, query: Dict, data: Dict) -> bool:
         """Generic UPDATE record."""
@@ -75,20 +99,38 @@ class DatabaseService:
 
     async def get_or_create_user(self, email: str, user_data: Dict) -> Dict:
         """Get existing user or create a new one."""
+        print(f"🔍 get_or_create_user: Looking for {email}")
+        
         user = await self._get("users", {"email": email})
         if user: 
+            print(f"✅ Found existing user: {email}")
             return user
         
         # Create new
+        print(f"🆕 Creating new user: {email}")
         res = await self._create("users", user_data)
-        if res == "CONFLICT": # Race condition handling
-            return await self._get("users", {"email": email}) or user_data
+        print(f"📝 Create result: {type(res).__name__} = {res}")
+        
+        if res == "CONFLICT":
+            print(f"⚠️ Conflict detected, fetching again...")
+            return await self._get("users", {"email": email})
             
         # Handle list response from Supabase
         if isinstance(res, list) and len(res) > 0:
+            print(f"✅ User created (list response)")
             return res[0]
             
-        return res if isinstance(res, dict) else user_data
+        # Handle simple success (no body returned)
+        if res is True:
+            print(f"✅ User created (empty response), fetching...")
+            return await self._get("users", {"email": email})
+
+        if isinstance(res, dict):
+            print(f"✅ User created (dict response)")
+            return res
+            
+        print(f"❌ Failed to create user, res={res}")
+        return None
 
     async def get_user_stats(self, email: str) -> Optional[Dict]:
         """Get user profile data."""
