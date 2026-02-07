@@ -325,10 +325,13 @@ class MagicalEnhancer {
         const style = document.createElement('style');
         style.id = 'clean-enhancer-styles';
         style.textContent = `
+            /* ========================================
+               P ICON - Draggable button near input
+               ======================================== */
             .ce-icon {
                 position: fixed !important;
-                width: 32px !important;
-                height: 32px !important;
+                width: 38px !important;
+                height: 38px !important;
                 background: #2c2c2c !important;
                 border: none !important;
                 border-radius: 50% !important;
@@ -338,39 +341,34 @@ class MagicalEnhancer {
                 align-items: center !important;
                 justify-content: center !important;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-                font-size: 16px !important;
+                font-size: 18px !important;
                 font-weight: bold !important;
                 color: white !important;
-                transition: all 0.2s ease !important;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
                 user-select: none !important;
+                transition: transform 0.15s ease, box-shadow 0.15s ease !important;
             }
-
             .ce-icon:hover {
                 background: #1a1a1a !important;
                 transform: scale(1.1) !important;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
             }
-
-            .ce-icon:active {
-                transform: scale(0.95) !important;
-            }
-
+            .ce-icon:active,
             .ce-icon.dragging {
                 cursor: grabbing !important;
-                opacity: 0.8 !important;
                 transform: scale(1.05) !important;
             }
-
             .ce-icon.processing {
-                animation: pulse 1s infinite !important;
+                animation: ce-pulse 1s infinite !important;
             }
-
-            @keyframes pulse {
+            @keyframes ce-pulse {
                 0%, 100% { opacity: 1; transform: scale(1); }
-                50% { opacity: 0.8; transform: scale(1.05); }
+                50% { opacity: 0.7; transform: scale(1.05); }
             }
 
+            /* ========================================
+               ENHANCEMENT POPUP - Fixed, not draggable
+               ======================================== */
             .ce-popup {
                 position: fixed !important;
                 width: 400px !important;
@@ -382,75 +380,56 @@ class MagicalEnhancer {
                 color: #f0f0f0 !important;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
                 z-index: 1000000 !important;
-                backdrop-filter: blur(16px) !important;
                 overflow: hidden !important;
                 display: flex !important;
                 flex-direction: column !important;
-                padding-bottom: 60px !important; /* Space for the insert button */
-                cursor: default !important; /* Ensure default cursor */
             }
-
-            .ce-close-btn {
-                background: none !important;
-                border: none !important;
-                color: #888 !important;
-                font-size: 18px !important;
-                cursor: pointer !important;
-                padding: 0 !important;
-                width: 24px !important;
-                height: 24px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                border-radius: 4px !important;
-                transition: all 0.2s ease !important;
-            }
-
-            .ce-close-btn:hover {
-                background: #333 !important;
-                color: #fff !important;
-            }
-
             .ce-content {
                 padding: 16px !important;
+                padding-bottom: 70px !important;
                 flex: 1 !important;
                 overflow-y: auto !important;
                 font-size: 15px !important;
                 line-height: 1.6 !important;
                 position: relative !important;
-                padding-bottom: 16px !important;
-                cursor: text !important; /* Text cursor for content */
             }
-
-            .ce-loading {
+            .ce-close-btn {
+                position: absolute !important;
+                top: 12px !important;
+                right: 12px !important;
+                background: none !important;
+                border: none !important;
+                color: #888 !important;
+                font-size: 20px !important;
+                cursor: pointer !important;
+                width: 28px !important;
+                height: 28px !important;
                 display: flex !important;
-                flex-direction: column !important;
                 align-items: center !important;
                 justify-content: center !important;
-                padding: 40px 20px !important;
-                color: #6b7280 !important;
-                text-align: center !important;
+                border-radius: 4px !important;
             }
-
+            .ce-close-btn:hover {
+                background: #333 !important;
+                color: #fff !important;
+            }
             .ce-insert-btn {
+                position: absolute !important;
+                bottom: 16px !important;
+                left: 16px !important;
                 background: #2D9CDB !important;
                 color: white !important;
-                border: 2px solid #c0c0c0 !important;
-                padding: 8px 16px !important;
+                border: none !important;
+                padding: 10px 20px !important;
                 border-radius: 6px !important;
                 cursor: pointer !important;
-                font-weight: 500 !important;
+                font-weight: 600 !important;
                 font-size: 14px !important;
-                transition: all 0.2s ease !important;
                 z-index: 1000001 !important;
-                position: absolute !important;
             }
-
             .ce-insert-btn:hover {
                 background: #1E7BB8 !important;
-                border-color: #e0e0e0 !important;
             }
-
             .ce-insert-btn:disabled {
                 opacity: 0.5 !important;
                 cursor: not-allowed !important;
@@ -469,15 +448,6 @@ class MagicalEnhancer {
                     sendResponse({ success: true });
             }
         });
-    }
-
-    findActiveInput() {
-        // Find the most recently focused input element
-        const inputs = document.querySelectorAll('textarea, input[type="text"], [contenteditable="true"]');
-        if (inputs.length > 0) {
-            return inputs[inputs.length - 1]; // Return the last one (most likely to be active)
-        }
-        return null;
     }
 
     activate() {
@@ -831,11 +801,12 @@ class MagicalEnhancer {
         this.iconCreationLock.add(inputId);
 
         try {
-            const icon = document.createElement('button');
+            const icon = document.createElement('div');
             icon.className = 'ce-icon';
             icon.innerHTML = this.createPLogo();
             icon.title = 'Improve with PromptGrammerly';
             icon.setAttribute('data-input-id', inputId);
+            icon.setAttribute('role', 'button');
             
             // Fast positioning - immediate placement without complex calculations
             this.positionIconFast(icon, inputElement);
@@ -928,50 +899,29 @@ class MagicalEnhancer {
 
     positionIconFast(icon, inputElement) {
         const rect = inputElement.getBoundingClientRect();
+        const iconSize = 38;
+        const spacing = 12;
         
-        //  FIXED: Position icon OUTSIDE input box, never inside
-        const iconSize = 32; // Smaller for better UX
-        const spacing = 15; // More spacing to ensure it's clearly outside
-        
-        // Always position to the RIGHT of the input box, never inside
+        // Position to the RIGHT of the input box
         let left = rect.right + spacing;
         let top = rect.top + (rect.height - iconSize) / 2;
         
-        // Smart positioning: if no space on right, position on left side
+        // If no space on right, position on left side
         if (left + iconSize > window.innerWidth - 10) {
-            left = rect.left - iconSize - spacing; // Left side of input
+            left = rect.left - iconSize - spacing;
         }
         
-        // CRITICAL: Ensure it's NEVER inside the input bounds
-        if (left >= rect.left && left <= rect.right) {
-            left = rect.right + spacing; // Force outside on right
-        }
-        if (left < rect.left - iconSize && left > rect.left - iconSize - spacing) {
-            left = rect.left - iconSize - spacing; // Force outside on left
-        }
+        // Keep within viewport bounds
+        left = Math.max(10, Math.min(left, window.innerWidth - iconSize - 10));
+        top = Math.max(10, Math.min(top, window.innerHeight - iconSize - 10));
         
-        // Vertical bounds checking with more margin
-        if (top < 15) top = 15;
-        if (top + iconSize > window.innerHeight - 15) top = window.innerHeight - iconSize - 15;
-        
-        // Apply position with enhanced styling for draggability
+        // CRITICAL: Set position fixed for dragging to work
         icon.style.position = 'fixed';
         icon.style.left = `${left}px`;
         icon.style.top = `${top}px`;
-        icon.style.zIndex = '999999';
-        icon.style.width = `${iconSize}px`;
-        icon.style.height = `${iconSize}px`;
-        icon.style.pointerEvents = 'auto';
-        icon.style.cursor = 'grab';
-        icon.style.borderRadius = '8px';
-        icon.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-        icon.style.transition = 'all 0.2s ease';
-        icon.style.backgroundColor = '#007AFF';
-        icon.style.border = '2px solid rgba(255,255,255,0.2)';
         
-        // Store position for repositioning on scroll/resize
+        // Store for repositioning
         icon._lastPosition = { left, top };
-        icon._inputRect = rect;
     }
 
     setupAutoRepositioning(icon, inputElement) {
@@ -1003,86 +953,88 @@ class MagicalEnhancer {
     }
 
     makeIconDraggableAndClickable(icon, inputElement) {
+        // State for drag detection
         let isDragging = false;
-        let startX, startY, startLeft, startTop;
-        let dragStartTime = 0;
-        
-        icon.draggable = false;
-        icon.style.cursor = 'grab';
-        icon.style.userSelect = 'none';
-        icon.style.touchAction = 'none'; // Better mobile support
+        let hasMoved = false;
+        let startX = 0;
+        let startY = 0;
+        let iconStartX = 0;
+        let iconStartY = 0;
 
-        icon.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
+        // Mouse down - start potential drag
+        const onMouseDown = (e) => {
+            if (e.button !== 0) return; // Only left click
             
-            dragStartTime = Date.now();
+            e.preventDefault();
+            e.stopPropagation();
+            
             isDragging = true;
-            icon._isDragging = true; // Flag for auto-repositioning
+            hasMoved = false;
             
             startX = e.clientX;
             startY = e.clientY;
             
-            // Get ACTUAL current position from computed style, not style attribute
             const rect = icon.getBoundingClientRect();
-            startLeft = rect.left;
-            startTop = rect.top;
-
+            iconStartX = rect.left;
+            iconStartY = rect.top;
+            
             icon.style.cursor = 'grabbing';
-            icon.style.zIndex = '9999999';
+            icon.classList.add('dragging');
+            icon._isDragging = true;
             
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        
-        document.addEventListener('mousemove', (e) => {
+            // Add global listeners
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        };
+
+        // Mouse move - drag the icon
+        const onMouseMove = (e) => {
             if (!isDragging) return;
             
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
             
-            const newLeft = startLeft + deltaX;
-            const newTop = startTop + deltaY;
+            // Only mark as moved if dragged more than 5px
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                hasMoved = true;
+            }
             
-            // Keep within bounds
-            const maxLeft = window.innerWidth - 32 - 10;
-            const maxTop = window.innerHeight - 32 - 10;
+            let newX = iconStartX + dx;
+            let newY = iconStartY + dy;
             
-            const finalLeft = Math.max(10, Math.min(newLeft, maxLeft));
-            const finalTop = Math.max(10, Math.min(newTop, maxTop));
+            // Keep within viewport
+            newX = Math.max(10, Math.min(newX, window.innerWidth - 48));
+            newY = Math.max(10, Math.min(newY, window.innerHeight - 48));
             
-            icon.style.left = finalLeft + 'px';
-            icon.style.top = finalTop + 'px';
-            
-            e.preventDefault();
-        });
-        
-        document.addEventListener('mouseup', (e) => {
+            icon.style.left = newX + 'px';
+            icon.style.top = newY + 'px';
+        };
+
+        // Mouse up - end drag or trigger click
+        const onMouseUp = (e) => {
             if (!isDragging) return;
-            
-            const dragDuration = Date.now() - dragStartTime;
-            const deltaX = Math.abs(e.clientX - startX);
-            const deltaY = Math.abs(e.clientY - startY);
-            const totalMovement = deltaX + deltaY;
             
             isDragging = false;
-            icon._isDragging = false; // Clear flag for auto-repositioning
+            icon._isDragging = false;
             icon.style.cursor = 'grab';
+            icon.classList.remove('dragging');
             
-            // If it was a quick click with minimal movement, treat as click
-            if (dragDuration < 200 && totalMovement < 10) {
-
+            // Remove global listeners
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            
+            // If didn't move, treat as click
+            if (!hasMoved) {
                 icon.classList.add('processing');
                 this.handleIconClick(inputElement, icon);
             } else {
-
-                const finalLeft = parseInt(icon.style.left);
-                const finalTop = parseInt(icon.style.top);
-
-                this.saveIconPosition(inputElement, finalLeft, finalTop);
+                // Save dragged position
+                this.saveIconPosition(inputElement, parseInt(icon.style.left), parseInt(icon.style.top));
             }
-            
-            e.preventDefault();
-        });
+        };
+
+        // Attach mousedown to icon
+        icon.addEventListener('mousedown', onMouseDown);
     }
 
     saveIconPosition(inputElement, left, top) {
@@ -1212,25 +1164,22 @@ class MagicalEnhancer {
         popup.className = 'ce-popup';
         popup.innerHTML = `
             <div class="ce-content">
-                <div class="ce-stream-container" id="stream-container">
-                    <div class="ce-stream-text" id="stream-text" style="font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;"></div>
-                </div>
-                <button class="ce-close-btn" title="Close" style="position: absolute; top: 12px; right: 12px;">×</button>
+                <div id="stream-text"></div>
             </div>
-            <button class="ce-insert-btn" id="insert-btn" style="display: none; position: absolute; bottom: 16px; left: 16px; z-index: 1000001;">Insert</button>
+            <button class="ce-close-btn" title="Close">×</button>
+            <button class="ce-insert-btn" id="insert-btn" style="display: none;">Insert</button>
         `;
 
         document.body.appendChild(popup);
         this.activePopup = popup;
         this.positionPopup(popup, iconElement);
-        this.makePopupDraggable(popup);
 
         popup.querySelector('.ce-close-btn').onclick = () => {
             this.closePopup();
             iconElement.classList.remove('processing');
         };
 
-        // Use REAL streaming for immediate response
+        // Start streaming the enhanced prompt
         this.startStreaming(inputElement, iconElement, inputText, popup);
     }
 
@@ -1428,162 +1377,34 @@ class MagicalEnhancer {
         const iconRect = iconElement.getBoundingClientRect();
         const popupWidth = 400;
         const popupHeight = 340;
-        const spacing = 8; // Closer spacing
+        const spacing = 10;
         
-        // Always position close to the icon - prioritize staying near the icon
+        // Position to the right of the icon
         let left = iconRect.right + spacing;
-        let top = iconRect.top - 10; // Slightly down from top
+        let top = iconRect.top;
         
-        // Smart positioning: only adjust minimally to stay close to icon
+        // If no space on right, position on left
         if (left + popupWidth > window.innerWidth - 16) {
-            // First try: shift just enough to fit, staying close to icon
-            const overflowAmount = (left + popupWidth) - (window.innerWidth - 16);
-            left = left - overflowAmount;
-            
-            // If that pushes it too far left, position it to the left of the icon instead
-            // but still keep it close
-            if (left < iconRect.left - popupWidth - spacing) {
-                left = iconRect.left - popupWidth - spacing;
-
-            } else {
-
-            }
+            left = iconRect.left - popupWidth - spacing;
         }
         
-        // Minimum distance from viewport edge, but prioritize staying near icon
-        if (left < 8) {
-            left = 8;
+        // If no space on left either, center horizontally
+        if (left < 16) {
+            left = Math.max(16, (window.innerWidth - popupWidth) / 2);
         }
         
-        // Adjust vertical position if needed, but keep close to icon
+        // Vertical bounds
         if (top + popupHeight > window.innerHeight - 16) {
-            // Try positioning above the icon first
-            const aboveTop = iconRect.top - popupHeight - spacing;
-            if (aboveTop >= 8) {
-                top = aboveTop;
-
-            } else {
-                // If no space above, position at top but keep horizontal position close to icon
-                top = 8;
-
-            }
+            top = window.innerHeight - popupHeight - 16;
         }
-        if (top < 8) {
-            top = 8;
+        if (top < 16) {
+            top = 16;
         }
         
-        popup.style.position = 'fixed';
         popup.style.left = `${left}px`;
         popup.style.top = `${top}px`;
-        popup.style.zIndex = '1000000';
-
     }
 
-
-
-    async showEnhancedResultWithAnimation(popup, enhancedText, inputElement) {
-        const content = popup.querySelector('.ce-content');
-
-        // Stop processing animation
-        const icon = this.icons.get(inputElement);
-        if (icon) {
-            icon.classList.remove('processing');
-        }
-
-        // Handle authentication error
-        if (!enhancedText) {
-            content.innerHTML = `
-                <div style="text-align: center; padding: 20px;">
-                    <div style="color: #dc3545; font-size: 16px; margin-bottom: 10px;"> Authentication Required</div>
-                    <div style="color: #808080; font-size: 14px; line-height: 1.5;">
-                        Please sign in with Google to use AI enhancement.<br>
-                        Click the extension icon to sign in.
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        // Use the new optimized method
-        this.showFinalResult(content, enhancedText, inputElement, popup);
-    }
-    
-    animateTextWordByWord(container, text, onComplete = () => {}) {
-
-        const words = text.split(' ');
-        let currentIndex = 0;
-
-        // Clear container content
-        container.innerHTML = '';
-
-        // Create the container for animated text
-        const textContainer = document.createElement('div');
-        textContainer.id = 'animated-text';
-        textContainer.style.cssText = 'font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;';
-        container.appendChild(textContainer);
-
-        const animateNextWord = () => {
-            if (currentIndex < words.length) {
-                const word = words[currentIndex];
-                const space = currentIndex < words.length - 1 ? ' ' : '';
-
-                // Add word with instant effect (no fade delay)
-                const wordSpan = document.createElement('span');
-                wordSpan.textContent = word + space;
-                wordSpan.style.opacity = '1'; // Start visible immediately
-                wordSpan.style.transition = 'none'; // Remove transition for instant effect
-
-                textContainer.appendChild(wordSpan);
-
-                currentIndex++;
-
-                // ULTRA FAST animation - 5ms between words (lightning fast!)
-                setTimeout(animateNextWord, 5);
-            } else {
-
-                onComplete();
-            }
-        };
-
-        // Start animation immediately
-
-        animateNextWord();
-
-        // Return promise that resolves when animation completes
-        return new Promise(resolve => {
-            const checkComplete = () => {
-                if (currentIndex >= words.length) {
-                    resolve();
-                } else {
-                    setTimeout(checkComplete, 10);
-                }
-            };
-            checkComplete();
-        });
-    }
-
-    showFinalResult(container, finalText, inputElement, popup) {
-
-        // Create text container for final result
-        const textContainer = document.createElement('div');
-        textContainer.id = 'final-text';
-        textContainer.style.cssText = 'font-size:15px;line-height:1.6;color:#f0f0f0;font-weight:500;margin:0;padding:0;';
-        // Safely render text with preserved line breaks
-        textContainer.innerHTML = this.toHtmlWithLineBreaks(finalText);
-        container.appendChild(textContainer);
-
-        // Show insert button
-        const insertBtn = popup.querySelector('#insert-btn');
-        if (insertBtn) {
-            insertBtn.style.display = 'block';
-            insertBtn.disabled = false;
-            insertBtn.textContent = 'Insert';
-
-            // DUPLICATE INSERT HANDLER - REMOVED
-            // Count increment now only happens in showInsertButton() method above
-
-        }
-    }
 
 
     detectTargetModel() {
@@ -1607,14 +1428,6 @@ class MagicalEnhancer {
         return 'gpt-5'; // Default fallback for ChatGPT
     }
 
-
-    formatText(text) {
-        //  CRITICAL FIX: Return AI text EXACTLY as generated - no processing!
-        // The AI generates perfectly structured prompts - we must preserve them completely!
-        
-        // Only trim leading/trailing whitespace, keep ALL internal structure
-        return text.trim();
-    }
 
     insertText(text, inputElement) {
         // CRITICAL FIX: Use text EXACTLY as it appears in the small UI - NO processing!
@@ -2003,46 +1816,6 @@ class MagicalEnhancer {
         }, 2000);
     }
 
-    makePopupDraggable(popup) {
-        const content = popup.querySelector('.ce-content');
-        let isDragging = false, startX, startY, startLeft, startTop;
-        content.style.cursor = 'default'; // Default cursor initially
-
-        content.onmousedown = (e) => {
-            // Don't drag if clicking on buttons
-            if (e.target.closest('.ce-close-btn') || e.target.closest('.ce-insert-btn')) {
-                return;
-            }
-
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            const rect = popup.getBoundingClientRect();
-            startLeft = rect.left;
-            startTop = rect.top;
-
-            document.onmousemove = (e2) => {
-                if (!isDragging) return;
-                let newLeft = startLeft + (e2.clientX - startX);
-                let newTop = startTop + (e2.clientY - startY);
-
-                const popupWidth = popup.offsetWidth;
-                const popupHeight = popup.offsetHeight;
-                newLeft = Math.max(8, Math.min(window.innerWidth - popupWidth - 8, newLeft));
-                newTop = Math.max(8, Math.min(window.innerHeight - popupHeight - 8, newTop));
-
-                popup.style.left = `${newLeft}px`;
-                popup.style.top = `${newTop}px`;
-            };
-
-            document.onmouseup = () => {
-                isDragging = false;
-                content.style.cursor = 'default'; // Revert to default cursor
-                document.onmousemove = null;
-                document.onmouseup = null;
-            };
-        };
-    }
 }
 
 // Initialize the enhancer

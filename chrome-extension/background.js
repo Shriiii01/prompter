@@ -294,32 +294,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    // Get user email from popup
+    // Get user email
     if (request.action === 'get_user_email') {
-
-        try {
-            // ALWAYS get from popup display first (most reliable)
-            chrome.runtime.sendMessage({action: 'get_displayed_email'}, (response) => {
-                let email = '';
-
-                if (response && response.email) {
-                    email = response.email;
-
-                } else {
-
-                    // Fallback to storage
-                    chrome.storage.local.get(['user_info'], (data) => {
-                        email = data.user_info?.email || '';
-
-                    });
-                }
-
-                sendResponse({ email: email });
-            });
-        } catch (error) {
-
-            sendResponse({ email: '' });
-        }
+        chrome.storage.local.get(['user_info'], (data) => {
+            sendResponse({ email: data.user_info?.email || '' });
+        });
         return true;
     }
 
@@ -372,32 +351,3 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
 });
-
-// Function to activate content script on all tabs
-async function activateContentScript() {
-    try {
-        const tabs = await chrome.tabs.query({});
-        const targetUrls = [
-            'https://chat.openai.com',
-            'https://chatgpt.com',
-            'https://claude.ai',
-            'https://gemini.google.com',
-            'https://perplexity.ai',
-            'https://meta.ai',
-            'https://poe.com'
-        ];
-        
-        for (const tab of tabs) {
-            if (tab.url && targetUrls.some(url => tab.url.startsWith(url))) {
-                try {
-                    await chrome.tabs.sendMessage(tab.id, { action: 'activate' });
-
-    } catch (error) {
-
-                }
-            }
-        }
-    } catch (error) {
-
-    }
-}

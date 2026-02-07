@@ -48,8 +48,7 @@ async def stream_enhance_prompt(request: EnhanceRequest, x_user_id: str = Header
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f"Please enhance this prompt:\n\n{request.prompt}"}
                 ],
-                max_tokens=1500,  # Limit output length for cost control
-                temperature=0.7,  # Balanced creativity
+                 # Balanced creativity
                 stream=True,
                 timeout=30
             )

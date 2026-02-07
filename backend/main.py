@@ -1,6 +1,5 @@
 import sys
 import os
-import time
 from datetime import datetime
 # Add the backend directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -57,7 +56,7 @@ app.add_middleware(
     max_age=3600,  # Cache preflight for 1 hour
 )
 
-# Rate limiting middleware - 30 requests/month per user
+# Rate limiting middleware - 100 requests/hour per user
 app.middleware("http")(rate_limiter)
 
 # Include routers

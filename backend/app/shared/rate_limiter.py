@@ -17,10 +17,10 @@ class SimpleRateLimiter:
         self.limit = 100
         self.window = 3600  # 1 hour in seconds
         
-        # Whitelisted paths (Auth, Payment, Health)
+        # Whitelisted paths (Auth, Health)
         self.whitelist = {
             "/api/v1/auth", "/api/v1/signin", "/api/v1/login",
-            "/api/v1/users", "/api/v1/payment", "/health", "/api/v1/health"
+            "/api/v1/users", "/health", "/api/v1/health"
         }
 
     async def __call__(self, request: Request, call_next):

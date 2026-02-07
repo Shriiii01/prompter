@@ -1,8 +1,5 @@
 import aiohttp
-import asyncio
-import uuid
 from typing import Dict, Optional, Any
-from datetime import datetime, timedelta
 from app.shared.config import config
 
 class DatabaseService:
@@ -151,39 +148,20 @@ class DatabaseService:
         return await self._get("users", {"email": email})
 
     async def increment_user_prompts(self, email: str) -> int:
-        """Atomic-like increment of usage counters."""
+        """Increment user's enhanced_prompts count by 1."""
         user = await self.get_user_stats(email)
         if not user:
             # Auto-create if missing
             await self.get_or_create_user(email, {"email": email, "name": "User"})
-            return 1 # Assume 1st prompt
+            return 1
 
-        # Logic: Reset daily limit if new day
-        today = datetime.now().date().isoformat()
-        last_reset = user.get("last_prompt_reset")
-        daily_used = user.get("daily_prompts_used", 0)
-        
-        if last_reset != today:
-            daily_used = 0
-            last_reset = today
-
-        # Update DB
         new_total = (user.get("enhanced_prompts", 0) or 0) + 1
         
         success = await self._update("users", {"email": email}, {
-            "enhanced_prompts": new_total,
-            "daily_prompts_used": daily_used + 1,
-            "last_prompt_reset": last_reset
+            "enhanced_prompts": new_total
         })
         
         return new_total if success else 0
-
-    # Backward compatibility helper for internal calls
-    async def get_user_by_email(self, email: str):
-        return await self.get_user_stats(email)
-    
-    async def create_user(self, data: Dict):
-        return await self._create("users", data)
 
 # Global Instance
 database_service = DatabaseService()
