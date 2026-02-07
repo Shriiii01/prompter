@@ -21,20 +21,6 @@ class DatabaseService:
         # Debug connection info (safely)
         if not self.base_url or "your_supabase" in self.base_url:
             print(f"⚠️  WARNING: Invalid Supabase URL: {self.base_url}")
-        else:
-            print(f"✅ Supabase connected to: {self.base_url.split('.supabase.co')[0]}...")
-            
-            # CRITICAL DEBUG: Check key role
-            try:
-                import jwt
-                key = config.settings.supabase_service_key
-                if key:
-                    decoded = jwt.decode(key, options={"verify_signature": False})
-                    print(f"🔑 Key Role: {decoded.get('role', 'unknown')}")
-                    if decoded.get('role') != 'service_role':
-                         print("⚠️  WARNING: You are using the ANON key! You MUST use the SERVICE_ROLE key.")
-            except Exception as e:
-                print(f"⚠️  Could not decode key: {e}")
 
     # =========================================================================
     # CORE ENGINE (The "One Function to Rule Them All")
